@@ -93,7 +93,12 @@ struct NowPlayingStreamDecoder {
         guard let title = nonEmptyString(Key.title) else {
             return nil
         }
-        let isPlaying = (fields[Key.playing] as? NSNumber)?.boolValue ?? false
+        // Some players (Spotify among them) keep reporting "playing" while paused and only
+        // drop their playback rate to 0. When a rate is reported it has the last word:
+        // otherwise a paused track looked like it kept playing, its time running out to
+        // 0:00, and the next click on the button asked for the wrong thing.
+        let flag = (fields[Key.playing] as? NSNumber)?.boolValue ?? false
+        let isPlaying = flag && (number(Key.playbackRate).map { $0 != 0 } ?? true)
         return NowPlayingSnapshot(
             bundleIdentifier: nonEmptyString(Key.bundleIdentifier),
             parentBundleIdentifier: nonEmptyString(Key.parentBundleIdentifier),
@@ -112,7 +117,7 @@ struct NowPlayingStreamDecoder {
         }
         let duration = durationMicros / 1_000_000
         let reportedRate = number(Key.playbackRate) ?? 1
-        let rate = isPlaying ? (reportedRate > 0 ? reportedRate : 1) : 0
+        let rate = isPlaying ? max(reportedRate, 0.01) : 0
 
         // A play/pause often arrives on its own, before the player republishes its
         // position. Re-reading the stored elapsed/timestamp pair would then be stale (a

@@ -149,6 +149,21 @@ struct NowPlayingStreamDecoderTests {
         #expect(result.sourceBundleIdentifier == "com.apple.Safari")
     }
 
+    /// Spotify can keep reporting "playing" while paused, with a playback rate of 0.
+    @Test func zeroRateMeansPausedWhateverTheFlagSays() throws {
+        var decoder = makeDecoder()
+        _ = try decode(&decoder, diff: false, fullPayload)
+        let pausedOutput = try decode(&decoder, diff: true, ["playbackRate": 0])
+        let paused = try #require(pausedOutput)
+        #expect(!paused.isPlaying)
+        #expect(paused.timeline?.rate == 0)
+
+        let resumedOutput = try decode(&decoder, diff: true, ["playbackRate": 1])
+        let resumed = try #require(resumedOutput)
+        #expect(resumed.isPlaying)
+        #expect(resumed.timeline?.rate == 1)
+    }
+
     @Test func playStateChangeReanchorsTheKnownPosition() throws {
         let clock = ManualClock(now: now)
         var decoder = NowPlayingStreamDecoder(clock: { clock.now })

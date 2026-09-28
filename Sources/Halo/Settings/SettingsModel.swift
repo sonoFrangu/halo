@@ -95,6 +95,7 @@ enum SettingsColor {
 /// A macOS permission some features need.
 enum SettingsPermission: CaseIterable, Identifiable {
     case accessibility
+    case automation
     case fullDiskAccess
     case calendar
     case location
@@ -104,6 +105,7 @@ enum SettingsPermission: CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .accessibility: "Accessibilità"
+        case .automation: "Automazione (Spotify e Musica)"
         case .fullDiskAccess: "Accesso completo al disco"
         case .calendar: "Calendari"
         case .location: "Localizzazione"
@@ -113,6 +115,7 @@ enum SettingsPermission: CaseIterable, Identifiable {
     var symbol: String {
         switch self {
         case .accessibility: "accessibility"
+        case .automation: "gearshape.2.fill"
         case .fullDiskAccess: "externaldrive.fill"
         case .calendar: "calendar"
         case .location: "location.fill"
@@ -122,6 +125,7 @@ enum SettingsPermission: CaseIterable, Identifiable {
     var tint: Color {
         switch self {
         case .accessibility: SettingsColor.blue
+        case .automation: SettingsColor.purple
         case .fullDiskAccess: SettingsColor.gray
         case .calendar: SettingsColor.red
         case .location: SettingsColor.blue
@@ -132,7 +136,9 @@ enum SettingsPermission: CaseIterable, Identifiable {
     var usage: String {
         switch self {
         case .accessibility:
-            "Per luminosità e volume nella notch (Halo intercetta quei tasti) e per l'avviso di Bloc Maiusc."
+            "Per luminosità e volume nella notch (Halo intercetta quei tasti) e per l'avviso di Bloc Maiusc. Serve anche come ultimo ripiego per play e pausa (il tasto multimediale)."
+        case .automation:
+            "Per mandare play, pausa, brani e posizione direttamente a Spotify e Musica: il modo più rapido e affidabile. macOS lo chiede al primo clic sul player; senza, Halo usa MediaRemote."
         case .fullDiskAccess:
             "Per le notifiche e la Full Immersione nella notch: macOS le tiene in file che solo le app con questo permesso possono leggere."
         case .calendar:
@@ -282,6 +288,9 @@ final class SettingsModel {
         switch permission {
         case .accessibility:
             return AXIsProcessTrusted() ? .granted : .missing
+        case .automation:
+            if !features.nowPlaying.automationDenied.isEmpty { return .missing }
+            return features.nowPlaying.automationGranted ? .granted : .notAsked
         case .fullDiskAccess:
             return Self.hasFullDiskAccess ? .granted : .missing
         case .calendar:
@@ -308,6 +317,7 @@ final class SettingsModel {
     func isNeeded(_ permission: SettingsPermission) -> Bool {
         switch permission {
         case .accessibility: isOn(id: "hud") || isOn(id: "keyboard")
+        case .automation: !features.nowPlaying.automationDenied.isEmpty
         case .fullDiskAccess: isOn(id: "notifications") || isOn(id: "focus")
         case .calendar: isOn(id: "calendar")
         case .location: false
@@ -319,6 +329,8 @@ final class SettingsModel {
         case .accessibility:
             features.hud.requestPermission()
             Self.openPrivacyPane("Privacy_Accessibility")
+        case .automation:
+            Self.openPrivacyPane("Privacy_Automation")
         case .fullDiskAccess:
             Self.openPrivacyPane("Privacy_AllFiles")
         case .calendar:

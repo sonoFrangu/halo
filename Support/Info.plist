@@ -28,6 +28,8 @@
 	<string>26.0</string>
 	<key>LSUIElement</key>
 	<true/>
+	<key>NSAppleEventsUsageDescription</key>
+	<string>Halo manda play, pausa, brano successivo e posizione a Spotify e Musica quando usi i controlli nella notch: così rispondono subito.</string>
 	<key>NSCalendarsFullAccessUsageDescription</key>
 	<string>Halo mostra i prossimi impegni nella notch e ti avvisa qualche minuto prima delle riunioni.</string>
 	<key>NSCalendarsUsageDescription</key>

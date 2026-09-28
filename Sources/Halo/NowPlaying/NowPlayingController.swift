@@ -1,43 +1,49 @@
 import AppKit
+import ApplicationServices
 
-/// Owns the adapter processes and keeps `NowPlayingModel` in sync with them.
+/// Owns the adapter processes, keeps `NowPlayingModel` in sync with them and delivers the
+/// player's commands.
+///
+/// Commands take the most reliable route available for the playing app (see
+/// `CommandRoute`): AppleScript for Spotify and Music, then MediaRemote in-process, the
+/// adapter, and the keyboard's media key. Play/pause goes through `PlaybackReconciler`,
+/// which moves to the next route when the stream does not confirm the change in time.
 @MainActor
 final class NowPlayingController {
     let model: NowPlayingModel
 
     private static let maximumRestartAttempts = 3
-    /// How long the optimistic play/pause state wins over contradicting stream updates.
-    static let optimisticHold: TimeInterval = 2.5
-    /// How long an in-process play/pause may take to show up in the stream.
-    static let confirmationTimeout: Duration = .milliseconds(900)
 
-    /// Where commands go: MediaRemote in-process (`unverified` until a play/pause is
-    /// confirmed, `direct` after) or the adapter.
-    private enum Route {
-        case unverified
-        case direct
-        case adapter
-    }
-
-    /// A play/pause the stream has not confirmed yet.
-    private struct PendingPlayback {
-        let isPlaying: Bool
-        let deadline: Date
+    /// What is known about the routes for one app.
+    private struct RouteMemory {
+        var working: CommandRoute?
+        var failed: Set<CommandRoute> = []
     }
 
     private var resources: AdapterResources?
     private var stream: AdapterStream?
     private var commands: AdapterCommandRunner?
-    private let direct = DirectMediaRemote()
-    private var route = Route.unverified
-    private var pendingPlayback: PendingPlayback?
-    private var confirmationTask: Task<Void, Never>?
     /// Distinguishes events of the current stream from a previous, already replaced one.
     private var generation = 0
     private var isStopping = false
     private var restartAttempts = 0
     private var restartTask: Task<Void, Never>?
     private var artworkTask: Task<Void, Never>?
+
+    /// The last state reported by the stream: the truth the UI falls back to.
+    private var streamSnapshot: NowPlayingSnapshot?
+    private var reconciler = PlaybackReconciler()
+    private var attemptTask: Task<Void, Never>?
+    /// Track and position shown while a click is being pursued.
+    private var optimistic: (title: String, timeline: PlaybackTimeline?)?
+    private var routeMemory: [String: RouteMemory] = [:]
+    private let direct = DirectMediaRemote()
+    private let scripts = ScriptRunner()
+    private var scriptsPrewarmed = false
+    /// Apps whose control the user refused in the Automation prompt.
+    private(set) var automationDenied: Set<String> = []
+    /// An AppleScript command went through at least once.
+    private(set) var automationGranted = false
 
     init(model: NowPlayingModel) {
         self.model = model
@@ -61,7 +67,7 @@ final class NowPlayingController {
         isStopping = true
         restartTask?.cancel()
         artworkTask?.cancel()
-        confirmationTask?.cancel()
+        attemptTask?.cancel()
         stream?.stop()
         stream = nil
         commands?.shutdown()
@@ -69,16 +75,21 @@ final class NowPlayingController {
 
     // MARK: Controls
 
-    /// Asks for the opposite of what is on screen with an explicit play or pause. A toggle
-    /// could undo itself: clicking again while the player's state was still on its way
-    /// flipped playback back.
+    /// Asks for the opposite of what is on screen. The button changes at once; the
+    /// reconciler then gets the player there (or the real state comes back).
     func togglePlayPause() {
-        guard let snapshot = model.snapshot else { return }
-        let playing = !snapshot.isPlaying
+        guard let shown = model.snapshot else { return }
+        let playing = !shown.isPlaying
         let now = Date()
-        model.snapshot = snapshot.settingPlaying(playing, at: now)
-        pendingPlayback = PendingPlayback(isPlaying: playing, deadline: now.addingTimeInterval(Self.optimisticHold))
-        deliverPlayback(playing)
+        optimistic = (shown.title, shown.timeline?.settingPlaying(playing, at: now))
+        let action = reconciler.request(
+            playing: playing,
+            actual: streamSnapshot?.isPlaying,
+            now: now,
+            routes: playbackRoutes()
+        )
+        perform(action)
+        refreshDisplay()
     }
 
     func nextTrack() {
@@ -93,43 +104,7 @@ final class NowPlayingController {
         if let snapshot = model.snapshot {
             model.snapshot = snapshot.seeking(to: position, at: Date())
         }
-        if route == .direct, direct.seek(to: position) {
-            return
-        }
-        commands?.seek(to: position)
-    }
-
-    /// Play/pause go straight through MediaRemote unless that already failed once. Each is
-    /// then confirmed by the stream: without confirmation in time the adapter sends it
-    /// again (play and pause are idempotent, so a late duplicate is harmless) and every
-    /// later command uses the adapter.
-    private func deliverPlayback(_ playing: Bool) {
-        let command: MediaCommand = playing ? .play : .pause
-        confirmationTask?.cancel()
-        confirmationTask = nil
-        guard route != .adapter, direct.send(command) else {
-            route = .adapter
-            commands?.send(command)
-            return
-        }
-        confirmationTask = Task { [weak self] in
-            try? await Task.sleep(for: Self.confirmationTimeout)
-            guard !Task.isCancelled, let self else { return }
-            self.confirmationTask = nil
-            guard let pending = self.pendingPlayback else { return }
-            Log.adapter.info("in-process MediaRemote command had no effect; switching to the adapter")
-            self.route = .adapter
-            self.commands?.send(pending.isPlaying ? .play : .pause)
-        }
-    }
-
-    /// Track skips cannot be confirmed safely ("previous" may just restart the track), so
-    /// they go in-process only once a play/pause has proved that route.
-    private func send(_ command: MediaCommand) {
-        if route == .direct, direct.send(command) {
-            return
-        }
-        commands?.send(command)
+        send(.seek(position))
     }
 
     /// Brings the playing app to the front (Safari for a YouTube tab).
@@ -139,6 +114,179 @@ final class NowPlayingController {
             let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: identifier)
         else { return }
         NSWorkspace.shared.openApplication(at: url, configuration: NSWorkspace.OpenConfiguration())
+    }
+
+    // MARK: Play/pause
+
+    private var currentApp: String? {
+        streamSnapshot?.sourceBundleIdentifier
+    }
+
+    /// The routes to try for the playing app: the one that worked last first, the ones
+    /// that failed last.
+    private func playbackRoutes() -> [CommandRoute] {
+        let app = currentApp
+        var available: [CommandRoute] = []
+        if let app, ScriptablePlayer(bundleIdentifier: app) != nil, !automationDenied.contains(app) {
+            available.append(.appleScript)
+        }
+        available.append(.direct)
+        available.append(.adapter)
+        if AXIsProcessTrusted() {
+            available.append(.mediaKey)
+        }
+        let memory = routeMemory[app ?? ""] ?? RouteMemory()
+        let working = available.filter { $0 == memory.working }
+        let untried = available.filter { $0 != memory.working && !memory.failed.contains($0) }
+        let failed = available.filter { $0 != memory.working && memory.failed.contains($0) }
+        return working + untried + failed
+    }
+
+    private func perform(_ action: PlaybackReconciler.Action) {
+        switch action {
+        case .none:
+            break
+        case .send(let playing, let route):
+            Log.adapter.info("\(playing ? "play" : "pause", privacy: .public) → \(self.currentApp ?? "?", privacy: .public) via \(route.rawValue, privacy: .public)")
+            scheduleAttemptCheck()
+            deliverPlayback(playing, via: route)
+        case .settled:
+            optimistic = nil
+        case .failed:
+            optimistic = nil
+            Log.adapter.error("play/pause did not reach \(self.currentApp ?? "?", privacy: .public) by any route; showing its real state")
+        }
+    }
+
+    private func deliverPlayback(_ playing: Bool, via route: CommandRoute) {
+        let command: PlayerCommand = playing ? .play : .pause
+        let delivered: Bool
+        switch route {
+        case .appleScript:
+            // The script answers asynchronously: an error fails this attempt only if it is
+            // still the one in flight (the reconciler may have moved on after its deadline).
+            let attempt = reconciler.attempt
+            delivered = runScript(for: command) { [weak self] error in
+                guard error != nil, let self, self.reconciler.attempt == attempt else { return }
+                self.attemptFailed()
+            }
+        case .direct:
+            delivered = command.mediaRemote.map { direct.send($0) } ?? false
+        case .adapter:
+            delivered = sendThroughAdapter(command)
+        case .mediaKey:
+            // A toggle: the reconciler asks for it only while the stream shows the other state.
+            delivered = MediaKeyPoster.press(.playPause)
+        }
+        if !delivered {
+            attemptFailed()
+        }
+    }
+
+    private func scheduleAttemptCheck() {
+        attemptTask?.cancel()
+        guard let attempt = reconciler.attempt else { return }
+        let delay = max(0, attempt.deadline.timeIntervalSinceNow)
+        attemptTask = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(delay))
+            guard !Task.isCancelled, let self, self.reconciler.attempt == attempt else { return }
+            self.attemptFailed()
+        }
+    }
+
+    private func attemptFailed() {
+        let (action, failed) = reconciler.attemptFailed(now: Date(), routes: playbackRoutes())
+        if let failed {
+            Log.adapter.info("\(failed.rawValue, privacy: .public) did not change the play state of \(self.currentApp ?? "?", privacy: .public) in time")
+            remember(failed, worked: false)
+        }
+        perform(action)
+        refreshDisplay()
+    }
+
+    private func remember(_ route: CommandRoute, worked: Bool) {
+        let app = currentApp ?? ""
+        var memory = routeMemory[app, default: RouteMemory()]
+        if worked {
+            memory.working = route
+            memory.failed.remove(route)
+        } else {
+            memory.failed.insert(route)
+            if memory.working == route {
+                memory.working = nil
+            }
+        }
+        routeMemory[app] = memory
+    }
+
+    // MARK: Other commands
+
+    /// Skips and seeks cannot be confirmed from the stream (a "previous" may just restart
+    /// the track), so they take the route known to work: AppleScript for Spotify and Music,
+    /// else the one that last carried a play/pause, else the adapter.
+    private func send(_ command: PlayerCommand) {
+        if ScriptablePlayer(bundleIdentifier: currentApp) != nil, !automationDenied.contains(currentApp ?? "") {
+            let sent = runScript(for: command) { [weak self] error in
+                if error != nil {
+                    _ = self?.sendThroughAdapter(command)
+                }
+            }
+            if sent { return }
+        }
+        switch routeMemory[currentApp ?? ""]?.working {
+        case .direct?:
+            if sendDirect(command) { return }
+        case .mediaKey?:
+            if let key = command.mediaKey, MediaKeyPoster.press(key) { return }
+        default:
+            break
+        }
+        _ = sendThroughAdapter(command)
+    }
+
+    private func sendDirect(_ command: PlayerCommand) -> Bool {
+        if case .seek(let position) = command {
+            return direct.seek(to: position)
+        }
+        return command.mediaRemote.map { direct.send($0) } ?? false
+    }
+
+    private func sendThroughAdapter(_ command: PlayerCommand) -> Bool {
+        guard let commands else { return false }
+        if case .seek(let position) = command {
+            commands.seek(to: position)
+        } else if let id = command.mediaRemote {
+            commands.send(id)
+        }
+        return true
+    }
+
+    /// Runs the command's AppleScript for the playing app; `completion` gets the
+    /// AppleScript error number (`nil` on success). Returns `false` if the app is not
+    /// scriptable.
+    private func runScript(for command: PlayerCommand, completion: @escaping (Int?) -> Void) -> Bool {
+        guard let player = ScriptablePlayer(bundleIdentifier: currentApp) else { return false }
+        let source = player.script(for: command)
+        let scripts = self.scripts
+        Task { [weak self] in
+            let error = await scripts.run(source)
+            self?.scriptFinished(error, app: player.rawValue)
+            completion(error)
+        }
+        return true
+    }
+
+    private func scriptFinished(_ error: Int?, app: String) {
+        guard let error else {
+            automationGranted = true
+            return
+        }
+        if error == ScriptRunner.notPermitted {
+            automationDenied.insert(app)
+            Log.adapter.info("control of \(app, privacy: .public) was not allowed (Automation); using MediaRemote")
+        } else {
+            Log.adapter.info("AppleScript to \(app, privacy: .public) failed with \(error)")
+        }
     }
 
     // MARK: Stream
@@ -165,7 +313,7 @@ final class NowPlayingController {
         case .snapshot(let snapshot):
             restartAttempts = 0
             model.availability = .running
-            apply(reconciled(snapshot))
+            streamUpdated(snapshot)
         case .terminated(let termination):
             stream = nil
             guard !isStopping else { return }
@@ -175,7 +323,7 @@ final class NowPlayingController {
 
     private func handleTermination(_ termination: AdapterTermination) {
         Log.adapter.error("stream exited (status \(termination.status), fatal: \(termination.isFatal))")
-        apply(nil)
+        streamUpdated(nil)
 
         if termination.isFatal {
             let detail = termination.lastError ?? "codice di uscita \(termination.status)"
@@ -199,35 +347,46 @@ final class NowPlayingController {
 
     // MARK: Model updates
 
-    /// Keeps the optimistic play/pause state against stream updates that predate the
-    /// command (the button no longer flips back and forth), and takes the matching update
-    /// as the confirmation that proves the in-process route.
-    private func reconciled(_ incoming: NowPlayingSnapshot?) -> NowPlayingSnapshot? {
-        guard let pending = pendingPlayback, var incoming else { return incoming }
-        if incoming.isPlaying == pending.isPlaying {
-            pendingPlayback = nil
-            if let confirmationTask {
-                confirmationTask.cancel()
-                self.confirmationTask = nil
-                if route == .unverified {
-                    route = .direct
-                }
+    private func streamUpdated(_ snapshot: NowPlayingSnapshot?) {
+        streamSnapshot = snapshot
+        if let snapshot {
+            if !scriptsPrewarmed, ScriptablePlayer(bundleIdentifier: snapshot.sourceBundleIdentifier) != nil {
+                scriptsPrewarmed = true
+                scripts.prewarm()
             }
-            return incoming
+            let (action, confirmed) = reconciler.streamReported(
+                playing: snapshot.isPlaying,
+                now: Date(),
+                routes: playbackRoutes()
+            )
+            if let confirmed {
+                Log.adapter.info("\(confirmed.rawValue, privacy: .public) changed the play state of \(snapshot.sourceBundleIdentifier ?? "?", privacy: .public)")
+                attemptTask?.cancel()
+                remember(confirmed, worked: true)
+            }
+            perform(action)
         }
-        guard Date() < pending.deadline, incoming.title == model.snapshot?.title else {
-            pendingPlayback = nil
-            return incoming
+        refreshDisplay()
+    }
+
+    /// The stream's state, with the play state the user asked for while it is pursued.
+    private func refreshDisplay() {
+        guard var shown = streamSnapshot else {
+            apply(nil)
+            return
         }
-        incoming.isPlaying = pending.isPlaying
-        if let optimistic = model.snapshot?.timeline {
-            incoming.timeline = optimistic
+        if let desired = reconciler.desired, let optimistic, optimistic.title == shown.title {
+            shown.isPlaying = desired
+            if let timeline = optimistic.timeline {
+                shown.timeline = timeline
+            }
         }
-        return incoming
+        apply(shown)
     }
 
     private func apply(_ snapshot: NowPlayingSnapshot?) {
         let previous = model.snapshot
+        guard snapshot != previous else { return }
         model.snapshot = snapshot
         if snapshot?.artwork != previous?.artwork {
             updateArtwork(snapshot?.artwork)
