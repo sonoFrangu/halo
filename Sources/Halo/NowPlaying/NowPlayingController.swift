@@ -36,6 +36,19 @@ final class NowPlayingController {
     private var attemptTask: Task<Void, Never>?
     /// Track and position shown while a click is being pursued.
     private var optimistic: (title: String, timeline: PlaybackTimeline?)?
+    /// A position asked for with the progress bar or a lyrics line, not yet reported back.
+    private var pendingSeek: PendingSeek?
+
+    private struct PendingSeek {
+        var title: String
+        var timeline: PlaybackTimeline
+        var until: Date
+    }
+
+    /// How long a seek wins over stream positions that disagree with it.
+    static let seekHold: TimeInterval = 3
+    /// Positions closer than this count as the same.
+    static let positionTolerance: TimeInterval = 1.5
     private var routeMemory: [String: RouteMemory] = [:]
     private let direct = DirectMediaRemote()
     private let scripts = ScriptRunner()
@@ -106,10 +119,16 @@ final class NowPlayingController {
         send(.previousTrack)
     }
 
+    /// Moves the position at once and keeps showing it until the player reports it: a
+    /// stream update without timing (Spotify's rate comes and goes) used to bring back the
+    /// position from before the seek.
     func seek(to position: TimeInterval) {
-        if let snapshot = model.snapshot {
-            model.snapshot = snapshot.seeking(to: position, at: Date())
+        let now = Date()
+        if let shown = model.snapshot, let timeline = shown.timeline?.seeking(to: position, at: now) {
+            pendingSeek = PendingSeek(title: shown.title, timeline: timeline, until: now.addingTimeInterval(Self.seekHold))
         }
+        Diagnostics.shared.record("seek a \(TimeFormatting.string(position)) su \(currentApp ?? "?")")
+        refreshDisplay()
         send(.seek(position))
     }
 
@@ -387,14 +406,37 @@ final class NowPlayingController {
     private static func describe(_ snapshot: NowPlayingSnapshot?) -> String {
         guard let snapshot else { return "stream: nessun player" }
         let rate = snapshot.reported.rate.map { String(format: "%g", $0) } ?? "assente"
-        return "stream: \(snapshot.sourceBundleIdentifier ?? "?") playing=\(snapshot.reported.playing) rate=\(rate) → \(snapshot.isPlaying ? "in riproduzione" : "in pausa")"
+        let position = snapshot.timeline.map { TimeFormatting.string($0.elapsed(at: Date())) } ?? "--:--"
+        return "stream: \(snapshot.sourceBundleIdentifier ?? "?") playing=\(snapshot.reported.playing) rate=\(rate) pos=\(position) → \(snapshot.isPlaying ? "in riproduzione" : "in pausa")"
     }
 
-    /// The stream's state, with the play state the user asked for while it is pursued.
+    /// The stream's state, with the position and play state the user asked for while
+    /// they are pursued.
     private func refreshDisplay() {
         guard var shown = streamSnapshot else {
+            pendingSeek = nil
             apply(nil)
             return
+        }
+        let now = Date()
+        if let seek = pendingSeek {
+            if seek.title != shown.title {
+                pendingSeek = nil
+            } else if let reported = shown.timeline,
+                      abs(reported.elapsed(at: now) - seek.timeline.elapsed(at: now)) < Self.positionTolerance {
+                pendingSeek = nil
+            } else if now >= seek.until {
+                pendingSeek = nil
+                let reported = shown.timeline.map { TimeFormatting.string($0.elapsed(at: now)) } ?? "--:--"
+                Diagnostics.shared.record("seek non confermato: il player dice \(reported), chiesto \(TimeFormatting.string(seek.timeline.elapsed(at: now)))")
+            } else {
+                // Keep the sought position, advancing only if the player is playing.
+                let position = seek.timeline.elapsed(at: now)
+                let rate = shown.isPlaying ? max(seek.timeline.rate, 1) : 0
+                let held = PlaybackTimeline(duration: seek.timeline.duration, elapsed: position, timestamp: now, rate: rate)
+                pendingSeek?.timeline = held
+                shown.timeline = held
+            }
         }
         if let desired = reconciler.desired, let optimistic, optimistic.title == shown.title {
             shown.isPlaying = desired
@@ -402,7 +444,20 @@ final class NowPlayingController {
                 shown.timeline = timeline
             }
         }
+        noteJump(from: model.snapshot, to: shown, at: now)
         apply(shown)
+    }
+
+    /// Records when the shown position jumps without a seek or a new track (diagnostics).
+    private func noteJump(from old: NowPlayingSnapshot?, to new: NowPlayingSnapshot, at now: Date) {
+        guard
+            pendingSeek == nil,
+            let old, old.title == new.title,
+            let before = old.timeline?.elapsed(at: now),
+            let after = new.timeline?.elapsed(at: now),
+            abs(after - before) >= 2
+        else { return }
+        Diagnostics.shared.record("la posizione salta da \(TimeFormatting.string(before)) a \(TimeFormatting.string(after))")
     }
 
     private func apply(_ snapshot: NowPlayingSnapshot?) {
