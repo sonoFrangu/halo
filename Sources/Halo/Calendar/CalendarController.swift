@@ -119,15 +119,15 @@ final class CalendarController {
         model.setAccess(.granted)
         let center = NotificationCenter.default
         let workspace = NSWorkspace.shared.notificationCenter
-        let refresh: @Sendable (Notification) -> Void = { [weak self] _ in
+        let changed: @Sendable (Notification) -> Void = { [weak self] _ in
             MainActor.assumeIsolated {
                 self?.refresh()
             }
         }
         observers = [
-            (center, center.addObserver(forName: .EKEventStoreChanged, object: store, queue: .main, using: refresh)),
-            (center, center.addObserver(forName: .NSCalendarDayChanged, object: nil, queue: .main, using: refresh)),
-            (workspace, workspace.addObserver(forName: NSWorkspace.didWakeNotification, object: nil, queue: .main, using: refresh)),
+            (center, center.addObserver(forName: .EKEventStoreChanged, object: store, queue: .main, using: changed)),
+            (center, center.addObserver(forName: .NSCalendarDayChanged, object: nil, queue: .main, using: changed)),
+            (workspace, workspace.addObserver(forName: NSWorkspace.didWakeNotification, object: nil, queue: .main, using: changed)),
         ]
         refresh()
     }
