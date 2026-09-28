@@ -17,7 +17,7 @@
 - Testi dell'interfaccia e diagnostiche in italiano; commenti e commit in inglese.
 - Nessuna nuova dipendenza.
 - Entrambe le funzioni attive di default (`siriEnabled`, `systemTimersEnabled`).
-- Comandi: `swift test` (tutti i test), `swift test --filter <Suite>`; `scripts/bundle.sh` per l'app.
+- Comandi: senza Xcode, `swift test` va lanciato con `-Xswiftc -plugin-path -Xswiftc /Library/Developer/CommandLineTools/usr/lib/swift/host/plugins/testing` (qui sotto abbreviato in `swift test`); `--filter <Suite>` per una suite; `scripts/bundle.sh` per l'app.
 
 ## File
 
@@ -172,10 +172,12 @@ struct SystemTimerStateTests {
 
     @Test func keepsTheLengthAcrossAPause() {
         var state = SystemTimerState()
-        #expect(!state.apply(.running(id: "A", end: now.addingTimeInterval(300)), now: now))
+        let started = state.apply(.running(id: "A", end: now.addingTimeInterval(300)), now: now)
+        #expect(!started)
         #expect(state.current == SystemTimer(id: "A", end: now.addingTimeInterval(300), total: 300))
 
-        #expect(!state.apply(.cleared, now: now.addingTimeInterval(7)))
+        let paused = state.apply(.cleared, now: now.addingTimeInterval(7))
+        #expect(!paused)
         #expect(state.current == nil)
 
         let resumed = now.addingTimeInterval(15)
@@ -193,7 +195,8 @@ struct SystemTimerStateTests {
     @Test func firingClearsAndReports() {
         var state = SystemTimerState()
         _ = state.apply(.running(id: "A", end: now.addingTimeInterval(60)), now: now)
-        #expect(state.apply(.fired(id: "A"), now: now.addingTimeInterval(60)))
+        let fired = state.apply(.fired(id: "A"), now: now.addingTimeInterval(60))
+        #expect(fired)
         #expect(state.current == nil)
     }
 

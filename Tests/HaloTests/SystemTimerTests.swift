@@ -24,3 +24,48 @@ struct SystemTimerLogParserTests {
         #expect(SystemTimerLogParser.event(from: "X has next trigger <MTTrigger: 0x1; trigger: Alert; date: \"not a date\">") == nil)
     }
 }
+
+struct SystemTimerStateTests {
+    private let now = Date(timeIntervalSince1970: 50_000)
+
+    @Test func keepsTheLengthAcrossAPause() {
+        var state = SystemTimerState()
+        let started = state.apply(.running(id: "A", end: now.addingTimeInterval(300)), now: now)
+        #expect(!started)
+        #expect(state.current == SystemTimer(id: "A", end: now.addingTimeInterval(300), total: 300))
+
+        let paused = state.apply(.cleared, now: now.addingTimeInterval(7))
+        #expect(!paused)
+        #expect(state.current == nil)
+
+        let resumed = now.addingTimeInterval(15)
+        _ = state.apply(.running(id: "A", end: resumed.addingTimeInterval(293)), now: resumed)
+        #expect(state.current?.total == 300)
+    }
+
+    @Test func aNewTimerStartsItsOwnLength() {
+        var state = SystemTimerState()
+        _ = state.apply(.running(id: "A", end: now.addingTimeInterval(300)), now: now)
+        _ = state.apply(.running(id: "B", end: now.addingTimeInterval(60)), now: now)
+        #expect(state.current == SystemTimer(id: "B", end: now.addingTimeInterval(60), total: 60))
+    }
+
+    @Test func firingClearsAndReports() {
+        var state = SystemTimerState()
+        _ = state.apply(.running(id: "A", end: now.addingTimeInterval(60)), now: now)
+        let fired = state.apply(.fired(id: "A"), now: now.addingTimeInterval(60))
+        #expect(fired)
+        #expect(state.current == nil)
+    }
+
+    @Test func ignoresAnEndAlreadyPast() {
+        var state = SystemTimerState()
+        _ = state.apply(.running(id: "A", end: now.addingTimeInterval(-1)), now: now)
+        #expect(state.current == nil)
+    }
+
+    @Test func becomesACountdown() {
+        let timer = SystemTimer(id: "A", end: now.addingTimeInterval(60), total: 300)
+        #expect(timer.focusTimer == FocusTimer(mode: .countdown, duration: 300, endDate: now.addingTimeInterval(60), pausedRemaining: nil))
+    }
+}
