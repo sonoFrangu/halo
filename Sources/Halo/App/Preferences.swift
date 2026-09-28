@@ -19,6 +19,7 @@ enum Preferences {
         static let gestures = "gesturesEnabled"
         static let haptics = "hapticsEnabled"
         static let hoverDelay = "hoverDelay"
+        static let calendar = "calendarEnabled"
     }
 
     private static func flag(_ key: String, default value: Bool) -> Bool {
@@ -89,6 +90,12 @@ enum Preferences {
     static var lockScreenEnabled: Bool {
         get { flag(Key.lockScreen, default: true) }
         set { defaults.set(newValue, forKey: Key.lockScreen) }
+    }
+
+    /// Upcoming events in the island and meeting reminders.
+    static var calendarEnabled: Bool {
+        get { flag(Key.calendar, default: true) }
+        set { defaults.set(newValue, forKey: Key.calendar) }
     }
 
     /// Swipes over the island skip tracks and change the volume.

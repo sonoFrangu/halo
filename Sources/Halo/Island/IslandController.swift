@@ -29,7 +29,8 @@ final class IslandController {
                     lyrics: services.lyrics.model,
                     weather: services.weather.model,
                     shelf: services.shelf.store,
-                    thumbnails: services.shelf.thumbnails
+                    thumbnails: services.shelf.thumbnails,
+                    calendar: services.calendar.model
                 ),
                 actions: Self.actions(for: viewModel, services: services, dragHolder: "hud-drag-\(displayID)")
             )
@@ -58,7 +59,7 @@ final class IslandController {
         observePlayback()
         observeAlerts()
         observeLyrics()
-        observeShelf()
+        observeTabs()
     }
 
     private static func actions(
@@ -72,6 +73,7 @@ final class IslandController {
         let lyrics = services.lyrics.model
         let shelf = services.shelf
         let store = shelf.store
+        let calendar = services.calendar
         return IslandActions(
             player: PlayerActions(
                 togglePlayPause: { [weak nowPlaying] in nowPlaying?.togglePlayPause() },
@@ -102,6 +104,10 @@ final class IslandController {
                 reveal: { [weak store] item in store?.reveal(item) },
                 remove: { [weak store] item in store?.remove(item) },
                 clear: { [weak store] in store?.clear() }
+            ),
+            calendar: CalendarActions(
+                open: { [weak calendar] event in calendar?.open(event) },
+                openSettings: { [weak calendar] in calendar?.openPrivacySettings() }
             ),
             selectTab: { [weak viewModel] tab in
                 Haptics.perform(.step)
@@ -209,15 +215,20 @@ final class IslandController {
         viewModel.lyricsChanged(visible: showsPanel)
     }
 
-    private func observeShelf() {
+    /// The optional tabs follow their features' switches.
+    private func observeTabs() {
         let shelf = services.shelf
-        let enabled = withObservationTracking {
-            shelf.isEnabled
+        let calendar = services.calendar
+        let tabs = withObservationTracking {
+            var tabs: [ExpandedTab] = []
+            if shelf.isEnabled { tabs.append(.shelf) }
+            if calendar.isEnabled { tabs.append(.calendar) }
+            return tabs
         } onChange: { [weak self] in
             Task { @MainActor [weak self] in
-                self?.observeShelf()
+                self?.observeTabs()
             }
         }
-        viewModel.shelfChanged(available: enabled)
+        viewModel.tabsChanged(tabs)
     }
 }

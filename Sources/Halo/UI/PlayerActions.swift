@@ -50,6 +50,7 @@ struct IslandActions {
     var hud: HUDActions
     var alerts: AlertActions
     var shelf: ShelfActions
+    var calendar: CalendarActions
     var selectTab: (ExpandedTab) -> Void
 }
 
@@ -62,4 +63,5 @@ struct IslandModels {
     let weather: WeatherModel
     let shelf: ShelfStore
     let thumbnails: ShelfThumbnails
+    let calendar: CalendarModel
 }

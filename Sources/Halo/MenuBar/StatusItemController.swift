@@ -62,6 +62,11 @@ final class StatusItemController: NSObject, NSMenuDelegate {
             shelf.setEnabled(on)
         })
 
+        let calendar = features.calendar
+        menu.addItem(toggle("Calendario", isOn: { calendar.isEnabled }) { on in
+            calendar.setEnabled(on)
+        })
+
         let notifications = features.notifications
         menu.addItem(toggle("Notifiche nella notch", isOn: { notifications.isEnabled }) { on in
             notifications.setEnabled(on)

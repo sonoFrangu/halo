@@ -48,8 +48,12 @@ struct IslandContentView: View {
                 isDropTargeted: island.isDropTargeted,
                 actions: actions.shelf
             )
-            .place(in: layout.shelfFrame)
+            .place(in: layout.tabBodyFrame)
             .reveal(isExpanded && island.context.tab == .shelf, order: 0)
+
+            CalendarTabView(model: models.calendar, actions: actions.calendar)
+                .place(in: layout.tabBodyFrame)
+                .reveal(isExpanded && island.context.tab == .calendar, order: 0)
 
             HeaderContentView(island: island, models: models, tint: tint, actions: actions, layout: layout)
 
@@ -125,9 +129,9 @@ struct PlayerContentView: View {
     }
 }
 
-/// The notch row of the expanded island: tabs in the left wing; weather in the right wing,
-/// replaced by the HUD inline while it is active (so a key press does not collapse an open
-/// island).
+/// The notch row of the expanded island: tabs in the left wing; in the right wing the
+/// weather, or the next meeting when one is close, replaced by the HUD inline while it is
+/// active (so a key press does not collapse an open island).
 struct HeaderContentView: View {
     let island: IslandViewModel
     let models: IslandModels
@@ -138,19 +142,28 @@ struct HeaderContentView: View {
     var body: some View {
         let isExpanded = island.state == .expanded
         let showsInlineHUD = isExpanded && island.alert == .hud
+        let headline = models.calendar.headline
 
         ZStack(alignment: .topLeading) {
             ExpandedTabsView(
+                tabs: island.availableTabs,
                 selected: island.context.tab,
-                showsShelf: island.isShelfAvailable,
                 onSelect: actions.selectTab
             )
             .place(in: layout.tabsFrame)
-            .reveal(isExpanded && island.isShelfAvailable, order: 0)
+            .reveal(isExpanded && island.availableTabs.count > 1, order: 0)
 
             WeatherBadge(report: models.weather.report)
                 .place(in: layout.headerAccessoryFrame)
-                .reveal(isExpanded && !showsInlineHUD, order: 0)
+                .reveal(isExpanded && !showsInlineHUD && headline == nil, order: 0)
+
+            if let headline {
+                NextEventBadge(event: headline)
+                    .contentShape(Rectangle())
+                    .onTapGesture { actions.selectTab(.calendar) }
+                    .place(in: layout.headerAccessoryFrame)
+                    .reveal(isExpanded && !showsInlineHUD, order: 0)
+            }
 
             InlineHUDView(hud: models.hud, tint: tint, hudActions: actions.hud)
                 .place(in: layout.headerAccessoryFrame)
@@ -213,6 +226,14 @@ struct AlertContentView: View {
                     .reveal(isAlert && kind == .audioDevice, order: 0)
             }
 
+            if let calendar = shown?.calendar {
+                CalendarBanner(alert: calendar, onOpen: { alertActions.activate(.calendar(calendar)) })
+                    .contentShape(Rectangle())
+                    .onTapGesture { alertActions.activate(.calendar(calendar)) }
+                    .place(in: layout.bannerFrame)
+                    .reveal(isAlert && kind == .calendar, order: 0)
+            }
+
             if let notification = shown?.notification {
                 NotificationBanner(alert: notification)
                     .contentShape(Rectangle())
@@ -238,6 +259,11 @@ extension IslandAlert {
 
     var notification: NotificationAlert? {
         if case .notification(let alert) = self { return alert }
+        return nil
+    }
+
+    var calendar: CalendarAlert? {
+        if case .calendar(let alert) = self { return alert }
         return nil
     }
 }

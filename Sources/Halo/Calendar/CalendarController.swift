@@ -1,0 +1,200 @@
+import AppKit
+import EventKit
+import Observation
+
+/// Upcoming events for the island.
+@MainActor
+@Observable
+final class CalendarModel {
+    enum Access: Equatable {
+        case unknown
+        case granted
+        case denied
+    }
+
+    private(set) var access: Access = .unknown
+    /// Events not over yet, soonest first (a few).
+    private(set) var events: [CalendarEvent] = []
+    /// The event shown in the island header: ongoing or starting within the hour.
+    private(set) var headline: CalendarEvent?
+
+    fileprivate func setAccess(_ access: Access) {
+        self.access = access
+    }
+
+    fileprivate func update(_ events: [CalendarEvent], headline: CalendarEvent?) {
+        if events != self.events {
+            self.events = events
+        }
+        if headline != self.headline {
+            self.headline = headline
+        }
+    }
+}
+
+/// Reads the user's calendars through EventKit and posts a reminder a few minutes before
+/// each meeting.
+///
+/// Event driven: it refreshes on `EKEventStoreChanged`, at midnight, after wake, and at the
+/// single next moment something changes (a reminder, a start or an end), with one sleeping
+/// task instead of a timer.
+@MainActor
+@Observable
+final class CalendarController {
+    let model = CalendarModel()
+    private(set) var isEnabled = Preferences.calendarEnabled
+
+    @ObservationIgnored private let alerts: AlertCenter
+    @ObservationIgnored private let store = EKEventStore()
+    @ObservationIgnored private var observers: [(center: NotificationCenter, token: NSObjectProtocol)] = []
+    @ObservationIgnored private var wakeTask: Task<Void, Never>?
+    @ObservationIgnored private var events: [CalendarEvent] = []
+    @ObservationIgnored private var alerted: Set<String> = []
+
+    /// Events shown in the tab.
+    static let listLimit = 4
+
+    init(alerts: AlertCenter) {
+        self.alerts = alerts
+    }
+
+    func start() {
+        guard isEnabled, observers.isEmpty else { return }
+        switch EKEventStore.authorizationStatus(for: .event) {
+        case .fullAccess:
+            begin()
+        case .notDetermined:
+            store.requestFullAccessToEvents { [weak self] granted, _ in
+                Task { @MainActor [weak self] in
+                    guard let self, self.isEnabled else { return }
+                    if granted {
+                        self.begin()
+                    } else {
+                        self.model.setAccess(.denied)
+                    }
+                }
+            }
+        default:
+            model.setAccess(.denied)
+        }
+    }
+
+    func stop() {
+        for observer in observers {
+            observer.center.removeObserver(observer.token)
+        }
+        observers.removeAll()
+        wakeTask?.cancel()
+        wakeTask = nil
+        events = []
+        model.update([], headline: nil)
+        alerts.withdraw(.calendar)
+    }
+
+    func setEnabled(_ enabled: Bool) {
+        isEnabled = enabled
+        Preferences.calendarEnabled = enabled
+        if enabled { start() } else { stop() }
+    }
+
+    /// Opens Privacy & Security › Calendars, where a denied access can be granted.
+    func openPrivacySettings() {
+        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Calendars") {
+            NSWorkspace.shared.open(url)
+        }
+    }
+
+    /// Joins the call when the event has a link, otherwise opens Calendar.
+    func open(_ event: CalendarEvent) {
+        if let meeting = event.meetingURL {
+            NSWorkspace.shared.open(meeting)
+        } else if let calendar = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.apple.iCal") {
+            NSWorkspace.shared.openApplication(at: calendar, configuration: NSWorkspace.OpenConfiguration())
+        }
+    }
+
+    // MARK: Refresh
+
+    private func begin() {
+        model.setAccess(.granted)
+        let center = NotificationCenter.default
+        let workspace = NSWorkspace.shared.notificationCenter
+        let refresh: @Sendable (Notification) -> Void = { [weak self] _ in
+            MainActor.assumeIsolated {
+                self?.refresh()
+            }
+        }
+        observers = [
+            (center, center.addObserver(forName: .EKEventStoreChanged, object: store, queue: .main, using: refresh)),
+            (center, center.addObserver(forName: .NSCalendarDayChanged, object: nil, queue: .main, using: refresh)),
+            (workspace, workspace.addObserver(forName: NSWorkspace.didWakeNotification, object: nil, queue: .main, using: refresh)),
+        ]
+        refresh()
+    }
+
+    private func refresh() {
+        guard isEnabled else { return }
+        let now = Date()
+        let predicate = store.predicateForEvents(
+            withStart: now.addingTimeInterval(-12 * 3600),
+            end: now.addingTimeInterval(36 * 3600),
+            calendars: nil
+        )
+        events = store.events(matching: predicate)
+            .filter { !$0.isAllDay && $0.status != .canceled && !Self.isDeclined($0) }
+            .map { Self.event(from: $0) }
+        model.update(
+            CalendarSchedule.upcoming(events, now: now, limit: Self.listLimit),
+            headline: CalendarSchedule.headline(events, now: now)
+        )
+
+        for event in CalendarSchedule.dueReminders(events, now: now, alerted: alerted) {
+            alerted.insert(event.reminderKey)
+            alerts.post(.calendar(CalendarAlert(event: event)))
+        }
+        scheduleNextRefresh(after: now)
+    }
+
+    private func scheduleNextRefresh(after now: Date) {
+        wakeTask?.cancel()
+        guard let next = CalendarSchedule.nextChange(events, after: now) else {
+            wakeTask = nil
+            return
+        }
+        let delay = max(1, next.timeIntervalSince(now) + 0.5)
+        wakeTask = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(delay))
+            guard !Task.isCancelled else { return }
+            self?.refresh()
+        }
+    }
+
+    // MARK: EventKit
+
+    private static func isDeclined(_ event: EKEvent) -> Bool {
+        event.attendees?.first(where: \.isCurrentUser)?.participantStatus == .declined
+    }
+
+    private static func event(from event: EKEvent) -> CalendarEvent {
+        let title: String = event.title ?? ""
+        return CalendarEvent(
+            id: event.eventIdentifier ?? event.calendarItemIdentifier,
+            title: title.isEmpty ? "Evento" : title,
+            start: event.startDate,
+            end: event.endDate,
+            color: color(of: event.calendar),
+            location: event.location,
+            meetingURL: MeetingLink.find(in: [event.url?.absoluteString, event.location, event.notes])
+        )
+    }
+
+    private static func color(of calendar: EKCalendar?) -> RGBColor {
+        guard
+            let cgColor = calendar?.cgColor,
+            let color = NSColor(cgColor: cgColor)?.usingColorSpace(.sRGB)
+        else {
+            return RGBColor(red: 0.35, green: 0.6, blue: 1)
+        }
+        return RGBColor(red: color.redComponent, green: color.greenComponent, blue: color.blueComponent)
+    }
+}

@@ -15,12 +15,14 @@ enum IslandAlert: Sendable, Equatable {
     case power(PowerAlert)
     case audioDevice(AudioDeviceAlert)
     case notification(NotificationAlert)
+    case calendar(CalendarAlert)
 
     enum Kind: Sendable, Hashable {
         case hud
         case power
         case audioDevice
         case notification
+        case calendar
     }
 
     var kind: Kind {
@@ -29,13 +31,14 @@ enum IslandAlert: Sendable, Equatable {
         case .power: .power
         case .audioDevice: .audioDevice
         case .notification: .notification
+        case .calendar: .calendar
         }
     }
 
     var style: AlertStyle {
         switch self {
         case .hud, .power: .wings
-        case .audioDevice, .notification: .banner
+        case .audioDevice, .notification, .calendar: .banner
         }
     }
 
@@ -46,6 +49,7 @@ enum IslandAlert: Sendable, Equatable {
         case .power: .milliseconds(3200)
         case .audioDevice: .milliseconds(4500)
         case .notification: .milliseconds(5500)
+        case .calendar: .seconds(12)
         }
     }
 }
@@ -83,4 +87,9 @@ struct NotificationAlert: Sendable, Equatable {
     var appName: String
     var title: String
     var body: String?
+}
+
+/// A meeting is about to start.
+struct CalendarAlert: Sendable, Equatable {
+    var event: CalendarEvent
 }

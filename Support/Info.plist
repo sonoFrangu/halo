@@ -26,6 +26,10 @@
 	<string>26.0</string>
 	<key>LSUIElement</key>
 	<true/>
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>Halo mostra i prossimi impegni nella notch e ti avvisa qualche minuto prima delle riunioni.</string>
+	<key>NSCalendarsUsageDescription</key>
+	<string>Halo mostra i prossimi impegni nella notch e ti avvisa qualche minuto prima delle riunioni.</string>
 	<key>NSHighResolutionCapable</key>
 	<true/>
 	<key>NSLocationUsageDescription</key>

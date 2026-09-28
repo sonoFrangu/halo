@@ -14,6 +14,7 @@ struct IslandShapeSpec: Sendable, Equatable {
 enum ExpandedTab: Sendable, Equatable, CaseIterable {
     case player
     case shelf
+    case calendar
 }
 
 /// What the island holds besides its state; it decides the size of alert and expanded
@@ -40,7 +41,8 @@ struct IslandLayout: Sendable, Equatable {
     static let playerBodyHeight: CGFloat = 136
     static let lyricsPanelHeight: CGFloat = 88
     static let emptyBodyHeight: CGFloat = 64
-    static let shelfBodyHeight: CGFloat = 122
+    /// Body of the non-player tabs (shelf, calendar).
+    static let tabBodyHeight: CGFloat = 122
     static let bannerMinimumWidth: CGFloat = 400
     static let bannerBodyHeight: CGFloat = 66
     static let contentInset: CGFloat = 24
@@ -83,9 +85,9 @@ struct IslandLayout: Sendable, Equatable {
             Self.playerBodyHeight + (context.showsLyrics ? Self.lyricsPanelHeight : 0)
         case .player:
             Self.emptyBodyHeight
-        case .shelf:
+        case .shelf, .calendar:
             // Same height when empty: the shelf is a drop target and must stay easy to hit.
-            Self.shelfBodyHeight
+            Self.tabBodyHeight
         }
     }
 
@@ -201,7 +203,7 @@ struct IslandLayout: Sendable, Equatable {
     /// Tab switcher, in the left wing.
     var tabsFrame: CGRect {
         let wing = (expandedWidth - notchSize.width) / 2
-        return CGRect(x: centerX - expandedWidth / 2 + 20, y: 0, width: wing - 32, height: notchSize.height)
+        return CGRect(x: centerX - expandedWidth / 2 + 16, y: 0, width: wing - 24, height: notchSize.height)
     }
 
     /// Weather (or the inline HUD while it is showing), in the right wing.
@@ -255,14 +257,15 @@ struct IslandLayout: Sendable, Equatable {
         )
     }
 
-    // MARK: Shelf
+    // MARK: Tabs
 
-    var shelfFrame: CGRect {
+    /// Content of the shelf and calendar tabs.
+    var tabBodyFrame: CGRect {
         CGRect(
             x: centerX - expandedWidth / 2 + 16,
             y: notchSize.height + 6,
             width: expandedWidth - 32,
-            height: Self.shelfBodyHeight - 16
+            height: Self.tabBodyHeight - 16
         )
     }
 

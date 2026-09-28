@@ -22,8 +22,8 @@ final class IslandViewModel {
     /// Pointer over the progress bar (it thickens). Kept here instead of view `@State`,
     /// which Command Line Tools builds cannot expand on the macOS 27 SDK.
     private(set) var isScrubberHovered = false
-    /// The shelf tab exists (feature on).
-    private(set) var isShelfAvailable = false
+    /// Tabs of the expanded island; the player is always first.
+    private(set) var availableTabs: [ExpandedTab] = [.player]
     /// A file drag is over the shelf.
     private(set) var isDropTargeted = false
 
@@ -133,6 +133,7 @@ final class IslandViewModel {
     }
 
     func selectTab(_ tab: ExpandedTab) {
+        guard availableTabs.contains(tab) else { return }
         updateContext { $0.tab = tab }
     }
 
@@ -140,14 +141,19 @@ final class IslandViewModel {
         updateContext { $0.showsLyrics = visible }
     }
 
-    func shelfChanged(available: Bool) {
-        guard available != isShelfAvailable else { return }
+    func tabsChanged(_ tabs: [ExpandedTab]) {
+        let tabs = [ExpandedTab.player] + tabs.filter { $0 != .player }
+        guard tabs != availableTabs else { return }
         withAnimation(Motion.context(reduceMotion: reduceMotion)) {
-            isShelfAvailable = available
+            availableTabs = tabs
         }
-        if !available {
+        if !tabs.contains(context.tab) {
             updateContext { $0.tab = .player }
         }
+    }
+
+    private var isShelfAvailable: Bool {
+        availableTabs.contains(.shelf)
     }
 
     /// Files are being dragged somewhere on screen: reaching the notch opens the shelf.

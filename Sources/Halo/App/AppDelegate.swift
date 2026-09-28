@@ -15,6 +15,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let lyrics = LyricsController(player: nowPlaying.model)
         let weather = WeatherController()
         let shelf = ShelfController()
+        let calendar = CalendarController(alerts: alerts)
         let islands = IslandsCoordinator(
             services: IslandServices(
                 nowPlaying: nowPlaying,
@@ -22,7 +23,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 alerts: alerts,
                 lyrics: lyrics,
                 weather: weather,
-                shelf: shelf
+                shelf: shelf,
+                calendar: calendar
             )
         )
         let cardActions = PlayerActions.card(for: nowPlaying)
@@ -36,6 +38,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             lyrics: lyrics,
             weather: weather,
             shelf: shelf,
+            calendar: calendar,
             notifications: NotificationMirror(alerts: alerts),
             desktopWidget: DesktopWidgetController(
                 player: nowPlaying.model,
@@ -54,6 +57,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         hud.start()
         weather.start()
         shelf.start()
+        calendar.start()
         features.notifications.start()
         features.desktopWidget.start()
         features.lockScreen.start()
@@ -72,6 +76,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         features.lyrics.stop()
         features.notifications.stop()
         features.lockScreen.stop()
+        features.calendar.stop()
     }
 }
 
@@ -86,6 +91,7 @@ struct Features {
     let lyrics: LyricsController
     let weather: WeatherController
     let shelf: ShelfController
+    let calendar: CalendarController
     let notifications: NotificationMirror
     let desktopWidget: DesktopWidgetController
     let lockScreen: LockScreenController

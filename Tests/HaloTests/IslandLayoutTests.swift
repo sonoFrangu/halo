@@ -118,6 +118,6 @@ struct IslandLayoutTests {
     func shelfFitsInsideItsBody(layout: IslandLayout) {
         let shelf = layout.spec(for: .expanded, context: IslandContext(tab: .shelf))
         let body = CGRect(x: layout.centerX - shelf.width / 2, y: 0, width: shelf.width, height: shelf.height)
-        #expect(body.contains(layout.shelfFrame))
+        #expect(body.contains(layout.tabBodyFrame))
     }
 }
