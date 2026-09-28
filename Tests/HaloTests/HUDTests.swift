@@ -59,15 +59,15 @@ struct HUDLayoutTests {
 
     @Test(arguments: HUDLayoutTests.layouts)
     func hudWingsAreWiderThanCompactOnesAtNotchHeight(layout: IslandLayout) {
-        let hud = layout.spec(for: .hud, hasMedia: false)
-        let compact = layout.spec(for: .compact, hasMedia: true)
+        let hud = layout.spec(for: .alert, context: IslandContext(alertStyle: .wings))
+        let compact = layout.spec(for: .compact, context: IslandContext(hasMedia: true))
         #expect(hud.width > compact.width)
         #expect(hud.height == layout.notchSize.height)
     }
 
     @Test(arguments: HUDLayoutTests.layouts)
     func hudContentSitsInTheWings(layout: IslandLayout) {
-        let hud = layout.spec(for: .hud, hasMedia: false)
+        let hud = layout.spec(for: .alert, context: IslandContext(alertStyle: .wings))
         let bodyMinX = layout.centerX - hud.width / 2
         let bodyMaxX = layout.centerX + hud.width / 2
         let notchMinX = layout.centerX - layout.notchSize.width / 2

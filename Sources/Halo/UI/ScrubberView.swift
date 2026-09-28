@@ -17,13 +17,16 @@ struct ScrubberView: View {
     let onHoverChanged: (Bool) -> Void
     let onScrubbingChanged: (Bool) -> Void
     let onSeek: (TimeInterval) -> Void
+    /// Redraw rate while playing: smooth in the island, which is open only briefly; once a
+    /// second on always-visible cards, where the bar moves a point or two per second.
+    var minimumInterval: TimeInterval = 1.0 / 30
 
     @GestureState private var dragProgress: Double? = nil
 
     var body: some View {
         let ticks = isActive && dragProgress == nil && (timeline?.isAdvancing ?? false)
 
-        TimelineView(.animation(minimumInterval: 1.0 / 30, paused: !ticks)) { context in
+        TimelineView(.animation(minimumInterval: minimumInterval, paused: !ticks)) { context in
             content(at: context.date)
         }
         .onHover { hovering in

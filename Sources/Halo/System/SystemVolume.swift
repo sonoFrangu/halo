@@ -68,6 +68,11 @@ final class SystemVolume {
         return AudioObjectSetPropertyData(device, &address, 0, nil, size, &value) == noErr
     }
 
+    /// Name of the default output device, e.g. "AirPods Pro di Matteo".
+    var outputName: String? {
+        defaultOutputDevice.flatMap { deviceName($0) }
+    }
+
     var route: Route {
         guard let device = defaultOutputDevice else { return .speakers }
         let name = deviceName(device)?.lowercased() ?? ""

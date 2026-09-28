@@ -13,6 +13,11 @@ enum Motion {
             : .spring(duration: 0.34, bounce: 0.08)
     }
 
+    /// Size changes within a state (media appears, an alert changes style, a tab switches).
+    static func context(reduceMotion: Bool) -> Animation {
+        reduceMotion ? .easeInOut(duration: 0.18) : .spring(duration: 0.45, bounce: 0.16)
+    }
+
     /// Staggered content reveal: waits for the shape to open, then fades in one element
     /// after another. Hiding is immediate and quick.
     static func reveal(isVisible: Bool, order: Int, reduceMotion: Bool) -> Animation {
@@ -44,7 +49,7 @@ enum Motion {
     private static func rank(_ state: IslandState) -> Int {
         switch state {
         case .idle: 0
-        case .compact, .hud: 1
+        case .compact, .alert: 1
         case .expanded: 2
         }
     }

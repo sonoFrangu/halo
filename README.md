@@ -1,11 +1,30 @@
 # Halo
 
 App macOS personale che trasforma la notch del MacBook in una "Dynamic Island": un'isola nera
-che cresce dalla notch fisica e mostra cosa stai ascoltando, da qualsiasi app (Spotify, Musica,
-Safari/YouTube, …), e sostituisce l'HUD di sistema di luminosità e volume.
+che cresce dalla notch fisica e mostra cosa stai ascoltando da qualsiasi app (Spotify, Musica,
+Safari/YouTube, …), sostituisce l'HUD di luminosità e volume, avvisa di ricarica, AirPods e
+notifiche, tiene uno scaffale di file e porta musica e testi sul desktop e sulla schermata di
+blocco.
 
-Stato: shell della notch + Now Playing + HUD luminosità/volume. Architettura e scelte in
-[`docs/design.md`](docs/design.md).
+Architettura e scelte in [`docs/design.md`](docs/design.md).
+
+## Funzioni
+
+| Funzione | Dove | Note |
+| --- | --- | --- |
+| **Now Playing** | isola `compact` (copertina + EQ) ed espansa (player completo) | qualsiasi app che pubblica Now Playing |
+| **Testi sincronizzati** | pannello sotto il player, widget, schermata di blocco | da [LRCLIB](https://lrclib.net); tocca una riga per saltare lì |
+| **HUD luminosità e volume** | ali dell'isola; in linea nell'intestazione se il player è aperto | barra trascinabile, passi fini con ⌥⇧ |
+| **Ricarica e batteria** | ali dell'isola | collegato/scollegato, avvisi al 20/10/5 % |
+| **AirPods e cuffie** | banner sotto la notch | batteria di auricolari e custodia, volume |
+| **Notifiche** | banner sotto la notch | copia delle notifiche di sistema; clic = apre l'app |
+| **Meteo** | intestazione dell'isola espansa, widget | [Open-Meteo](https://open-meteo.com) |
+| **Scaffale file** | scheda dell'isola espansa | trascina file sulla notch; trascinali fuori per usarli |
+| **Tutti i display** | un'isola per schermo | monitor esterni e Mac senza notch: pillola finta |
+| **Widget sul desktop** | sopra lo sfondo, sotto le finestre | player in vetro, oppure orologio e meteo |
+| **Schermata di blocco** | sopra il lock screen | player e testi mentre il Mac è bloccato |
+
+Tutto si accende e spegne dal menu della barra dei menu (icona a capsula).
 
 ## Requisiti
 
@@ -34,26 +53,26 @@ scripts/bundle.sh
 4. firma tutto e verifica la firma: ad-hoc (`codesign -s -`) per default, oppure con il
    certificato locale "Halo Local" se esiste (vedi sotto).
 
-### Firma stabile (consigliata per l'HUD)
+### Firma stabile (consigliata)
 
-macOS lega il permesso di Accessibilità alla firma dell'app. Con la firma ad-hoc la firma
-cambia a ogni build, quindi dopo ogni `scripts/bundle.sh` il permesso va rimosso e concesso di
-nuovo. Per evitarlo, una volta sola:
+macOS lega i permessi (Accessibilità, Accesso completo al disco) alla firma dell'app. Con la
+firma ad-hoc la firma cambia a ogni build, quindi dopo ogni `scripts/bundle.sh` i permessi vanno
+rimossi e concessi di nuovo. Per evitarlo, una volta sola:
 
 1. Accesso Portachiavi › Assistente Certificato › Crea un certificato…
 2. Nome **`Halo Local`**, Tipo di identità **Radice autofirmata**, Tipo di certificato
    **Firma codice** › Crea.
 
-Da quel momento `scripts/bundle.sh` firma con `Halo Local` (lo stampa a video) e il permesso
-sopravvive alle ricompilazioni. `HALO_SIGN_IDENTITY="Altro nome" scripts/bundle.sh` forza
+Da quel momento `scripts/bundle.sh` firma con `Halo Local` (lo stampa a video) e i permessi
+sopravvivono alle ricompilazioni. `HALO_SIGN_IDENTITY="Altro nome" scripts/bundle.sh` forza
 un'altra identità.
 
-Test unitari (parsing dello stream, timeline, geometria, forma, palette, passi dell'HUD):
-`swift test` (richiede Xcode per Swift Testing).
+Test unitari (stream Now Playing, timeline, geometria e layout, forma, palette, HUD, avvisi,
+batterie, LRC, meteo, notifiche): `swift test` (richiede Xcode per Swift Testing).
 
-La CI (`.github/workflows/build.yml`, runner `macos-26`) esegue test e bundle a ogni push e
-carica `Halo.zip` come artifact. Se il runner `macos-26` non fosse disponibile, lancia il
-workflow a mano (*Run workflow*) scegliendo `macos-latest`.
+La CI (`.github/workflows/build.yml`) esegue test e bundle a ogni push con Xcode 26.0.1 e 26.6
+(runner `macos-26`) e con Xcode 27 + Command Line Tools su SDK 27, e carica `Halo.zip` come
+artifact.
 
 ## Lanciare
 
@@ -62,9 +81,7 @@ open build/Halo.app
 ```
 
 Oppure copia `build/Halo.app` in `/Applications` (consigliato se attivi "Avvia al login": il
-login item punta al percorso dell'app). Halo compare solo nella barra dei menu (icona a
-capsula): il menu mostra lo stato di Now Playing, **HUD luminosità e volume nella notch**,
-**Avvia al login** ed **Esci**.
+login item punta al percorso dell'app). Halo compare solo nella barra dei menu.
 
 Se usi lo zip scaricato dalla CI, macOS lo mette in quarantena (firma ad-hoc, non
 notarizzata). Sbloccalo una volta:
@@ -72,6 +89,93 @@ notarizzata). Sbloccalo una volta:
 ```sh
 xattr -dr com.apple.quarantine /Applications/Halo.app
 ```
+
+## Permessi richiesti
+
+| Permesso | Serve per | Senza |
+| --- | --- | --- |
+| **Accessibilità** | HUD luminosità/volume: intercettare i tasti con un event tap | i tasti usano l'HUD di sistema |
+| **Localizzazione** (quando in uso) | meteo del posto in cui sei | posizione approssimata dall'IP ([ipwho.is](https://ipwho.is)) |
+| **Accesso completo al disco** | notifiche nella notch: leggere il database di Centro Notifiche | nessuna notifica nella notch (tutto il resto funziona) |
+
+- Accessibilità: richiesta al primo avvio; poi dal menu ("Concedi Accessibilità per l'HUD…").
+- Accesso completo al disco: dal menu, "Concedi Accesso completo al disco…" apre Impostazioni ›
+  Privacy e sicurezza › Accesso completo al disco; aggiungi `Halo.app` con **+**. Halo se ne
+  accorge da solo quando torni a un'altra app (non serve riavviarlo).
+- **Nessuna Registrazione schermo né Monitoraggio input.** Hover e trascinamento file usano
+  monitor di eventi *mouse* (`NSEvent`), che non richiedono autorizzazioni.
+- **Elementi di login**: attivando "Avvia al login" macOS può chiedere conferma in
+  Impostazioni di Sistema › Generali › Elementi login; Halo apre quella pagina se serve.
+- **Now Playing**: nessun prompt. Halo avvia `/usr/bin/perl` con
+  [mediaremote-adapter](https://github.com/ungive/mediaremote-adapter): perl è un binario di
+  sistema ancora autorizzato a usare il framework privato MediaRemote (bloccato per le app di
+  terzi da macOS 15.4).
+- **Rete**: LRCLIB (testi), Open-Meteo (meteo), ipwho.is (solo se la posizione è negata). Nessun
+  altro traffico, nessun account.
+
+## Le funzioni nel dettaglio
+
+### Isola e player
+- Tre forme principali — `idle` (nascosta nella notch), `compact` (musica: mini copertina a
+  sinistra, EQ a destra), `expanded` (hover: player completo) — più gli avvisi (`alert`), resi
+  da **una sola forma animabile** nera che morfa con molle.
+- Player: copertina con badge dell'app sorgente, titolo, controlli in Liquid Glass, barra di
+  avanzamento trascinabile che si ispessisce all'hover, pulsante testi. Alone e sfumatura
+  interna prendono i colori dominanti della copertina.
+
+### Testi sincronizzati
+- Cercati su LRCLIB a ogni cambio brano (con debounce e cache); se esistono solo testi non
+  sincronizzati non vengono mostrati. Il pulsante con le virgolette apre/chiude il pannello.
+- La riga cantata è centrata, grande, sfumata con i colori della copertina; il pannello si
+  ridisegna **solo** quando cambia riga (nessun timer).
+
+### HUD luminosità e volume
+- Luminosità (F1/F2), volume (F11/F12) e muto (F10) mostrano l'HUD nelle ali: icona animata
+  (sole che ruota; AirPods/AirPods Pro/Max/cuffie quando sono l'uscita), barra con bagliore e
+  percentuale. Se il player è aperto l'HUD compare in linea nell'intestazione, senza chiuderlo.
+- **Regolazione personalizzata**: la barra si trascina; Opzione+Maiusc con i tasti fa passi fini
+  da 1/64 come in macOS.
+- Luminosità tramite il framework privato DisplayServices (solo display integrato), volume
+  tramite CoreAudio. Se una delle due non è regolabile, il tasto passa al sistema.
+
+### Ricarica, AirPods, notifiche
+- **Ricarica**: batteria disegnata a mano che si riempie a molla, fulmine in carica, percentuale
+  con cifre che scorrono. Eventi da IOKit (nessun polling).
+- **AirPods e cuffie**: quando diventano l'uscita audio compare un banner con anelli per
+  auricolare sinistro/destro, custodia e volume. Le batterie arrivano da `system_profiler` circa
+  un secondo dopo (le AirPods a volte le pubblicano in ritardo: Halo riprova una volta dopo 4 s).
+- **Notifiche**: ogni notifica consegnata da macOS appare anche nella notch (icona, app, titolo,
+  testo). Clic sul banner = apre l'app. Più di 3 notifiche insieme (es. al risveglio) mostrano
+  solo l'ultima.
+- Gli avvisi si mettono in coda; l'HUD ha la precedenza; un banner resta finché il puntatore ci
+  è sopra o il player è aperto.
+
+### Meteo
+- Icona e temperatura nell'intestazione dell'isola espansa e nel widget. Si aggiorna quando apri
+  l'isola se il dato ha più di 20 minuti (e all'avvio): niente timer. °F con il sistema
+  metrico USA.
+
+### Scaffale file
+- Trascina uno o più file verso la notch: l'isola si apre sulla scheda Scaffale e diventa un
+  bersaglio di rilascio. I file restano lì (anche dopo il riavvio) con anteprime Quick Look;
+  trascinali fuori per copiarli/allegarli, clic per aprirli, tasto destro per Mostra nel Finder
+  o Rimuovi, "Svuota" per toglierli tutti.
+- Lo scaffale tiene **riferimenti**, non copie: se sposti o elimini l'originale, sparisce anche
+  dallo scaffale. Massimo 24 file.
+
+### Tutti i display
+- Con "Su tutti i display" (predefinito) ogni schermo ha la sua isola: sul display con la notch
+  si fonde con quella fisica, sugli altri è una pillola nera sotto la barra dei menu. Si
+  adegua a collegamenti, scollegamenti e cambi di risoluzione.
+
+### Widget sul desktop
+- Spento per default (menu › "Widget sul desktop"). Una card in vetro con la copertina sfocata
+  come sfondo, controlli, avanzamento e testi; quando non suona nulla mostra ora, data e meteo.
+  Si trascina dove vuoi (la posizione viene ricordata) e sta sotto tutte le finestre.
+
+### Schermata di blocco
+- Quando blocchi il Mac con musica in riproduzione, la card del player (con i testi) compare
+  sopra la schermata di blocco, sotto l'orologio. Sparisce allo sblocco.
 
 ## Risoluzione problemi
 
@@ -81,95 +185,76 @@ xattr -dr com.apple.quarantine /Applications/Halo.app
   Reinstallali: `sudo rm -rf /Library/Developer/CommandLineTools && xcode-select --install`.
 - **`plugin for module 'SwiftUIMacros' not found`**: codice con macro SwiftUI compilato con i
   soli Command Line Tools sull'SDK di macOS 27 (vedi Requisiti). Usa Xcode o evita la macro.
+- **Nessuna notifica nella notch**: controlla che nel menu non compaia "Concedi Accesso completo
+  al disco…"; se hai ricompilato con firma ad-hoc, rimuovi Halo dall'elenco e aggiungilo di
+  nuovo (vedi *Firma stabile*).
+- **Meteo assente**: senza rete o con entrambi i servizi irraggiungibili il badge resta vuoto;
+  riprova aprendo l'isola dopo qualche minuto.
 - Le prime righe di `scripts/bundle.sh` stampano toolchain, versione di Swift e SDK in uso.
-
-## Permessi richiesti
-
-- **Accessibilità** (solo per l'HUD di luminosità e volume): per sostituire l'HUD di sistema
-  Halo intercetta i tasti luminosità/volume/muto con un event tap, e macOS lo consente solo alle
-  app autorizzate in Impostazioni › Privacy e sicurezza › Accessibilità. Al primo avvio compare
-  la richiesta; poi è raggiungibile dal menu ("Concedi Accessibilità per l'HUD…"). Senza
-  permesso, o con l'HUD disattivato dal menu, i tasti funzionano come sempre con l'HUD di
-  sistema. Con la firma ad-hoc il permesso va riconcesso dopo ogni build: vedi *Firma stabile*.
-- **Nessuna Registrazione schermo né Monitoraggio input.** L'hover usa monitor di eventi
-  *mouse* (`NSEvent`), che non richiedono autorizzazioni.
-- **Elementi di login**: attivando "Avvia al login" macOS può chiedere conferma in
-  Impostazioni di Sistema › Generali › Elementi login; Halo apre quella pagina se serve.
-- **Now Playing**: nessun prompt. Halo avvia `/usr/bin/perl` con
-  [mediaremote-adapter](https://github.com/ungive/mediaremote-adapter): perl è un binario di
-  sistema ancora autorizzato a usare il framework privato MediaRemote (bloccato per le app di
-  terzi da macOS 15.4).
-
-## HUD luminosità e volume
-
-- I tasti luminosità (F1/F2), volume (F11/F12) e muto (F10) mostrano l'isola in modalità HUD:
-  a sinistra l'icona (il sole ruota con la luminosità; per il volume compaiono AirPods, AirPods
-  Pro/Max o cuffie quando sono l'uscita attiva), a destra una barra con bagliore proporzionale
-  al livello e la percentuale.
-- **Regolazione personalizzata**: la barra si trascina con il mouse; Opzione+Maiusc con i tasti
-  fa passi fini da 1/64 come in macOS. La luminosità è caldo-solare, il volume prende i colori
-  della copertina in riproduzione.
-- Luminosità tramite il framework privato DisplayServices (solo display integrato), volume
-  tramite CoreAudio sul dispositivo di uscita predefinito. Se una delle due non è regolabile
-  (es. uscita HDMI senza volume), il tasto passa al sistema.
-
-## Come funziona (in breve)
-
-- **Isola**: `NSPanel` borderless non-attivante sopra la menu bar, su tutti gli Spazi e sopra
-  le app a schermo intero. Tre stati — `idle` (nascosta nella notch), `compact` (musica in
-  riproduzione: mini copertina a sinistra, EQ a destra), `expanded` (hover: player completo) —
-  resi da **una sola forma animabile** nera che morfa con molle.
-- **Click-through**: il pannello ignora il mouse tranne quando l'isola è espansa *sotto il
-  puntatore*; non ruba mai focus né click alla menu bar o alle app sotto.
-- **Zero polling**: stream JSON dell'adapter, notifiche di sistema, eventi mouse e Observation.
-  EQ e barra di avanzamento animano solo quando visibili e in riproduzione.
-- **Estetica**: nero puro `#000`, orecchie superiori concave, angoli inferiori continui
-  (corner smoothing stile Apple), bagliore dai colori dominanti della copertina (Core Image +
-  k-means), Liquid Glass solo sui controlli, SF Pro.
-- **Accessibilità**: rispetta *Riduci movimento* (niente rimbalzi/blur/scale, EQ statico) e
-  *Riduci trasparenza* (controlli pieni al posto del vetro, niente alone esterno).
+- Log: `log stream --predicate 'subsystem == "io.github.sonofrangu.halo"'`.
 
 ## Limiti noti
 
-- **Now Playing dipende da un workaround non ufficiale.** Un aggiornamento di macOS può
-  romperlo; in quel caso il menu e l'isola espansa mostrano "Now Playing non disponibile" con il
-  motivo. Se l'adapter termina con errore Halo non lo rilancia (come raccomandato dall'adapter):
-  serve riavviare Halo.
-- **L'EQ non legge l'audio.** È un'animazione sintetica che parte solo quando il player dichiara
-  di essere in riproduzione; livelli reali richiederebbero permessi di cattura audio.
+- **API private e workaround.** Now Playing (MediaRemote via perl), luminosità
+  (DisplayServices), schermata di blocco (SkyLight) e notifiche (database di Centro Notifiche)
+  non hanno API pubbliche. Ognuna viene caricata o letta a runtime e, se un aggiornamento di
+  macOS la rompe, **solo quella funzione** si spegne (con un messaggio nel log o nel menu); il
+  resto continua a funzionare.
+- **Schermata di blocco**: funziona sul blocco di una sessione già aperta. La finestra di login
+  dopo un riavvio (prima di aver mai fatto l'accesso, con FileVault) esiste prima di qualsiasi
+  app utente: lì nessuna app di terzi può mostrare nulla.
+- **Notifiche**: sono una *copia*: il banner di sistema compare comunque (spegnilo per singola
+  app in Impostazioni › Notifiche se vuoi solo quello di Halo). Halo non sa se è attiva una
+  Full Immersion (non c'è un'API pubblica per le altre app), quindi mostra anche le notifiche
+  che la Full Immersion silenzierebbe: in quel caso disattiva "Notifiche nella notch".
+  Il formato del database è privato: se cambia, il banner mostra solo il nome dell'app.
+- **AirPods**: batterie lette da `system_profiler` (circa un secondo, una volta per
+  connessione); se il dispositivo non le pubblica si vede solo il volume. Nessun avviso quando
+  cambiano *durante* l'uso (servirebbe interrogare periodicamente il Bluetooth).
+- **Now Playing**: se l'adapter termina con errore Halo non lo rilancia (come raccomandato
+  dall'adapter): serve riavviare Halo.
+- **L'EQ non legge l'audio.** È un'animazione sintetica che parte solo in riproduzione; livelli
+  reali richiederebbero permessi di cattura audio.
 - **Artwork**: alcune app (spesso i browser) non forniscono la copertina o la forniscono in
   ritardo; al suo posto c'è un segnaposto con i colori neutri.
-- **Titoli lunghi** vengono troncati con "…" (niente scorrimento marquee, per ora).
+- **Titoli lunghi** vengono troncati con "…" (niente scorrimento marquee).
 - **Contenuti live** (senza durata) mostrano la barra vuota e `--:--`; il seek è disattivato.
 - **Le ali coprono la menu bar**: in `compact` le ali nere stanno sopra gli elementi della menu
   bar adiacenti alla notch. I click li raggiungono comunque (il pannello è click-through), ma
   passarci sopra con il puntatore apre il player dopo ~90 ms.
-- **Un solo schermo**: l'isola sta sul display con la notch o, in assenza, sul display
-  principale; non segue il monitor attivo.
-- **Stato "pausa"**: dopo ~1,5 s di pausa l'isola torna `idle`; in pausa resta raggiungibile
-  con l'hover (player completo).
 - **HUD**: niente suono di feedback del volume (il tasto non arriva al sistema); luminosità solo
-  del display integrato (non dei monitor esterni); niente tasti retroilluminazione tastiera
-  (il MacBook Air M2 non li ha).
+  del display integrato; niente tasti retroilluminazione tastiera (l'Air M2 non li ha).
+- **Testi**: dipendono da LRCLIB (database comunitario): per brani rari o molto recenti possono
+  mancare o essere sfasati.
 - **Solo arm64**: `scripts/build-adapter.sh` compila l'adapter per l'architettura della
   macchina che builda.
-- **Build verificata solo in CI.** Lo sviluppo è avvenuto senza un Mac: tutto ciò che è visivo
-  (forma, allineamento alla notch, animazioni, vetro, hover) va verificato a mano — vedi la
-  descrizione della PR.
+- **Build verificata solo in CI.** Lo sviluppo è avvenuto senza un Mac: tutto ciò che è visivo o
+  legato all'hardware (forme, animazioni, vetro, hover, drag and drop, AirPods, schermata di
+  blocco, notifiche reali) va verificato a mano — l'elenco è nella descrizione della PR.
 
 ## Struttura
 
 ```
 Sources/Halo/
-  App/          entry point, AppDelegate, log
-  MenuBar/      NSStatusItem, SMAppService
-  NowPlaying/   modello, controller, timeline; Adapter/ processi perl, parsing dello stream
-  Artwork/      palette (Core Image + k-means)
-  Island/       geometria notch, layout, stati, hover, schermi; Panel/ NSPanel + hosting
-  UI/           forma, viste SwiftUI del player
-Tests/HaloTests Swift Testing
-scripts/        bundle.sh, build-adapter.sh
-Vendor/         mediaremote-adapter (submodule)
+  App/            entry point, AppDelegate, preferenze, log
+  MenuBar/        NSStatusItem e voci del menu, SMAppService
+  NowPlaying/     modello, controller, timeline; Adapter/ processi perl, parsing dello stream
+  Artwork/        palette (Core Image + k-means)
+  Island/         geometria notch, layout, stati, hover, schermi; Panel/ NSPanel + hosting
+  Alerts/         coda degli avvisi (HUD, ricarica, cuffie, notifiche)
+  HUD/            luminosità e volume
+  System/         DisplayServices, CoreAudio, event tap, Accessibilità, SkyLight
+  Power/          batteria (IOKit)
+  AudioDevices/   uscita audio e batterie delle cuffie
+  Lyrics/         LRC, LRCLIB
+  Weather/        Open-Meteo, posizione
+  Shelf/          scaffale file, rilevamento del trascinamento, anteprime
+  Notifications/  lettura del database di Centro Notifiche
+  Widgets/        pannelli del widget sul desktop e della schermata di blocco
+  UI/             forma e viste SwiftUI (Alerts/, HUD/, Shelf/, Widgets/)
+Tests/HaloTests   Swift Testing
+scripts/          bundle.sh, build-adapter.sh
+Vendor/           mediaremote-adapter (submodule)
 ```
 
 ## Licenze di terze parti
@@ -177,3 +262,6 @@ Vendor/         mediaremote-adapter (submodule)
 [mediaremote-adapter](https://github.com/ungive/mediaremote-adapter) © 2025 Jonas van den
 Berg e contributori, licenza BSD 3-Clause. Il testo della licenza è incluso in
 `Halo.app/Contents/Resources/MediaRemoteAdapter/LICENSE` e nel submodule.
+
+Servizi usati a runtime: [LRCLIB](https://lrclib.net) (testi), [Open-Meteo](https://open-meteo.com)
+(meteo, dati CC BY 4.0), [ipwho.is](https://ipwho.is) (posizione approssimata).

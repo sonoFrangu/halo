@@ -2,36 +2,53 @@ import AppKit
 import Observation
 import SwiftUI
 
-/// Decides which shape the island takes: an ongoing drag keeps the current shape, then the
-/// brightness/volume HUD, then hover, then playback activity, else idle.
+/// Decides which shape the island takes for one screen.
 ///
-/// Inputs are pushed in (pointer positions, playback changes, geometry); state changes are
-/// wrapped in the matching spring so every view derived from `state` animates together.
+/// Priority: an ongoing drag keeps the current shape; an open island stays open (alerts
+/// wait, the HUD shows inline); files dragged to the notch open the shelf; then alerts;
+/// then hover; then playback; else idle.
+/// Inputs are pushed in (pointer positions, playback, alerts, geometry); every change of
+/// `state` or `context` happens inside a spring so shape and content animate together.
 @MainActor
 @Observable
 final class IslandViewModel {
     private(set) var state: IslandState = .idle
     private(set) var geometry: NotchGeometry
-    /// Mirrors the player, but changes inside an animation so the shape morphs smoothly
-    /// when media appears or disappears.
-    private(set) var hasMedia = false
+    private(set) var context = IslandContext()
+    /// The alert being shown, if any.
+    private(set) var alert: IslandAlert?
+    /// The last alert shown, kept so content can fade out with its payload.
+    private(set) var displayedAlert: IslandAlert?
     /// Pointer over the progress bar (it thickens). Kept here instead of view `@State`,
     /// which Command Line Tools builds cannot expand on the macOS 27 SDK.
     private(set) var isScrubberHovered = false
+    /// The shelf tab exists (feature on).
+    private(set) var isShelfAvailable = false
+    /// A file drag is over the shelf.
+    private(set) var isDropTargeted = false
 
     var layout: IslandLayout {
         IslandLayout(geometry: geometry)
     }
 
+    var hasMedia: Bool {
+        context.hasMedia
+    }
+
     /// Called with `true` when the panel should receive mouse events.
     @ObservationIgnored var onInteractivityChange: ((Bool) -> Void)?
+    /// Called with `true` while alerts should wait (player open, pointer on a banner).
+    @ObservationIgnored var onHoldsAlertsChange: ((Bool) -> Void)?
+    /// Called when the island opens (`true`) or closes (`false`).
+    @ObservationIgnored var onExpandedChange: ((Bool) -> Void)?
 
     @ObservationIgnored private var isPointerInside = false
     @ObservationIgnored private var isHovering = false
     @ObservationIgnored private var isInteracting = false
     @ObservationIgnored private var showsActivity = false
-    @ObservationIgnored private var showsHUD = false
+    @ObservationIgnored private var isDraggingFiles = false
     @ObservationIgnored private var lastInteractivity = false
+    @ObservationIgnored private var lastHoldsAlerts = false
     @ObservationIgnored private var hoverTask: Task<Void, Never>?
     @ObservationIgnored private var lingerTask: Task<Void, Never>?
 
@@ -61,15 +78,11 @@ final class IslandViewModel {
             isPointerInside = inside
             scheduleHover(inside)
         }
-        publishInteractivity()
+        publish()
     }
 
     func playbackChanged(isPlaying: Bool, hasMedia: Bool) {
-        if hasMedia != self.hasMedia {
-            withAnimation(Motion.shape(from: .compact, to: hasMedia ? .expanded : .compact, reduceMotion: reduceMotion)) {
-                self.hasMedia = hasMedia
-            }
-        }
+        updateContext { $0.hasMedia = hasMedia }
 
         if isPlaying && hasMedia {
             lingerTask?.cancel()
@@ -94,10 +107,49 @@ final class IslandViewModel {
         }
     }
 
-    func hudChanged(isVisible: Bool) {
-        guard isVisible != showsHUD else { return }
-        showsHUD = isVisible
+    func alertChanged(_ alert: IslandAlert?) {
+        guard alert != self.alert else { return }
+        withAnimation(Motion.context(reduceMotion: reduceMotion)) {
+            self.alert = alert
+            if let alert {
+                displayedAlert = alert
+                context.alertStyle = alert.style
+            }
+        }
         resolveState()
+    }
+
+    func selectTab(_ tab: ExpandedTab) {
+        updateContext { $0.tab = tab }
+    }
+
+    func lyricsChanged(visible: Bool) {
+        updateContext { $0.showsLyrics = visible }
+    }
+
+    func shelfChanged(available: Bool) {
+        guard available != isShelfAvailable else { return }
+        withAnimation(Motion.context(reduceMotion: reduceMotion)) {
+            isShelfAvailable = available
+        }
+        if !available {
+            updateContext { $0.tab = .player }
+        }
+    }
+
+    /// Files are being dragged somewhere on screen: reaching the notch opens the shelf.
+    func fileDragChanged(_ dragging: Bool) {
+        guard dragging != isDraggingFiles else { return }
+        isDraggingFiles = dragging && isShelfAvailable
+        if !dragging {
+            setDropTargeted(false)
+        }
+        resolveState()
+    }
+
+    func setDropTargeted(_ targeted: Bool) {
+        guard targeted != isDropTargeted else { return }
+        isDropTargeted = targeted
     }
 
     /// While a bar (progress or HUD level) is dragged the island keeps its shape and stays
@@ -110,7 +162,7 @@ final class IslandViewModel {
             scheduleHover(isPointerInside)
             resolveState()
         }
-        publishInteractivity()
+        publish()
     }
 
     func setScrubberHovered(_ hovered: Bool) {
@@ -121,13 +173,22 @@ final class IslandViewModel {
     // MARK: State
 
     private var hotZone: CGRect {
-        let spec = layout.spec(for: state, hasMedia: hasMedia)
+        let spec = layout.spec(for: state, context: context)
         let body = geometry.islandRect(width: spec.width, height: spec.height)
         return body.insetBy(dx: -(spec.earRadius + Self.hoverTolerance), dy: -Self.hoverTolerance)
     }
 
     private var reduceMotion: Bool {
         NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+    }
+
+    private func updateContext(_ change: (inout IslandContext) -> Void) {
+        var next = context
+        change(&next)
+        guard next != context else { return }
+        withAnimation(Motion.context(reduceMotion: reduceMotion)) {
+            context = next
+        }
     }
 
     private func scheduleHover(_ inside: Bool) {
@@ -142,11 +203,16 @@ final class IslandViewModel {
     }
 
     private func resolveState() {
+        let isOpen = state == .expanded || state == .alert
         let target: IslandState
-        if isInteracting && (state == .expanded || state == .hud) {
+        if isInteracting && isOpen {
             target = state
-        } else if showsHUD {
-            target = .hud
+        } else if state == .expanded && isHovering {
+            target = .expanded
+        } else if isDraggingFiles && isHovering {
+            target = .expanded
+        } else if alert != nil {
+            target = .alert
         } else if isHovering {
             target = .expanded
         } else if showsActivity {
@@ -154,23 +220,50 @@ final class IslandViewModel {
         } else {
             target = .idle
         }
-        guard target != state else { return }
+        // A file drag opens (or turns) the island onto the shelf; closing returns to the player.
+        let tab: ExpandedTab
+        if target == .expanded && isDraggingFiles {
+            tab = .shelf
+        } else if target != .expanded {
+            tab = .player
+        } else {
+            tab = context.tab
+        }
+        guard target != state else {
+            if tab != context.tab {
+                updateContext { $0.tab = tab }
+            }
+            publish()
+            return
+        }
 
+        let wasExpanded = state == .expanded
         withAnimation(Motion.shape(from: state, to: target, reduceMotion: reduceMotion)) {
             state = target
+            context.tab = tab
+        }
+        if wasExpanded != (target == .expanded) {
+            onExpandedChange?(target == .expanded)
         }
         if target != .expanded {
             // The panel turns click-through when collapsing, so no hover-exit may arrive.
             isScrubberHovered = false
         }
-        publishInteractivity()
+        publish()
     }
 
-    private func publishInteractivity() {
-        let isOpen = state == .expanded || state == .hud
+    private func publish() {
+        let isOpen = state == .expanded || state == .alert
         let interactive = isOpen && (isPointerInside || isInteracting)
-        guard interactive != lastInteractivity else { return }
-        lastInteractivity = interactive
-        onInteractivityChange?(interactive)
+        if interactive != lastInteractivity {
+            lastInteractivity = interactive
+            onInteractivityChange?(interactive)
+        }
+
+        let holdsAlerts = state == .expanded || (state == .alert && isPointerInside)
+        if holdsAlerts != lastHoldsAlerts {
+            lastHoldsAlerts = holdsAlerts
+            onHoldsAlertsChange?(holdsAlerts)
+        }
     }
 }

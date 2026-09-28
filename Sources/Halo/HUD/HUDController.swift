@@ -1,7 +1,7 @@
 import Foundation
 
 /// Replaces the system brightness and volume HUD: intercepts the keys, applies the change
-/// itself (DisplayServices, CoreAudio) and presents it in the island.
+/// itself (DisplayServices, CoreAudio) and posts it to the island as the `.hud` alert.
 @MainActor
 final class HUDController {
     enum Status: Equatable {
@@ -13,17 +13,18 @@ final class HUDController {
     let model = HUDModel()
     private(set) var status: Status = .disabled
 
-    /// How long the HUD stays after the last change.
-    static let visibleDuration: Duration = .milliseconds(1600)
-
+    private let alerts: AlertCenter
     private let brightness = DisplayBrightness()
-    private let volume = SystemVolume()
+    private let volume: SystemVolume
     private let permission = AccessibilityPermission()
     private lazy var keyTap = MediaKeyTap { [weak self] press in
         self?.handle(press) ?? false
     }
-    private var hideTask: Task<Void, Never>?
-    private var isInteracting = false
+
+    init(alerts: AlertCenter, volume: SystemVolume) {
+        self.alerts = alerts
+        self.volume = volume
+    }
 
     func start() {
         permission.observeChanges { [weak self] in
@@ -52,7 +53,9 @@ final class HUDController {
 
     // MARK: HUD interaction (dragging the level bar)
 
+    /// Sets the level of whatever the HUD shows; keeps the HUD up while dragging.
     func setLevel(_ level: Double) {
+        alerts.post(.hud)
         let level = min(max(level, 0), 1)
         switch model.kind {
         case .brightness:
@@ -66,15 +69,6 @@ final class HUDController {
             if volume.setLevel(level) {
                 model.level = level
             }
-        }
-    }
-
-    func setInteracting(_ interacting: Bool) {
-        isInteracting = interacting
-        if interacting {
-            hideTask?.cancel()
-        } else {
-            scheduleHide()
         }
     }
 
@@ -135,17 +129,6 @@ final class HUDController {
         if kind == .volume {
             model.route = volume.route
         }
-        model.isVisible = true
-        scheduleHide()
-    }
-
-    private func scheduleHide() {
-        hideTask?.cancel()
-        guard !isInteracting else { return }
-        hideTask = Task { [weak self] in
-            try? await Task.sleep(for: Self.visibleDuration)
-            guard !Task.isCancelled else { return }
-            self?.model.isVisible = false
-        }
+        alerts.post(.hud)
     }
 }

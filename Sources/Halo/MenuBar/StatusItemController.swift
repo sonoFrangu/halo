@@ -1,22 +1,18 @@
 import AppKit
 
-/// The menu bar item: current status, HUD replacement, "Avvia al login", "Esci".
+/// The menu bar item: status, feature toggles, "Avvia al login", "Esci".
 @MainActor
 final class StatusItemController: NSObject, NSMenuDelegate {
     private let statusItem: NSStatusItem
-    private let player: NowPlayingModel
-    private let hud: HUDController
-    private let loginItem: LoginItemController
+    private let features: Features
     private let statusLine = NSMenuItem()
-    private let hudItem = NSMenuItem()
-    private let hudPermissionItem = NSMenuItem()
-    private let launchAtLoginItem = NSMenuItem()
+    private var toggles: [ToggleMenuItem] = []
+    private var hudPermissionItem: NSMenuItem?
+    private var notificationsPermissionItem: NSMenuItem?
 
-    init(player: NowPlayingModel, hud: HUDController, loginItem: LoginItemController) {
+    init(features: Features) {
         self.statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-        self.player = player
-        self.hud = hud
-        self.loginItem = loginItem
+        self.features = features
         super.init()
 
         if let button = statusItem.button {
@@ -28,35 +24,98 @@ final class StatusItemController: NSObject, NSMenuDelegate {
             }
             button.toolTip = "Halo"
         }
+        statusItem.menu = makeMenu()
+    }
 
-        statusLine.isEnabled = false
-
-        hudItem.title = "HUD luminosità e volume nella notch"
-        hudItem.target = self
-        hudItem.action = #selector(toggleHUD(_:))
-
-        hudPermissionItem.title = "Concedi Accessibilità per l'HUD…"
-        hudPermissionItem.target = self
-        hudPermissionItem.action = #selector(requestHUDPermission(_:))
-
-        launchAtLoginItem.title = "Avvia al login"
-        launchAtLoginItem.target = self
-        launchAtLoginItem.action = #selector(toggleLaunchAtLogin(_:))
-
-        let quitItem = NSMenuItem(title: "Esci", action: #selector(quit(_:)), keyEquivalent: "q")
-        quitItem.target = self
-
+    private func makeMenu() -> NSMenu {
         let menu = NSMenu()
         menu.autoenablesItems = false
         menu.delegate = self
+
+        statusLine.isEnabled = false
         menu.addItem(statusLine)
         menu.addItem(.separator())
-        menu.addItem(hudItem)
-        menu.addItem(hudPermissionItem)
-        menu.addItem(launchAtLoginItem)
+
+        let hud = features.hud
+        menu.addItem(toggle("HUD luminosità e volume nella notch", isOn: { hud.isEnabled }) { on in
+            hud.setEnabled(on)
+        })
+        let permission = ActionMenuItem(title: "Concedi Accessibilità per l'HUD…") {
+            hud.requestPermission()
+        }
+        hudPermissionItem = permission
+        menu.addItem(permission)
+
+        let lyrics = features.lyrics
+        menu.addItem(toggle("Testi sincronizzati", isOn: { Preferences.lyricsEnabled }) { on in
+            Preferences.lyricsEnabled = on
+            if on { lyrics.start() } else { lyrics.stop() }
+        })
+
+        let weather = features.weather
+        menu.addItem(toggle("Meteo", isOn: { weather.isEnabled }) { on in
+            weather.setEnabled(on)
+        })
+
+        let shelf = features.shelf
+        menu.addItem(toggle("Scaffale file", isOn: { shelf.isEnabled }) { on in
+            shelf.setEnabled(on)
+        })
+
+        let notifications = features.notifications
+        menu.addItem(toggle("Notifiche nella notch", isOn: { notifications.isEnabled }) { on in
+            notifications.setEnabled(on)
+        })
+        let fullDiskAccess = ActionMenuItem(title: "Concedi Accesso completo al disco…") {
+            notifications.openFullDiskAccessSettings()
+        }
+        notificationsPermissionItem = fullDiskAccess
+        menu.addItem(fullDiskAccess)
+
+        let lockScreen = features.lockScreen
+        menu.addItem(toggle("Musica sulla schermata di blocco", isOn: { lockScreen.isEnabled }) { on in
+            lockScreen.setEnabled(on)
+        })
+
+        let desktopWidget = features.desktopWidget
+        menu.addItem(toggle("Widget sul desktop", isOn: { desktopWidget.isEnabled }) { on in
+            desktopWidget.setEnabled(on)
+        })
+
+        let power = features.power
+        menu.addItem(toggle("Avvisi di ricarica e batteria", isOn: { Preferences.chargingAlertsEnabled }) { on in
+            Preferences.chargingAlertsEnabled = on
+            if on { power.start() } else { power.stop() }
+        })
+
+        let audioDevices = features.audioDevices
+        menu.addItem(toggle("Avvisi AirPods e cuffie", isOn: { Preferences.headphoneAlertsEnabled }) { on in
+            Preferences.headphoneAlertsEnabled = on
+            if on { audioDevices.start() } else { audioDevices.stop() }
+        })
+
+        let islands = features.islands
+        menu.addItem(toggle("Su tutti i display", isOn: { Preferences.showsOnAllDisplays }) { on in
+            Preferences.showsOnAllDisplays = on
+            islands.rebuild()
+        })
+
         menu.addItem(.separator())
-        menu.addItem(quitItem)
-        statusItem.menu = menu
+        let loginItem = features.loginItem
+        menu.addItem(toggle("Avvia al login", isOn: { loginItem.isEnabled }) { [weak self] on in
+            self?.setLaunchAtLogin(on)
+        })
+        menu.addItem(.separator())
+        menu.addItem(ActionMenuItem(title: "Esci", keyEquivalent: "q") {
+            NSApp.terminate(nil)
+        })
+        return menu
+    }
+
+    private func toggle(_ title: String, isOn: @escaping () -> Bool, setOn: @escaping (Bool) -> Void) -> ToggleMenuItem {
+        let item = ToggleMenuItem(title: title, isOn: isOn, setOn: setOn)
+        toggles.append(item)
+        return item
     }
 
     // MARK: NSMenuDelegate
@@ -64,15 +123,18 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     func menuNeedsUpdate(_ menu: NSMenu) {
         statusLine.title = statusText
         statusLine.toolTip = statusTooltip
-        launchAtLoginItem.state = loginItem.isEnabled ? .on : .off
-        hudItem.state = hud.isEnabled ? .on : .off
-        hudPermissionItem.isHidden = hud.status != .needsPermission
+        hudPermissionItem?.isHidden = features.hud.status != .needsPermission
+        features.notifications.refreshAccess()
+        notificationsPermissionItem?.isHidden = features.notifications.status != .needsFullDiskAccess
+        for item in toggles {
+            item.refresh()
+        }
     }
 
     // MARK: Actions
 
-    @objc private func toggleLaunchAtLogin(_ sender: NSMenuItem) {
-        let enable = !loginItem.isEnabled
+    private func setLaunchAtLogin(_ enable: Bool) {
+        let loginItem = features.loginItem
         do {
             try loginItem.setEnabled(enable)
             if enable && loginItem.requiresApproval {
@@ -92,21 +154,10 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         }
     }
 
-    @objc private func toggleHUD(_ sender: NSMenuItem) {
-        hud.setEnabled(!hud.isEnabled)
-    }
-
-    @objc private func requestHUDPermission(_ sender: NSMenuItem) {
-        hud.requestPermission()
-    }
-
-    @objc private func quit(_ sender: NSMenuItem) {
-        NSApp.terminate(nil)
-    }
-
     // MARK: Status
 
     private var statusText: String {
+        let player = features.player
         switch player.availability {
         case .unavailable:
             return "Now Playing non disponibile"
@@ -121,7 +172,7 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     }
 
     private var statusTooltip: String? {
-        if case .unavailable(let reason) = player.availability {
+        if case .unavailable(let reason) = features.player.availability {
             return reason
         }
         return nil

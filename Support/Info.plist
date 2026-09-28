@@ -28,6 +28,10 @@
 	<true/>
 	<key>NSHighResolutionCapable</key>
 	<true/>
+	<key>NSLocationUsageDescription</key>
+	<string>Halo usa la posizione approssimativa per mostrare il meteo nella notch.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Halo usa la posizione approssimativa per mostrare il meteo nella notch.</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
 </dict>

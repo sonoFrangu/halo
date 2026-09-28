@@ -10,6 +10,21 @@ struct IslandShapeSpec: Sendable, Equatable {
     var earRadius: CGFloat
 }
 
+/// Pages of the expanded island.
+enum ExpandedTab: Sendable, Equatable, CaseIterable {
+    case player
+    case shelf
+}
+
+/// What the island holds besides its state; it decides the size of alert and expanded
+/// shapes. Changes are applied inside an animation so the shape morphs between sizes.
+struct IslandContext: Sendable, Equatable {
+    var hasMedia = false
+    var alertStyle: AlertStyle = .wings
+    var tab: ExpandedTab = .player
+    var showsLyrics = false
+}
+
 /// Every island dimension and content frame, derived from the notch size.
 ///
 /// Content frames are in canvas coordinates: origin at the top-left of the panel's content
@@ -21,14 +36,17 @@ struct IslandLayout: Sendable, Equatable {
 
     // MARK: Tunables
 
-    static let expandedMediaMinimumWidth: CGFloat = 468
-    static let expandedMediaBodyHeight: CGFloat = 136
-    static let expandedEmptyMinimumWidth: CGFloat = 320
-    static let expandedEmptyBodyHeight: CGFloat = 52
+    static let expandedMinimumWidth: CGFloat = 468
+    static let playerBodyHeight: CGFloat = 136
+    static let lyricsPanelHeight: CGFloat = 88
+    static let emptyBodyHeight: CGFloat = 64
+    static let shelfBodyHeight: CGFloat = 122
+    static let bannerMinimumWidth: CGFloat = 400
+    static let bannerBodyHeight: CGFloat = 66
     static let contentInset: CGFloat = 24
     static let expandedArtworkSide: CGFloat = 76
     /// Room around the largest shape for its shadow and glow, so they never hit the
-    /// panel edge. The margin is click-through (see `IslandController`).
+    /// panel edge. The margin is click-through (see `IslandViewModel`).
     static let canvasMargin = CGSize(width: 72, height: 64)
 
     init(notchSize: CGSize, hasPhysicalNotch: Bool) {
@@ -40,18 +58,38 @@ struct IslandLayout: Sendable, Equatable {
         self.init(notchSize: geometry.notchSize, hasPhysicalNotch: geometry.hasPhysicalNotch)
     }
 
-    // MARK: Shapes
+    // MARK: Sizes
 
     var compactWingWidth: CGFloat {
         (notchSize.height + 10).rounded()
     }
 
-    /// Wider than the compact wings: the right one holds the level bar and its value.
+    /// Wing width of alerts shown beside the notch (HUD, charging).
     var hudWingWidth: CGFloat {
         max(96, (notchSize.height * 3.5).rounded())
     }
 
-    func spec(for state: IslandState, hasMedia: Bool) -> IslandShapeSpec {
+    var expandedWidth: CGFloat {
+        max(Self.expandedMinimumWidth, notchSize.width + 2 * 132)
+    }
+
+    var bannerWidth: CGFloat {
+        max(Self.bannerMinimumWidth, notchSize.width + 2 * 104)
+    }
+
+    func expandedBodyHeight(_ context: IslandContext) -> CGFloat {
+        switch context.tab {
+        case .player where context.hasMedia:
+            Self.playerBodyHeight + (context.showsLyrics ? Self.lyricsPanelHeight : 0)
+        case .player:
+            Self.emptyBodyHeight
+        case .shelf:
+            // Same height when empty: the shelf is a drop target and must stay easy to hit.
+            Self.shelfBodyHeight
+        }
+    }
+
+    func spec(for state: IslandState, context: IslandContext) -> IslandShapeSpec {
         let notch = notchSize
         switch state {
         case .idle where hasPhysicalNotch:
@@ -77,42 +115,38 @@ struct IslandLayout: Sendable, Equatable {
                 bottomRadius: min(12, notch.height / 2 - 2),
                 earRadius: 6
             )
-        case .hud:
+        case .alert where context.alertStyle == .wings:
             return IslandShapeSpec(
                 width: notch.width + 2 * hudWingWidth,
                 height: notch.height,
                 bottomRadius: min(12, notch.height / 2 - 2),
                 earRadius: 6
             )
-        case .expanded where hasMedia:
+        case .alert:
             return IslandShapeSpec(
-                width: expandedWidth(hasMedia: true),
-                height: notch.height + Self.expandedMediaBodyHeight,
-                bottomRadius: 28,
-                earRadius: 14
+                width: bannerWidth,
+                height: notch.height + Self.bannerBodyHeight,
+                bottomRadius: 24,
+                earRadius: 12
             )
         case .expanded:
             return IslandShapeSpec(
-                width: expandedWidth(hasMedia: false),
-                height: notch.height + Self.expandedEmptyBodyHeight,
-                bottomRadius: 22,
-                earRadius: 12
+                width: expandedWidth,
+                height: notch.height + expandedBodyHeight(context),
+                bottomRadius: 28,
+                earRadius: 14
             )
         }
     }
 
-    func expandedWidth(hasMedia: Bool) -> CGFloat {
-        hasMedia
-            ? max(Self.expandedMediaMinimumWidth, notchSize.width + 2 * 132)
-            : max(Self.expandedEmptyMinimumWidth, notchSize.width + 2 * 70)
-    }
-
     var canvasSize: CGSize {
+        let tallest = IslandContext(hasMedia: true, tab: .player, showsLyrics: true)
         let specs = [
-            spec(for: .expanded, hasMedia: true),
-            spec(for: .expanded, hasMedia: false),
-            spec(for: .compact, hasMedia: true),
-            spec(for: .hud, hasMedia: true),
+            spec(for: .expanded, context: tallest),
+            spec(for: .expanded, context: IslandContext(tab: .shelf)),
+            spec(for: .alert, context: IslandContext(alertStyle: .banner)),
+            spec(for: .alert, context: IslandContext(alertStyle: .wings)),
+            spec(for: .compact, context: IslandContext()),
         ]
         let width = specs.map { $0.width + 2 * $0.earRadius }.max() ?? 0
         let height = specs.map(\.height).max() ?? 0
@@ -126,12 +160,12 @@ struct IslandLayout: Sendable, Equatable {
         canvasSize.width / 2
     }
 
-    // MARK: Content frames (canvas coordinates)
+    // MARK: Persistent content (canvas coordinates)
 
     /// The artwork is one persistent view whose frame morphs between states.
     func artworkFrame(for state: IslandState) -> CGRect {
         switch state {
-        case .idle, .hud:
+        case .idle, .alert:
             // Slides inward under the notch while shrinking.
             return square(side: 10, centerX: centerX - notchSize.width / 2 + 14, centerY: notchSize.height / 2)
         case .compact:
@@ -146,12 +180,12 @@ struct IslandLayout: Sendable, Equatable {
         }
     }
 
-    /// The equalizer is persistent too: right wing when compact, top-right when expanded.
+    /// The equalizer lives in the compact right wing; elsewhere it fades where it is.
     func equalizerFrame(for state: IslandState) -> CGRect {
         switch state {
-        case .idle, .hud:
+        case .idle, .alert:
             return CGRect(x: centerX + notchSize.width / 2 - 18, y: notchSize.height / 2 - 3, width: 8, height: 6)
-        case .compact:
+        case .compact, .expanded:
             let height = max(10, notchSize.height - 18)
             return CGRect(
                 x: centerX + notchSize.width / 2 + compactWingWidth / 2 - 8,
@@ -159,15 +193,29 @@ struct IslandLayout: Sendable, Equatable {
                 width: 16,
                 height: height
             )
-        case .expanded:
-            let height = max(10, notchSize.height - 18)
-            return CGRect(x: expandedMaxX - 18, y: (notchSize.height - height) / 2, width: 18, height: height)
         }
     }
 
-    /// Source app icon, in the notch row's left wing.
+    // MARK: Expanded header (notch row)
+
+    /// Tab switcher, in the left wing.
+    var tabsFrame: CGRect {
+        let wing = (expandedWidth - notchSize.width) / 2
+        return CGRect(x: centerX - expandedWidth / 2 + 20, y: 0, width: wing - 32, height: notchSize.height)
+    }
+
+    /// Weather (or the inline HUD while it is showing), in the right wing.
+    var headerAccessoryFrame: CGRect {
+        let wing = (expandedWidth - notchSize.width) / 2
+        return CGRect(x: centerX + notchSize.width / 2 + 12, y: 0, width: wing - 32, height: notchSize.height)
+    }
+
+    // MARK: Player
+
+    /// Source app badge on the artwork's bottom-right corner.
     var sourceIconFrame: CGRect {
-        square(side: 18, centerX: expandedMinX + 9, centerY: notchSize.height / 2)
+        let artwork = artworkFrame(for: .expanded)
+        return square(side: 22, centerX: artwork.maxX - 5, centerY: artwork.maxY - 5)
     }
 
     var trackInfoFrame: CGRect {
@@ -187,14 +235,40 @@ struct IslandLayout: Sendable, Equatable {
         return CGRect(x: expandedMinX, y: artwork.maxY + 14, width: expandedMaxX - expandedMinX, height: 20)
     }
 
-    var emptyStateFrame: CGRect {
-        let width = expandedWidth(hasMedia: false) - 2 * Self.contentInset
-        return CGRect(x: centerX - width / 2, y: notchSize.height + 6, width: width, height: 40)
+    var lyricsFrame: CGRect {
+        let scrubber = scrubberFrame
+        return CGRect(
+            x: expandedMinX,
+            y: scrubber.maxY + 8,
+            width: expandedMaxX - expandedMinX,
+            height: Self.lyricsPanelHeight - 16
+        )
     }
 
-    // MARK: HUD frames (canvas coordinates)
+    /// Message area of the player tab when nothing is playing.
+    var emptyStateFrame: CGRect {
+        CGRect(
+            x: expandedMinX,
+            y: notchSize.height + 4,
+            width: expandedMaxX - expandedMinX,
+            height: Self.emptyBodyHeight - 12
+        )
+    }
 
-    /// Brightness/volume glyph, centered in the left wing.
+    // MARK: Shelf
+
+    var shelfFrame: CGRect {
+        CGRect(
+            x: centerX - expandedWidth / 2 + 16,
+            y: notchSize.height + 6,
+            width: expandedWidth - 32,
+            height: Self.shelfBodyHeight - 16
+        )
+    }
+
+    // MARK: Alerts
+
+    /// Glyph of a wings alert (HUD, charging), centered in the left wing.
     var hudGlyphFrame: CGRect {
         square(
             side: notchSize.height - 8,
@@ -215,14 +289,30 @@ struct IslandLayout: Sendable, Equatable {
         return CGRect(x: bar.maxX + 6, y: 0, width: 26, height: notchSize.height)
     }
 
+    /// Whole right wing of a wings alert.
+    var alertRightWingFrame: CGRect {
+        let x = centerX + notchSize.width / 2 + 12
+        return CGRect(x: x, y: 0, width: hudWingWidth - 12 - 16, height: notchSize.height)
+    }
+
+    /// Content of a banner alert, below the notch.
+    var bannerFrame: CGRect {
+        CGRect(
+            x: centerX - bannerWidth / 2 + 20,
+            y: notchSize.height + 4,
+            width: bannerWidth - 40,
+            height: Self.bannerBodyHeight - 12
+        )
+    }
+
     // MARK: Helpers
 
     private var expandedMinX: CGFloat {
-        centerX - expandedWidth(hasMedia: true) / 2 + Self.contentInset
+        centerX - expandedWidth / 2 + Self.contentInset
     }
 
     private var expandedMaxX: CGFloat {
-        centerX + expandedWidth(hasMedia: true) / 2 - Self.contentInset
+        centerX + expandedWidth / 2 - Self.contentInset
     }
 
     private func square(side: CGFloat, centerX: CGFloat, centerY: CGFloat) -> CGRect {

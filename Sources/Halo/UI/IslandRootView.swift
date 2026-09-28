@@ -5,10 +5,8 @@ import SwiftUI
 /// which changes inside a spring, so shape and content frames animate as one.
 struct IslandRootView: View {
     let island: IslandViewModel
-    let player: NowPlayingModel
-    let hud: HUDModel
-    let actions: PlayerActions
-    let hudActions: HUDActions
+    let models: IslandModels
+    let actions: IslandActions
 
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -16,15 +14,16 @@ struct IslandRootView: View {
     var body: some View {
         let layout = island.layout
         let isExpanded = island.state == .expanded
-        let shape = NotchShape(spec: layout.spec(for: island.state, hasMedia: island.hasMedia))
+        let shape = NotchShape(spec: layout.spec(for: island.state, context: island.context))
         let canvas = layout.canvasSize
+        let palette = models.player.palette
 
         ZStack(alignment: .topLeading) {
             if isExpanded {
                 IslandDecoration(
-                    spec: layout.spec(for: .expanded, hasMedia: island.hasMedia),
-                    palette: player.palette,
-                    showsGlow: island.hasMedia && !reduceTransparency
+                    spec: layout.spec(for: .expanded, context: island.context),
+                    palette: palette,
+                    showsGlow: island.hasMedia && island.context.tab == .player && !reduceTransparency
                 )
                 .transition(
                     .asymmetric(
@@ -36,18 +35,11 @@ struct IslandRootView: View {
 
             shape.fill(Color.black)
 
-            IslandContentView(
-                island: island,
-                player: player,
-                hud: hud,
-                actions: actions,
-                hudActions: hudActions,
-                layout: layout
-            )
+            IslandContentView(island: island, models: models, actions: actions, layout: layout)
                 .clipShape(shape)
         }
         .frame(width: canvas.width, height: canvas.height, alignment: .topLeading)
         .ignoresSafeArea()
-        .animation(Motion.palette, value: player.palette)
+        .animation(Motion.palette, value: palette)
     }
 }

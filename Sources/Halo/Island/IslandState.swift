@@ -4,8 +4,9 @@ enum IslandState: Sendable, Equatable {
     case idle
     /// Music is playing: the notch grows two wings (artwork left, equalizer right).
     case compact
-    /// Brightness or volume changed: icon in the left wing, level in the right one.
-    case hud
+    /// Something to tell: brightness/volume or charging beside the notch, headphones or a
+    /// notification in a banner below it (see `IslandAlert`).
+    case alert
     /// Hovered: the full player.
     case expanded
 }

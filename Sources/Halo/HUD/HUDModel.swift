@@ -5,11 +5,11 @@ enum HUDKind: Sendable, Equatable {
     case volume
 }
 
-/// What the HUD island shows. Written only by `HUDController`.
+/// What the HUD shows. Written only by `HUDController`; whether it is visible is decided by
+/// `AlertCenter` (the `.hud` alert).
 @MainActor
 @Observable
 final class HUDModel {
-    var isVisible = false
     var kind: HUDKind = .volume
     /// 0...1.
     var level: Double = 0
