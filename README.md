@@ -118,6 +118,7 @@ xattr -dr com.apple.quarantine /Applications/Halo.app
 | **Localizzazione** (quando in uso) | meteo del posto in cui sei | posizione approssimata dall'IP ([ipwho.is](https://ipwho.is)) |
 | **Accesso completo al disco** | notifiche e Full Immersione nella notch: leggere il database di Centro Notifiche e quello di Non disturbare | niente notifiche né cambi di Full Immersione nella notch (tutto il resto funziona) |
 | **Calendario** (accesso completo) | prossimi impegni e promemoria delle riunioni | scheda Calendario con il pulsante per concederlo |
+| **Automazione** (Spotify, Musica) | play, pausa, brani e posizione mandati direttamente a Spotify e Musica (chiesta al primo clic sul player) | Halo usa MediaRemote, che con Spotify funziona a intermittenza |
 
 La pagina **Impostazioni › Permessi** li elenca tutti con lo stato (Concesso / Necessario / Verrà
 chiesto al primo uso), a cosa servono e il pulsante che apre la pagina giusta di Impostazioni di
@@ -140,9 +141,10 @@ Sistema; lo stato si aggiorna da solo quando torni su Halo.
 - **Now Playing**: nessun prompt. Halo avvia `/usr/bin/perl` con
   [mediaremote-adapter](https://github.com/ungive/mediaremote-adapter): perl è un binario di
   sistema ancora autorizzato a usare il framework privato MediaRemote (bloccato per le app di
-  terzi da macOS 15.4). I *comandi* (play, pausa, brani, seek) partono invece direttamente da
-  Halo, che è istantaneo; il primo play/pausa viene verificato sullo stream e, se non ha
-  effetto, Halo ripiega sull'adapter per il resto della sessione.
+  terzi da macOS 15.4). I *comandi* seguono la via più affidabile per l'app che suona:
+  AppleScript per Spotify e Musica (permesso Automazione), poi MediaRemote chiamato da Halo,
+  l'adapter e infine il tasto multimediale (con Accessibilità). Ogni play/pausa viene
+  verificato sullo stream: se non ha effetto entro un secondo circa si passa alla via successiva.
 - **Rete**: LRCLIB (testi), Open-Meteo (meteo), ipwho.is (solo se la posizione è negata). Nessun
   altro traffico, nessun account.
 
@@ -155,10 +157,13 @@ Sistema; lo stato si aggiorna da solo quando torni su Halo.
 - Player: copertina con badge dell'app sorgente, titolo, controlli in Liquid Glass, barra di
   avanzamento trascinabile che si ispessisce all'hover, pulsante testi. Alone e sfumatura
   interna prendono i colori dominanti della copertina.
-- **Play/pausa immediati**: il pulsante cambia subito e manda un *play* o una *pausa* espliciti
-  (mai un "inverti", che con due clic ravvicinati si annullava); gli aggiornamenti in ritardo
-  del player non lo fanno più rimbalzare. Il vetro dei pulsanti è disegnato dallo stile del
-  pulsante, così nessun clic va perso.
+- **Play/pausa**: il pulsante cambia subito e Halo porta il player in quello stato: con Spotify
+  e Musica via AppleScript (*play*/*pausa* espliciti, istantanei), altrimenti via MediaRemote;
+  se lo stream non conferma il cambio passa alla via successiva, e se nessuna funziona entro
+  6 s il pulsante torna a mostrare lo stato reale (mai una pausa finta). Due clic ravvicinati si
+  fondono in un'unica richiesta. Lo stato "in pausa" si legge dalla velocità di riproduzione:
+  Spotify in pausa continua a dichiararsi "in riproduzione" e prima il tempo scorreva fino a
+  0:00. Il vetro dei pulsanti è disegnato dallo stile del pulsante, così nessun clic va perso.
 
 ### Testi sincronizzati
 - Cercati su LRCLIB a ogni cambio brano (con debounce e cache); se esistono solo testi non
@@ -297,8 +302,11 @@ Sistema; lo stato si aggiorna da solo quando torni su Halo.
   menu); se hai ricompilato con firma ad-hoc, rimuovi Halo dall'elenco e aggiungilo di nuovo
   (vedi *Firma stabile*). Con una Full Immersione attiva le notifiche restano zitte per scelta.
 - **Testo in anticipo o in ritardo sulla voce**: Impostazioni › Musica › Sincronia del testo.
-- **Play/pausa lenti**: se il comando diretto non funziona sul tuo sistema Halo usa l'adapter
-  (circa 0,2 s in più); nel log compare "switching to the adapter".
+- **Play/pausa che non rispondono**: con Spotify e Musica controlla Impostazioni › Permessi ›
+  Automazione (se l'hai negata: Impostazioni di Sistema › Privacy e sicurezza › Automazione ›
+  Halo). Il log dice per ogni clic quale via è stata usata e se ha funzionato: righe
+  `pause → com.spotify.client via AppleScript`, `… changed the play state …` oppure
+  `… did not change the play state … in time`.
 - **Meteo assente**: senza rete o con entrambi i servizi irraggiungibili il badge resta vuoto;
   riprova aprendo l'isola dopo qualche minuto.
 - Le prime righe di `scripts/bundle.sh` stampano toolchain, versione di Swift e SDK in uso.
@@ -327,8 +335,10 @@ Sistema; lo stato si aggiorna da solo quando torni su Halo.
   download fatti da Terminale). Il nome mostrato è quello del file in corso (senza
   `.download`/`.crdownload`); se il browser lo rinomina alla fine, "Mostra nel Finder" apre la
   cartella.
-- **Comandi del player**: l'invio diretto a MediaRemote non è documentato; Halo lo verifica e,
-  se non funziona, torna all'adapter (più lento di circa 0,2 s).
+- **Comandi del player**: AppleScript solo per Spotify e Musica; per le altre app (browser,
+  Podcast, …) MediaRemote, il cui invio diretto non è documentato, poi l'adapter (circa 0,2 s
+  più lento) e il tasto multimediale. Avanti/indietro e posizione non si possono verificare
+  sullo stream: usano AppleScript o la via che ha già funzionato per play/pausa.
 - **Icona**: è un `.icns` classico (squircle disegnata con la griglia delle icone macOS). macOS
   26+ preferisce le icone di Icon Composer, compilabili solo con Xcode: se il sistema la
   giudica fuori forma può mostrarla dentro il proprio riquadro grigio.

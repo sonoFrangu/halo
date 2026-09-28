@@ -311,8 +311,9 @@ Sources/Halo/
   Transfers/      Transfer (+ TransferNaming), TransferMonitor (+ TransferSink, FractionGate, TrackedProgress)
   Focus/          FocusMode (+ FocusStore), FocusMonitor
   Settings/       SettingsModel (+ SettingsPane, SettingsPermission, SettingsToggle), SettingsWindowController
-  NowPlaying/     NowPlayingSnapshot, PlaybackTimeline, MediaCommand, DirectMediaRemote, NowPlayingModel,
-                  NowPlayingController
+  NowPlaying/     NowPlayingSnapshot, PlaybackTimeline, MediaCommand, PlayerCommand (+ CommandRoute,
+                  ScriptablePlayer), PlaybackReconciler, ScriptRunner, MediaKeyPoster, DirectMediaRemote,
+                  NowPlayingModel, NowPlayingController
   NowPlaying/Adapter/  AdapterResources, AdapterStream, AdapterCommandRunner, LineSplitter,
                        NowPlayingStreamDecoder, StderrTail
   Artwork/        ArtworkDecoder, RGBColor, ArtworkPalette, PaletteExtractor, KMeans, PaletteSelector
@@ -352,18 +353,33 @@ scripts/icon/render-icon.py           disegna Support/AppIcon.png (NumPy + Pillo
    palette off-main, risolve l'icona dell'app sorgente.
 4. Il tempo trascorso non viene mai "pollato": `PlaybackTimeline` = (elapsed, timestamp, rate)
    ed è valutato solo quando serve disegnare.
-5. Comandi: *play* e *pausa* espliciti (0/1, mai l'inverti 2, che con due clic ravvicinati si
-   annullava), avanti/indietro (4/5), seek. Partono da `DirectMediaRemote`
-   (`MRMediaRemoteSendCommand` / `MRMediaRemoteSetElapsedTime` risolti con `dlsym`, nel processo
-   di Halo, istantanei). Ogni play/pausa diretto va confermato dallo stream entro 0,9 s; senza
-   conferma `AdapterCommandRunner` lo reinvia (`send 0/1`, idempotenti: un doppione tardivo non
-   fa danni) e da lì in poi tutti i comandi passano dall'adapter. I salti di brano vanno diretti
-   solo dopo una conferma (non si possono verificare: "indietro" può solo riavviare il brano).
-   L'interfaccia cambia subito e lo stato ottimistico vince per 2,5 s sugli aggiornamenti dello
-   stream che contraddicono il comando (arrivati prima che il player lo eseguisse).
-6. Quando un diff porta solo il cambio di play/pausa, `NowPlayingStreamDecoder` riancora la
-   posizione nota all'istante del cambio invece di riusare la coppia elapsed/timestamp vecchia
-   (una ripresa saltava avanti di tutta la pausa).
+5. Comandi (`PlayerCommand`): *play* e *pausa* espliciti (mai l'inverti, che con due clic
+   ravvicinati si annullava), avanti, indietro, posizione. Le vie (`CommandRoute`), dalla più
+   affidabile:
+   - **AppleScript** per Spotify e Musica (`ScriptablePlayer`, `ScriptRunner` su una coda
+     seriale fuori dal main thread; permesso Automazione chiesto al primo uso). I comandi
+     MediaRemote arrivano a Spotify solo a intermittenza: era la causa della pausa che serviva
+     cliccare più volte;
+   - **MediaRemote nel processo** (`DirectMediaRemote`, `MRMediaRemoteSendCommand` risolto con
+     `dlsym`);
+   - **adapter** (`AdapterCommandRunner`, `send 0/1/4/5`, `seek`);
+   - **tasto multimediale** (`MediaKeyPoster`, evento `NX_SYSDEFINED` come la tastiera; serve
+     Accessibilità; per play/pausa è un inverti).
+
+   Play/pausa passa da `PlaybackReconciler` (puro, testato): il clic fissa lo stato voluto;
+   un comando parte solo se lo stream mostra l'altro stato e nessun comando è in volo, così i
+   clic ravvicinati si fondono e l'inverti del tasto multimediale non si annulla da solo. Una
+   via non confermata dallo stream entro il suo tempo (0,9–1,5 s) passa alla successiva; la via
+   che funziona viene ricordata per app e provata per prima, quelle fallite per ultime. Dopo
+   tutte le vie, o 6 s, la richiesta decade e l'interfaccia torna allo stato reale. Avanti,
+   indietro e posizione non sono verificabili sullo stream ("indietro" può solo riavviare il
+   brano): usano AppleScript, oppure la via che ha già funzionato per play/pausa, oppure
+   l'adapter. Ogni tentativo finisce nel log con via ed esito.
+6. `NowPlayingStreamDecoder`: lo stato di riproduzione è `playing && playbackRate != 0`
+   (Spotify in pausa resta "playing" e porta solo la velocità a 0: prima il tempo continuava a
+   scorrere fino a 0:00). Quando un diff porta solo il cambio di stato, riancora la posizione
+   nota all'istante del cambio invece di riusare la coppia elapsed/timestamp vecchia (una
+   ripresa saltava avanti di tutta la pausa).
 7. Uscita del processo: exit ≠ 0 → adapter "non disponibile"; altrimenti riavvio con backoff
    (max 3 tentativi).
 
