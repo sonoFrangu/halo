@@ -37,9 +37,9 @@ final class ScreenshotController {
 
     // MARK: Actions
 
+    /// Opens the capture (dismissing the banner is up to the caller).
     func open(_ url: URL) {
         NSWorkspace.shared.open(url)
-        alerts.dismissCurrent()
     }
 
     /// Copies the image, ready to paste into a message or a document.

@@ -21,6 +21,7 @@ enum Preferences {
         static let hoverDelay = "hoverDelay"
         static let calendar = "calendarEnabled"
         static let screenshots = "screenshotsEnabled"
+        static let timer = "timerEnabled"
     }
 
     private static func flag(_ key: String, default value: Bool) -> Bool {
@@ -103,6 +104,12 @@ enum Preferences {
     static var screenshotsEnabled: Bool {
         get { flag(Key.screenshots, default: true) }
         set { defaults.set(newValue, forKey: Key.screenshots) }
+    }
+
+    /// Timer and Pomodoro tab, and the timer's live activity in the wings.
+    static var timerEnabled: Bool {
+        get { flag(Key.timer, default: true) }
+        set { defaults.set(newValue, forKey: Key.timer) }
     }
 
     /// Swipes over the island skip tracks and change the volume.

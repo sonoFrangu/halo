@@ -17,6 +17,7 @@ enum IslandAlert: Sendable, Equatable {
     case notification(NotificationAlert)
     case calendar(CalendarAlert)
     case screenshot(ScreenshotAlert)
+    case timer(TimerAlert)
 
     enum Kind: Sendable, Hashable {
         case hud
@@ -25,6 +26,7 @@ enum IslandAlert: Sendable, Equatable {
         case notification
         case calendar
         case screenshot
+        case timer
     }
 
     var kind: Kind {
@@ -35,13 +37,14 @@ enum IslandAlert: Sendable, Equatable {
         case .notification: .notification
         case .calendar: .calendar
         case .screenshot: .screenshot
+        case .timer: .timer
         }
     }
 
     var style: AlertStyle {
         switch self {
         case .hud, .power: .wings
-        case .audioDevice, .notification, .calendar, .screenshot: .banner
+        case .audioDevice, .notification, .calendar, .screenshot, .timer: .banner
         }
     }
 
@@ -54,6 +57,7 @@ enum IslandAlert: Sendable, Equatable {
         case .notification: .milliseconds(5500)
         case .calendar: .seconds(12)
         case .screenshot: .seconds(6)
+        case .timer: .seconds(8)
         }
     }
 }

@@ -57,6 +57,7 @@ final class IslandViewModel {
     @ObservationIgnored private var isInteracting = false
     @ObservationIgnored private var showsActivity = false
     @ObservationIgnored private var isDraggingFiles = false
+    @ObservationIgnored private var isTimerActive = false
     @ObservationIgnored private var lastInteractivity = false
     @ObservationIgnored private var lastHoldsAlerts = false
     @ObservationIgnored private var hoverTask: Task<Void, Never>?
@@ -135,6 +136,13 @@ final class IslandViewModel {
     func selectTab(_ tab: ExpandedTab) {
         guard availableTabs.contains(tab) else { return }
         updateContext { $0.tab = tab }
+    }
+
+    /// A running or paused timer keeps the compact island up as a live activity.
+    func timerChanged(active: Bool) {
+        guard active != isTimerActive else { return }
+        isTimerActive = active
+        resolveState()
     }
 
     func lyricsChanged(visible: Bool) {
@@ -234,7 +242,7 @@ final class IslandViewModel {
             target = .alert
         } else if isHovering {
             target = .expanded
-        } else if showsActivity {
+        } else if showsActivity || isTimerActive {
             target = .compact
         } else {
             target = .idle

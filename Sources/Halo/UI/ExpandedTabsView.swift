@@ -49,6 +49,7 @@ extension ExpandedTab {
         case .player: "music.note"
         case .shelf: "tray.full.fill"
         case .calendar: "calendar"
+        case .timer: "timer"
         }
     }
 
@@ -57,6 +58,7 @@ extension ExpandedTab {
         case .player: "Musica"
         case .shelf: "Scaffale"
         case .calendar: "Calendario"
+        case .timer: "Timer"
         }
     }
 }

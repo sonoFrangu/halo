@@ -16,6 +16,7 @@ struct IslandContentView: View {
         let isExpanded = state == .expanded
         let showsPlayer = isExpanded && hasMedia && island.context.tab == .player
         let tint = player.palette.primary.color
+        let timer = models.timers.timer
 
         ZStack(alignment: .topLeading) {
             ExpandedBackdrop(palette: player.palette, layout: layout, isVisible: showsPlayer)
@@ -32,9 +33,20 @@ struct IslandContentView: View {
             .place(in: layout.artworkFrame(for: state))
             .opacity(hasMedia && (state == .compact || showsPlayer) ? 1 : 0)
 
-            EqualizerView(isPlaying: player.isPlaying && hasMedia && state == .compact, tint: tint)
+            EqualizerView(isPlaying: player.isPlaying && hasMedia && state == .compact && timer == nil, tint: tint)
                 .place(in: layout.equalizerFrame(for: state))
-                .opacity(hasMedia && state == .compact ? 1 : 0)
+                .opacity(hasMedia && state == .compact && timer == nil ? 1 : 0)
+
+            if let timer {
+                CompactTimerRing(timer: timer)
+                    .place(in: layout.artworkFrame(for: .compact))
+                    .opacity(state == .compact && !hasMedia ? 1 : 0)
+                    .animation(.easeOut(duration: 0.2), value: state)
+                CompactTimerCountdown(timer: timer)
+                    .place(in: layout.compactRightWingFrame)
+                    .opacity(state == .compact ? 1 : 0)
+                    .animation(.easeOut(duration: 0.2), value: state)
+            }
 
             PlayerContentView(island: island, models: models, actions: actions.player, layout: layout, isVisible: showsPlayer)
 
@@ -54,6 +66,11 @@ struct IslandContentView: View {
             CalendarTabView(model: models.calendar, actions: actions.calendar)
                 .place(in: layout.tabBodyFrame)
                 .reveal(isExpanded && island.context.tab == .calendar, order: 0)
+
+            TimerTabView(timers: models.timers, actions: actions.timer)
+                .place(in: layout.tabBodyFrame)
+                .reveal(isExpanded && island.context.tab == .timer, order: 0)
+                .animation(.spring(duration: 0.4, bounce: 0.15), value: timer == nil)
 
             HeaderContentView(island: island, models: models, tint: tint, actions: actions, layout: layout)
 
@@ -235,6 +252,14 @@ struct AlertContentView: View {
                     .reveal(isAlert && kind == .calendar, order: 0)
             }
 
+            if let timer = shown?.timer {
+                TimerBanner(alert: timer, onStop: actions.timer.stop)
+                    .contentShape(Rectangle())
+                    .onTapGesture { alertActions.activate(.timer(timer)) }
+                    .place(in: layout.bannerFrame)
+                    .reveal(isAlert && kind == .timer, order: 0)
+            }
+
             if let screenshot = shown?.screenshot {
                 ScreenshotBanner(alert: screenshot, thumbnails: models.thumbnails, actions: actions.screenshot)
                     .place(in: layout.bannerFrame)
@@ -276,6 +301,11 @@ extension IslandAlert {
 
     var screenshot: ScreenshotAlert? {
         if case .screenshot(let alert) = self { return alert }
+        return nil
+    }
+
+    var timer: TimerAlert? {
+        if case .timer(let alert) = self { return alert }
         return nil
     }
 }

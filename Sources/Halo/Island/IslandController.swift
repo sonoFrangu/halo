@@ -30,7 +30,8 @@ final class IslandController {
                     weather: services.weather.model,
                     shelf: services.shelf.store,
                     thumbnails: services.shelf.thumbnails,
-                    calendar: services.calendar.model
+                    calendar: services.calendar.model,
+                    timers: services.timers
                 ),
                 actions: Self.actions(for: viewModel, services: services, dragHolder: "hud-drag-\(displayID)")
             )
@@ -60,6 +61,7 @@ final class IslandController {
         observeAlerts()
         observeLyrics()
         observeTabs()
+        observeTimer()
     }
 
     private static func actions(
@@ -75,6 +77,7 @@ final class IslandController {
         let store = shelf.store
         let calendar = services.calendar
         let screenshots = services.screenshots
+        let timers = services.timers
         return IslandActions(
             player: PlayerActions(
                 togglePlayPause: { [weak nowPlaying] in nowPlaying?.togglePlayPause() },
@@ -111,10 +114,17 @@ final class IslandController {
                 openSettings: { [weak calendar] in calendar?.openPrivacySettings() }
             ),
             screenshot: ScreenshotActions(
-                open: { [weak screenshots] url in screenshots?.open(url) },
+                open: { url in services.activate(.screenshot(ScreenshotAlert(url: url))) },
                 copy: { [weak screenshots] url in screenshots?.copy(url) },
                 keep: { [weak screenshots] url in screenshots?.keepOnShelf(url) },
                 trash: { [weak screenshots] url in screenshots?.moveToTrash(url) }
+            ),
+            timer: TimerActions(
+                start: { [weak timers] minutes in timers?.start(minutes: minutes) },
+                startPomodoro: { [weak timers] in timers?.startPomodoro() },
+                togglePause: { [weak timers] in timers?.togglePause() },
+                addMinute: { [weak timers] in timers?.addMinute() },
+                stop: { [weak timers] in timers?.stop() }
             ),
             selectTab: { [weak viewModel] tab in
                 Haptics.perform(.step)
@@ -226,10 +236,12 @@ final class IslandController {
     private func observeTabs() {
         let shelf = services.shelf
         let calendar = services.calendar
+        let timers = services.timers
         let tabs = withObservationTracking {
             var tabs: [ExpandedTab] = []
             if shelf.isEnabled { tabs.append(.shelf) }
             if calendar.isEnabled { tabs.append(.calendar) }
+            if timers.isEnabled { tabs.append(.timer) }
             return tabs
         } onChange: { [weak self] in
             Task { @MainActor [weak self] in
@@ -237,5 +249,18 @@ final class IslandController {
             }
         }
         viewModel.tabsChanged(tabs)
+    }
+
+    /// A timer turns the compact island into its live activity.
+    private func observeTimer() {
+        let timers = services.timers
+        let active = withObservationTracking {
+            timers.timer != nil
+        } onChange: { [weak self] in
+            Task { @MainActor [weak self] in
+                self?.observeTimer()
+            }
+        }
+        viewModel.timerChanged(active: active)
     }
 }

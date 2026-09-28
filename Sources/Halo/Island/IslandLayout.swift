@@ -15,6 +15,7 @@ enum ExpandedTab: Sendable, Equatable, CaseIterable {
     case player
     case shelf
     case calendar
+    case timer
 }
 
 /// What the island holds besides its state; it decides the size of alert and expanded
@@ -85,7 +86,7 @@ struct IslandLayout: Sendable, Equatable {
             Self.playerBodyHeight + (context.showsLyrics ? Self.lyricsPanelHeight : 0)
         case .player:
             Self.emptyBodyHeight
-        case .shelf, .calendar:
+        case .shelf, .calendar, .timer:
             // Same height when empty: the shelf is a drop target and must stay easy to hit.
             Self.tabBodyHeight
         }
@@ -196,6 +197,11 @@ struct IslandLayout: Sendable, Equatable {
                 height: height
             )
         }
+    }
+
+    /// Right wing of the compact island (a running timer's countdown).
+    var compactRightWingFrame: CGRect {
+        CGRect(x: centerX + notchSize.width / 2, y: 0, width: compactWingWidth, height: notchSize.height)
     }
 
     // MARK: Expanded header (notch row)

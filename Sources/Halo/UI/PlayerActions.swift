@@ -52,6 +52,7 @@ struct IslandActions {
     var shelf: ShelfActions
     var calendar: CalendarActions
     var screenshot: ScreenshotActions
+    var timer: TimerActions
     var selectTab: (ExpandedTab) -> Void
 }
 
@@ -65,4 +66,5 @@ struct IslandModels {
     let shelf: ShelfStore
     let thumbnails: ShelfThumbnails
     let calendar: CalendarModel
+    let timers: TimerController
 }

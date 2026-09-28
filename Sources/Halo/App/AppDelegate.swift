@@ -17,6 +17,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let shelf = ShelfController()
         let calendar = CalendarController(alerts: alerts)
         let screenshots = ScreenshotController(alerts: alerts, shelf: shelf.store)
+        let timers = TimerController(alerts: alerts)
         let islands = IslandsCoordinator(
             services: IslandServices(
                 nowPlaying: nowPlaying,
@@ -26,7 +27,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 weather: weather,
                 shelf: shelf,
                 calendar: calendar,
-                screenshots: screenshots
+                screenshots: screenshots,
+                timers: timers
             )
         )
         let cardActions = PlayerActions.card(for: nowPlaying)
@@ -42,6 +44,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             shelf: shelf,
             calendar: calendar,
             screenshots: screenshots,
+            timers: timers,
             notifications: NotificationMirror(alerts: alerts),
             desktopWidget: DesktopWidgetController(
                 player: nowPlaying.model,
@@ -98,6 +101,7 @@ struct Features {
     let shelf: ShelfController
     let calendar: CalendarController
     let screenshots: ScreenshotController
+    let timers: TimerController
     let notifications: NotificationMirror
     let desktopWidget: DesktopWidgetController
     let lockScreen: LockScreenController

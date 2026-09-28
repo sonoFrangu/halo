@@ -9,6 +9,8 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     private var toggles: [ToggleMenuItem] = []
     private var hudPermissionItem: NSMenuItem?
     private var notificationsPermissionItem: NSMenuItem?
+    private var timerPauseItem: NSMenuItem?
+    private var timerStopItem: NSMenuItem?
 
     init(features: Features) {
         self.statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
@@ -34,6 +36,9 @@ final class StatusItemController: NSObject, NSMenuDelegate {
 
         statusLine.isEnabled = false
         menu.addItem(statusLine)
+        menu.addItem(.separator())
+
+        menu.addItem(timerMenuItem())
         menu.addItem(.separator())
 
         let hud = features.hud
@@ -122,6 +127,28 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         return menu
     }
 
+    /// "Timer ▸": presets and Pomodoro, then pause/stop for the running timer.
+    private func timerMenuItem() -> NSMenuItem {
+        let timers = features.timers
+        let submenu = NSMenu()
+        submenu.autoenablesItems = false
+        for minutes in TimerController.presets {
+            submenu.addItem(ActionMenuItem(title: "\(minutes) min") { timers.start(minutes: minutes) })
+        }
+        submenu.addItem(ActionMenuItem(title: "Pomodoro (25 + 5)") { timers.startPomodoro() })
+        submenu.addItem(.separator())
+        let pause = ActionMenuItem(title: "Pausa") { timers.togglePause() }
+        let stop = ActionMenuItem(title: "Ferma") { timers.stop() }
+        submenu.addItem(pause)
+        submenu.addItem(stop)
+        timerPauseItem = pause
+        timerStopItem = stop
+
+        let item = NSMenuItem(title: "Timer", action: nil, keyEquivalent: "")
+        item.submenu = submenu
+        return item
+    }
+
     private func toggle(_ title: String, isOn: @escaping () -> Bool, setOn: @escaping (Bool) -> Void) -> ToggleMenuItem {
         let item = ToggleMenuItem(title: title, isOn: isOn, setOn: setOn)
         toggles.append(item)
@@ -136,6 +163,10 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         hudPermissionItem?.isHidden = features.hud.status != .needsPermission
         features.notifications.refreshAccess()
         notificationsPermissionItem?.isHidden = features.notifications.status != .needsFullDiskAccess
+        let timer = features.timers.timer
+        timerPauseItem?.isEnabled = timer != nil
+        timerPauseItem?.title = timer?.isRunning == false ? "Riprendi" : "Pausa"
+        timerStopItem?.isEnabled = timer != nil
         for item in toggles {
             item.refresh()
         }
