@@ -384,6 +384,7 @@ final class SettingsModel {
         let systemTimers = f.systemTimers
         let transfers = f.transfers
         let shelf = f.shelf
+        let clipboard = f.clipboard
         let screenshots = f.screenshots
         let power = f.power
         let audioDevices = f.audioDevices
@@ -615,6 +616,13 @@ final class SettingsModel {
                     symbol: "tray.full.fill", tint: SettingsColor.teal,
                     isOn: { shelf.isEnabled },
                     setOn: { shelf.setEnabled($0) }
+                )),
+                .toggle(SettingsToggle(
+                    id: "clipboard", title: "Appunti",
+                    detail: "La scheda Appunti tiene gli ultimi 20 testi e immagini che copi: un clic li copia di nuovo, oppure trascinali dove vuoi. Restano solo finché Halo è aperta; le password copiate dai gestori di password non vengono tenute.",
+                    symbol: "list.clipboard.fill", tint: SettingsColor.blue,
+                    isOn: { clipboard.isEnabled },
+                    setOn: { clipboard.setEnabled($0) }
                 )),
                 .toggle(SettingsToggle(
                     id: "screenshots", title: "Anteprima degli screenshot",

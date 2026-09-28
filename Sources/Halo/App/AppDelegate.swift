@@ -15,6 +15,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let lyrics = LyricsController(player: nowPlaying.model)
         let weather = WeatherController()
         let shelf = ShelfController()
+        let clipboard = ClipboardHistory()
         let calendar = CalendarController(alerts: alerts)
         let screenshots = ScreenshotController(alerts: alerts, shelf: shelf.store)
         let timers = TimerController(alerts: alerts)
@@ -31,10 +32,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             services: IslandServices(
                 nowPlaying: nowPlaying,
                 hud: hud,
+                volume: volume,
                 alerts: alerts,
                 lyrics: lyrics,
                 weather: weather,
                 shelf: shelf,
+                clipboard: clipboard,
                 calendar: calendar,
                 screenshots: screenshots,
                 timers: timers,
@@ -55,6 +58,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             lyrics: lyrics,
             weather: weather,
             shelf: shelf,
+            clipboard: clipboard,
             calendar: calendar,
             screenshots: screenshots,
             timers: timers,
@@ -85,6 +89,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         hud.start()
         weather.start()
         shelf.start()
+        clipboard.start()
         calendar.start()
         screenshots.start()
         transfers.start()
@@ -116,6 +121,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         features.calendar.stop()
         features.screenshots.stop()
         features.transfers.stop()
+        features.clipboard.stop()
         features.systemTimers.stop()
         features.privacy.stop()
         features.keyboard.stop()
@@ -137,6 +143,7 @@ struct Features {
     let lyrics: LyricsController
     let weather: WeatherController
     let shelf: ShelfController
+    let clipboard: ClipboardHistory
     let calendar: CalendarController
     let screenshots: ScreenshotController
     let timers: TimerController

@@ -20,6 +20,8 @@ Architettura e scelte in [`docs/design.md`](docs/design.md).
 | **Notifiche** | banner sotto la notch | copia delle notifiche di sistema; clic = apre l'app |
 | **Meteo** | intestazione dell'isola espansa, widget | [Open-Meteo](https://open-meteo.com) |
 | **Scaffale file** | scheda dell'isola espansa | trascina file sulla notch; trascinali fuori per usarli |
+| **Appunti** | scheda dell'isola espansa | ultimi 20 testi e immagini copiati; clic per ricopiarli, trascinali fuori; solo in memoria, senza password |
+| **Uscita audio** | pulsante AirPlay nel player | scegli altoparlanti, cuffie o monitor senza aprire Impostazioni |
 | **Tutti i display** | un'isola per schermo | monitor esterni e Mac senza notch: pillola finta |
 | **Widget sul desktop** | sopra lo sfondo, sotto le finestre | player in vetro, oppure orologio e meteo |
 | **Schermata di blocco** | sopra il lock screen | player e testi mentre il Mac è bloccato |

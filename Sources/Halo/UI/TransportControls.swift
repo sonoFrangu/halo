@@ -1,6 +1,7 @@
 import SwiftUI
 
-/// Previous / play-pause / next, plus the lyrics toggle when the track has synced lyrics.
+/// Previous / play-pause / next, then the output picker (in the island) and the lyrics
+/// toggle when the track has synced lyrics.
 /// The only Liquid Glass in the island: the body stays black, the controls float on it as
 /// glass. With Reduce Transparency they become solid.
 struct TransportControls: View {
@@ -33,6 +34,13 @@ struct TransportControls: View {
             }
 
             Spacer(minLength: 8)
+
+            if let showOutputs = actions.showOutputs {
+                ControlButton(symbol: "airplay.audio", label: "Uscita audio", diameter: 28, glyphSize: 11) {
+                    showOutputs()
+                }
+                .padding(.trailing, hasLyrics ? 8 : 0)
+            }
 
             if hasLyrics {
                 ControlButton(

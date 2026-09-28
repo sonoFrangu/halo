@@ -30,6 +30,7 @@ final class IslandController {
                     weather: services.weather.model,
                     shelf: services.shelf.store,
                     thumbnails: services.shelf.thumbnails,
+                    clipboard: services.clipboard,
                     calendar: services.calendar.model,
                     timers: services.timers,
                     systemTimers: services.systemTimers,
@@ -81,6 +82,7 @@ final class IslandController {
         let lyrics = services.lyrics.model
         let shelf = services.shelf
         let store = shelf.store
+        let clipboard = services.clipboard
         let calendar = services.calendar
         let screenshots = services.screenshots
         let timers = services.timers
@@ -102,6 +104,12 @@ final class IslandController {
                 openSource: { [weak nowPlaying] in nowPlaying?.openSourceApp() },
                 setInteracting: { [weak viewModel] interacting in
                     viewModel?.setInteracting(interacting, pointer: NSEvent.mouseLocation)
+                },
+                showOutputs: { [weak viewModel] in
+                    // The menu lies outside the island: hold it open until the menu closes.
+                    viewModel?.setInteracting(true, pointer: NSEvent.mouseLocation)
+                    AudioOutputMenu.popUp(volume: services.volume)
+                    viewModel?.setInteracting(false, pointer: NSEvent.mouseLocation)
                 }
             ),
             hud: HUDActions(
@@ -119,6 +127,11 @@ final class IslandController {
                 reveal: { [weak store] item in store?.reveal(item) },
                 remove: { [weak store] item in store?.remove(item) },
                 clear: { [weak store] in store?.clear() }
+            ),
+            clipboard: ClipboardActions(
+                copy: { [weak clipboard] item in clipboard?.copy(item) },
+                remove: { [weak clipboard] item in clipboard?.remove(item) },
+                clear: { [weak clipboard] in clipboard?.clear() }
             ),
             calendar: CalendarActions(
                 open: { [weak calendar] event in calendar?.open(event) },
@@ -261,11 +274,13 @@ final class IslandController {
     /// The optional tabs follow their features' switches.
     private func observeTabs() {
         let shelf = services.shelf
+        let clipboard = services.clipboard
         let calendar = services.calendar
         let timers = services.timers
         let tabs = withObservationTracking {
             var tabs: [ExpandedTab] = []
             if shelf.isEnabled { tabs.append(.shelf) }
+            if clipboard.isEnabled { tabs.append(.clipboard) }
             if calendar.isEnabled { tabs.append(.calendar) }
             if timers.isEnabled { tabs.append(.timer) }
             return tabs

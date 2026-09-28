@@ -5,10 +5,12 @@ import AppKit
 struct IslandServices {
     let nowPlaying: NowPlayingController
     let hud: HUDController
+    let volume: SystemVolume
     let alerts: AlertCenter
     let lyrics: LyricsController
     let weather: WeatherController
     let shelf: ShelfController
+    let clipboard: ClipboardHistory
     let calendar: CalendarController
     let screenshots: ScreenshotController
     let timers: TimerController

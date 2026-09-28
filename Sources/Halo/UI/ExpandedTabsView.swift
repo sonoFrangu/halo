@@ -4,11 +4,20 @@ import SwiftUI
 struct ExpandedTabsView: View {
     let tabs: [ExpandedTab]
     let selected: ExpandedTab
+    /// Room in the wing (`IslandLayout.tabsFrame`).
+    let width: CGFloat
     let onSelect: (ExpandedTab) -> Void
 
-    /// Sized so four tabs fit the narrowest wing.
     static let pillSize = CGSize(width: 24, height: 20)
     static let spacing: CGFloat = 4
+
+    /// Full-size pills, narrower when they would not all fit the wing (five tabs do not fit
+    /// a wide notch).
+    static func pillWidth(count: Int, available: CGFloat) -> CGFloat {
+        guard count > 1 else { return pillSize.width }
+        let fitting = (available - spacing * CGFloat(count - 1)) / CGFloat(count)
+        return min(pillSize.width, fitting.rounded(.down))
+    }
 
     var body: some View {
         HStack(spacing: Self.spacing) {
@@ -25,13 +34,14 @@ struct ExpandedTabsView: View {
 
     private func pill(_ tab: ExpandedTab) -> some View {
         let isSelected = selected == tab
+        let pillWidth = Self.pillWidth(count: tabs.count, available: width)
         return Button {
             onSelect(tab)
         } label: {
             Image(systemName: tab.symbol)
                 .font(.system(size: 10.5, weight: .semibold))
                 .foregroundStyle(isSelected ? Color.black : Color.white.opacity(0.6))
-                .frame(width: Self.pillSize.width, height: Self.pillSize.height)
+                .frame(width: pillWidth, height: Self.pillSize.height)
                 .background {
                     Capsule().fill(isSelected ? Color.white : Color.white.opacity(0.08))
                 }
@@ -48,6 +58,7 @@ extension ExpandedTab {
         switch self {
         case .player: "music.note"
         case .shelf: "tray.full.fill"
+        case .clipboard: "list.clipboard.fill"
         case .calendar: "calendar"
         case .timer: "timer"
         }
@@ -57,6 +68,7 @@ extension ExpandedTab {
         switch self {
         case .player: "Musica"
         case .shelf: "Scaffale"
+        case .clipboard: "Appunti"
         case .calendar: "Calendario"
         case .timer: "Timer"
         }

@@ -78,6 +78,10 @@ struct IslandContentView: View {
             .place(in: layout.tabBodyFrame)
             .reveal(isExpanded && island.context.tab == .shelf, order: 0)
 
+            ClipboardTabView(history: models.clipboard, actions: actions.clipboard)
+                .place(in: layout.tabBodyFrame)
+                .reveal(isExpanded && island.context.tab == .clipboard, order: 0)
+
             CalendarTabView(model: models.calendar, actions: actions.calendar)
                 .place(in: layout.tabBodyFrame)
                 .reveal(isExpanded && island.context.tab == .calendar, order: 0)
@@ -185,6 +189,7 @@ struct HeaderContentView: View {
             ExpandedTabsView(
                 tabs: island.availableTabs,
                 selected: island.context.tab,
+                width: layout.tabsFrame.width,
                 onSelect: actions.selectTab
             )
             .place(in: layout.tabsFrame)

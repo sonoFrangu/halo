@@ -14,6 +14,7 @@ struct IslandShapeSpec: Sendable, Equatable {
 enum ExpandedTab: Sendable, Equatable, CaseIterable {
     case player
     case shelf
+    case clipboard
     case calendar
     case timer
 }
@@ -86,7 +87,7 @@ struct IslandLayout: Sendable, Equatable {
             Self.playerBodyHeight + (context.showsLyrics ? Self.lyricsPanelHeight : 0)
         case .player:
             Self.emptyBodyHeight
-        case .shelf, .calendar, .timer:
+        case .shelf, .clipboard, .calendar, .timer:
             // Same height when empty: the shelf is a drop target and must stay easy to hit.
             Self.tabBodyHeight
         }

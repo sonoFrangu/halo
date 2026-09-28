@@ -14,6 +14,7 @@ enum Preferences {
         static let lyricsLead = "lyricsLead"
         static let weather = "weatherEnabled"
         static let shelf = "shelfEnabled"
+        static let clipboard = "clipboardEnabled"
         static let notifications = "notificationsEnabled"
         static let desktopWidget = "desktopWidgetEnabled"
         static let lockScreen = "lockScreenEnabled"
@@ -86,6 +87,12 @@ enum Preferences {
     static var shelfEnabled: Bool {
         get { flag(Key.shelf, default: true) }
         set { defaults.set(newValue, forKey: Key.shelf) }
+    }
+
+    /// The clipboard tab with the last texts and images copied.
+    static var clipboardEnabled: Bool {
+        get { flag(Key.clipboard, default: true) }
+        set { defaults.set(newValue, forKey: Key.clipboard) }
     }
 
     /// Mirror system notifications in the island (needs Full Disk Access).

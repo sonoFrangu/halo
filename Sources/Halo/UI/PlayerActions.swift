@@ -12,6 +12,8 @@ struct PlayerActions {
     var openSource: () -> Void
     /// A bar is being dragged: keep the island open and interactive.
     var setInteracting: (Bool) -> Void
+    /// Opens the output device menu; `nil` hides the button (cards outside the island).
+    var showOutputs: (() -> Void)? = nil
 }
 
 extension PlayerActions {
@@ -50,6 +52,7 @@ struct IslandActions {
     var hud: HUDActions
     var alerts: AlertActions
     var shelf: ShelfActions
+    var clipboard: ClipboardActions
     var calendar: CalendarActions
     var screenshot: ScreenshotActions
     var timer: TimerActions
@@ -66,6 +69,7 @@ struct IslandModels {
     let weather: WeatherModel
     let shelf: ShelfStore
     let thumbnails: ShelfThumbnails
+    let clipboard: ClipboardHistory
     let calendar: CalendarModel
     let timers: TimerController
     let systemTimers: SystemTimerMonitor
