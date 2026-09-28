@@ -145,3 +145,10 @@ di Halo fa lo stesso. Aprendo l'isola con il puntatore sull'ala destra mentre c'
 **Limiti**: a ogni comando Orologio compare per un istante; durante un avvio Halo digita le
 cifre, quindi un tasto premuto in quel momento può finire altrove. Un timer messo in pausa
 dalla notch e poi annullato dall'app Orologio resta in pausa nella notch finché non lo fermi.
+
+**Aggiornamento dopo la verifica**: Orologio ignora i clic solo quando è *nascosto*, non
+quando è in secondo piano. Pausa, ripresa, annullamento e avvio dai "Recenti" avvengono quindi
+senza attivare Orologio: la finestra viene spinta nell'angolo in basso a sinistra (ne restano
+visibili circa 40 × 110 punti) e il focus non si sposta. Solo l'avvio di una durata che non è
+nei Recenti attiva Orologio con la finestra sullo schermo (circa un secondo), perché le cifre
+arrivano solo a una finestra attiva e visibile.

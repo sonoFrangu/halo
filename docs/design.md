@@ -240,6 +240,19 @@ occupa anche l'ala sinistra. `IslandViewModel.liveActivityChanged` tiene l'isola
   sono uguali) e "timer fired" (banner timer). Il timer diventa un `FocusTimer` `.countdown`,
   con la durata vista al primo avvio; un timer in pausa non compare. Se `log` si chiude,
   riprova dopo 5 s, al terzo fallimento lo scrive nelle diagnostiche.
+- **Comandare Orologio** (`ClockAppDriver`, `TimerCommands`): Comandi Rapidi non serve
+  (l'azione "Avvia timer" fallisce con errore 101 su macOS 26). La scheda Timer di Orologio è
+  esposta all'Accessibilità (`TimePicker`, `PauseResumeButton`, `CancelButton`, "Recenti").
+  Orologio ignora i clic mentre è nascosto ma non mentre è solo in secondo piano: ogni comando
+  lo mostra senza attivarlo, con la finestra spinta nell'angolo in basso a sinistra (macOS ne
+  lascia visibili circa 40 × 110 punti), preme e lo nasconde; il focus non si sposta. Un avvio
+  usa la voce dei Recenti con la stessa durata; se non c'è, scrive le cifre nelle rotelle, e i
+  tasti arrivano solo all'app attiva con la finestra sullo schermo: Orologio compare per circa
+  un secondo, poi il focus torna all'app di prima (`AXFrontmost`, perché `activate()` da
+  un'app in secondo piano è rifiutato da macOS 14). Impostazioni › Attività sceglie l'app dei
+  timer della notch (Orologio o Halo); se Orologio non risponde parte il timer di Halo. Una
+  pausa chiesta dalla notch resta visibile (`SystemTimer.pausedRemaining`). Entrando
+  nell'isola sopra l'ala destra mentre c'è un timer, l'isola si apre sulla scheda Timer.
 
 ## Siri
 

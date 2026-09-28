@@ -5,20 +5,29 @@ import ApplicationServices
 /// can start, pause, resume or cancel a Clock timer (`mobiletimerd` refuses outside
 /// clients, and the Shortcuts "Start Timer" action fails on macOS 26).
 ///
-/// Clock carries out a press only while it is the active app: pressing in the background
-/// reports success and does nothing. So each command brings Clock forward for an instant,
-/// with its window moved off screen, then gives focus back and hides it. Commands run one
-/// at a time. Elements are found by identifier (or position, for the Timers tab), never by
-/// their localized names.
+/// Clock ignores presses while it is hidden (they report success and do nothing), but not
+/// while it is merely in the background. So a command shows Clock for an instant without
+/// activating it, with its window pushed into the bottom-left corner (macOS keeps about
+/// 40 × 110 points of it on screen), presses, and hides Clock again: focus never moves.
+/// Typing a new duration is the exception: keys reach only the active app and an
+/// on-screen window, so that start shows Clock for about a second and then gives focus back. A duration used before is started from
+/// Clock's Recents instead, quietly. Commands run one at a time. Elements are found by
+/// identifier or position, not by their localized names (Recents by their "N min" prefix).
 @MainActor
 final class ClockAppDriver {
     static let bundleIdentifier = "com.apple.clock"
 
     private var queue: Task<Bool, Never>?
 
-    /// Starts a timer of `minutes` (typed into the hour, minute and second wheels).
+    /// Starts a timer of `minutes`: from Recents when that duration is there, otherwise
+    /// typed into the hour, minute and second wheels.
     func start(minutes: Int) async -> Bool {
-        await run("avvio \(minutes) min") { root in
+        if await run("avvio \(minutes) min dai recenti", activating: false, { root in
+            Self.pressRecent(minutes: minutes, in: root)
+        }) {
+            return true
+        }
+        return await run("avvio \(minutes) min", activating: true) { root in
             guard
                 let picker = Self.element(in: root, identifier: "TimePicker"),
                 let wheels = Self.children(of: picker), wheels.count == 3,
@@ -39,25 +48,25 @@ final class ClockAppDriver {
 
     /// Pauses the running timer, or resumes the paused one.
     func togglePause() async -> Bool {
-        await run("pausa/riprendi") { root in
+        await run("pausa/riprendi", activating: false) { root in
             Self.press(identifier: "PauseResumeButton", in: root)
         }
     }
 
     func cancel() async -> Bool {
-        await run("annulla") { root in
+        await run("annulla", activating: false) { root in
             Self.press(identifier: "CancelButton", in: root)
         }
     }
 
     // MARK: Running a command
 
-    private func run(_ label: String, _ body: @escaping @MainActor (AXUIElement) async -> Bool) async -> Bool {
+    private func run(_ label: String, activating: Bool, _ body: @escaping @MainActor (AXUIElement) async -> Bool) async -> Bool {
         let previous = queue
         let task = Task { @MainActor [weak self] () -> Bool in
             _ = await previous?.value
             guard let self else { return false }
-            let done = await self.perform(body)
+            let done = await self.perform(activating: activating, body)
             Diagnostics.shared.record("Orologio: \(label) \(done ? "fatto" : "non riuscito")")
             return done
         }
@@ -65,35 +74,40 @@ final class ClockAppDriver {
         return await task.value
     }
 
-    private func perform(_ body: @MainActor (AXUIElement) async -> Bool) async -> Bool {
+    private func perform(activating: Bool, _ body: @MainActor (AXUIElement) async -> Bool) async -> Bool {
         guard AXIsProcessTrusted(), let clock = await launch() else { return false }
         let root = AXUIElementCreateApplication(clock.processIdentifier)
         guard let window = await Self.firstWindow(of: root) else { return false }
         let previous = NSWorkspace.shared.frontmostApplication
 
-        var offscreen = CGPoint(x: -10_000, y: -10_000)
-        if let position = AXValueCreate(.cgPoint, &offscreen) {
-            AXUIElementSetAttributeValue(window, kAXPositionAttribute as CFString, position)
-        }
-        // `activate()` from an app in the background is refused since macOS 14; bringing
-        // Clock forward through Accessibility is not. A hidden Clock must be shown and its
-        // window raised first, or it does not become frontmost.
+        // Out of the way, moved while hidden and again once shown (macOS may put it back).
+        // Not when typing: an off-screen window does not get the keys.
+        if !activating { Self.pushAway(window) }
         AXUIElementSetAttributeValue(root, kAXHiddenAttribute as CFString, kCFBooleanFalse)
-        await Self.settle(0.2)
-        AXUIElementPerformAction(window, kAXRaiseAction as CFString)
-        AXUIElementSetAttributeValue(window, kAXMainAttribute as CFString, kCFBooleanTrue)
-        AXUIElementSetAttributeValue(root, kAXFrontmostAttribute as CFString, kCFBooleanTrue)
+        await Self.settle(0.1)
+        if !activating { Self.pushAway(window) }
+        await Self.settle(0.15)
+
+        var ready = true
+        if activating {
+            // `activate()` from an app in the background is refused since macOS 14;
+            // bringing Clock forward through Accessibility is not, once its window is raised.
+            AXUIElementPerformAction(window, kAXRaiseAction as CFString)
+            AXUIElementSetAttributeValue(window, kAXMainAttribute as CFString, kCFBooleanTrue)
+            AXUIElementSetAttributeValue(root, kAXFrontmostAttribute as CFString, kCFBooleanTrue)
+            ready = await Self.wait(timeout: 1.5, until: { Self.attribute(root, kAXFrontmostAttribute) as? Bool == true })
+        }
         var done = false
-        if await Self.wait(timeout: 1.5, until: { Self.attribute(root, kAXFrontmostAttribute) as? Bool == true }) {
+        if ready {
             Self.selectTimersTab(in: root)
             await Self.settle(0.15)
             done = await body(root)
             await Self.settle(0.15)
         }
-        if let previous, previous.processIdentifier != clock.processIdentifier {
+        if activating, let previous, previous.processIdentifier != clock.processIdentifier {
             previous.activate()
         }
-        clock.hide()
+        AXUIElementSetAttributeValue(root, kAXHiddenAttribute as CFString, kCFBooleanTrue)
         return done
     }
 
@@ -137,6 +151,25 @@ final class ClockAppDriver {
     private static func press(identifier: String, in root: AXUIElement) -> Bool {
         guard let button = element(in: root, identifier: identifier) else { return false }
         return AXUIElementPerformAction(button, kAXPressAction as CFString) == .success
+    }
+
+    /// Into the bottom-left corner, as far off screen as macOS allows.
+    private static func pushAway(_ window: AXUIElement) {
+        var corner = CGPoint(x: -10_000, y: 10_000)
+        if let position = AXValueCreate(.cgPoint, &corner) {
+            AXUIElementSetAttributeValue(window, kAXPositionAttribute as CFString, position)
+        }
+    }
+
+    /// Presses the Recents entry for `minutes` ("5 min, five minutes"), if there is one.
+    private static func pressRecent(minutes: Int, in root: AXUIElement) -> Bool {
+        let prefix = "\(minutes) min"
+        let entry = elements(in: root, role: "AXGenericElement").first { element in
+            attribute(element, kAXHelpAttribute) != nil
+                && (attribute(element, kAXDescriptionAttribute) as? String)?.hasPrefix(prefix + ",") == true
+        }
+        guard let entry else { return false }
+        return AXUIElementPerformAction(entry, kAXPressAction as CFString) == .success
     }
 
     /// The toolbar's last segment (World Clock, Alarms, Stopwatch, Timers).
