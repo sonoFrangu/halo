@@ -31,7 +31,8 @@ final class IslandController {
                     shelf: services.shelf.store,
                     thumbnails: services.shelf.thumbnails,
                     calendar: services.calendar.model,
-                    timers: services.timers
+                    timers: services.timers,
+                    privacy: services.privacy
                 ),
                 actions: Self.actions(for: viewModel, services: services, dragHolder: "hud-drag-\(displayID)")
             )
@@ -62,6 +63,7 @@ final class IslandController {
         observeLyrics()
         observeTabs()
         observeTimer()
+        observePrivacy()
     }
 
     private static func actions(
@@ -262,5 +264,18 @@ final class IslandController {
             }
         }
         viewModel.timerChanged(active: active)
+    }
+
+    /// A microphone or camera in use keeps the island up with its dot.
+    private func observePrivacy() {
+        let privacy = services.privacy
+        let inUse = withObservationTracking {
+            privacy.active != nil
+        } onChange: { [weak self] in
+            Task { @MainActor [weak self] in
+                self?.observePrivacy()
+            }
+        }
+        viewModel.privacyChanged(inUse: inUse)
     }
 }

@@ -77,6 +77,11 @@ final class StatusItemController: NSObject, NSMenuDelegate {
             screenshots.setEnabled(on)
         })
 
+        let privacy = features.privacy
+        menu.addItem(toggle("Microfono e fotocamera in uso", isOn: { privacy.isEnabled }) { on in
+            privacy.setEnabled(on)
+        })
+
         let notifications = features.notifications
         menu.addItem(toggle("Notifiche nella notch", isOn: { notifications.isEnabled }) { on in
             notifications.setEnabled(on)

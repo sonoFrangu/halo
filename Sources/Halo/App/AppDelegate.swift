@@ -18,6 +18,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let calendar = CalendarController(alerts: alerts)
         let screenshots = ScreenshotController(alerts: alerts, shelf: shelf.store)
         let timers = TimerController(alerts: alerts)
+        let privacy = PrivacyIndicators()
         let islands = IslandsCoordinator(
             services: IslandServices(
                 nowPlaying: nowPlaying,
@@ -28,7 +29,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 shelf: shelf,
                 calendar: calendar,
                 screenshots: screenshots,
-                timers: timers
+                timers: timers,
+                privacy: privacy
             )
         )
         let cardActions = PlayerActions.card(for: nowPlaying)
@@ -45,6 +47,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             calendar: calendar,
             screenshots: screenshots,
             timers: timers,
+            privacy: privacy,
             notifications: NotificationMirror(alerts: alerts),
             desktopWidget: DesktopWidgetController(
                 player: nowPlaying.model,
@@ -65,6 +68,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         shelf.start()
         calendar.start()
         screenshots.start()
+        privacy.start()
         features.notifications.start()
         features.desktopWidget.start()
         features.lockScreen.start()
@@ -85,6 +89,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         features.lockScreen.stop()
         features.calendar.stop()
         features.screenshots.stop()
+        features.privacy.stop()
     }
 }
 
@@ -102,6 +107,7 @@ struct Features {
     let calendar: CalendarController
     let screenshots: ScreenshotController
     let timers: TimerController
+    let privacy: PrivacyIndicators
     let notifications: NotificationMirror
     let desktopWidget: DesktopWidgetController
     let lockScreen: LockScreenController

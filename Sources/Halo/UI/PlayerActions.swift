@@ -67,4 +67,5 @@ struct IslandModels {
     let thumbnails: ShelfThumbnails
     let calendar: CalendarModel
     let timers: TimerController
+    let privacy: PrivacyIndicators
 }

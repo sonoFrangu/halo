@@ -58,6 +58,7 @@ final class IslandViewModel {
     @ObservationIgnored private var showsActivity = false
     @ObservationIgnored private var isDraggingFiles = false
     @ObservationIgnored private var isTimerActive = false
+    @ObservationIgnored private var isDeviceInUse = false
     @ObservationIgnored private var lastInteractivity = false
     @ObservationIgnored private var lastHoldsAlerts = false
     @ObservationIgnored private var hoverTask: Task<Void, Never>?
@@ -142,6 +143,13 @@ final class IslandViewModel {
     func timerChanged(active: Bool) {
         guard active != isTimerActive else { return }
         isTimerActive = active
+        resolveState()
+    }
+
+    /// A microphone or camera in use keeps the compact island up with its dot.
+    func privacyChanged(inUse: Bool) {
+        guard inUse != isDeviceInUse else { return }
+        isDeviceInUse = inUse
         resolveState()
     }
 
@@ -242,7 +250,7 @@ final class IslandViewModel {
             target = .alert
         } else if isHovering {
             target = .expanded
-        } else if showsActivity || isTimerActive {
+        } else if showsActivity || isTimerActive || isDeviceInUse {
             target = .compact
         } else {
             target = .idle

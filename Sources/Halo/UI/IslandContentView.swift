@@ -37,6 +37,19 @@ struct IslandContentView: View {
                 .place(in: layout.equalizerFrame(for: state))
                 .opacity(hasMedia && state == .compact && timer == nil ? 1 : 0)
 
+            if let device = models.privacy.active {
+                let alone = !hasMedia && timer == nil
+                if alone {
+                    PrivacyGlyph(kind: device)
+                        .place(in: layout.artworkFrame(for: .compact))
+                        .opacity(state == .compact ? 1 : 0)
+                }
+                PrivacyDot(kind: device)
+                    .place(in: layout.privacyDotFrame(alone: alone))
+                    .opacity(state == .compact ? 1 : 0)
+                    .animation(.easeOut(duration: 0.2), value: state)
+            }
+
             if let timer {
                 CompactTimerRing(timer: timer)
                     .place(in: layout.artworkFrame(for: .compact))

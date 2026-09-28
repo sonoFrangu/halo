@@ -22,6 +22,7 @@ enum Preferences {
         static let calendar = "calendarEnabled"
         static let screenshots = "screenshotsEnabled"
         static let timer = "timerEnabled"
+        static let privacyIndicator = "privacyIndicatorEnabled"
     }
 
     private static func flag(_ key: String, default value: Bool) -> Bool {
@@ -110,6 +111,12 @@ enum Preferences {
     static var timerEnabled: Bool {
         get { flag(Key.timer, default: true) }
         set { defaults.set(newValue, forKey: Key.timer) }
+    }
+
+    /// The orange/green dot while an app uses the microphone or a camera.
+    static var privacyIndicatorEnabled: Bool {
+        get { flag(Key.privacyIndicator, default: true) }
+        set { defaults.set(newValue, forKey: Key.privacyIndicator) }
     }
 
     /// Swipes over the island skip tracks and change the volume.

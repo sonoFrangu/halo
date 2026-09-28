@@ -204,6 +204,16 @@ struct IslandLayout: Sendable, Equatable {
         CGRect(x: centerX + notchSize.width / 2, y: 0, width: compactWingWidth, height: notchSize.height)
     }
 
+    /// The microphone/camera dot: centered in the right wing when the island is only up for
+    /// it, otherwise at the outer edge of the left wing, clear of the artwork.
+    func privacyDotFrame(alone: Bool) -> CGRect {
+        let side: CGFloat = alone ? 7 : 5
+        let centerX = alone
+            ? compactRightWingFrame.midX
+            : self.centerX - notchSize.width / 2 - compactWingWidth + 7
+        return square(side: side, centerX: centerX, centerY: notchSize.height / 2)
+    }
+
     // MARK: Expanded header (notch row)
 
     /// Tab switcher, in the left wing.

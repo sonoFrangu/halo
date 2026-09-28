@@ -12,6 +12,7 @@ struct IslandServices {
     let calendar: CalendarController
     let screenshots: ScreenshotController
     let timers: TimerController
+    let privacy: PrivacyIndicators
 
     /// What happens when an alert is clicked: a notification opens its app, a meeting
     /// reminder joins the call (or opens Calendar), a screenshot opens; any alert is then
