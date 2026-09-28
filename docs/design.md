@@ -213,7 +213,7 @@ visibile.
 ## Attività live
 
 `LiveActivity.current` sceglie cosa mostrare nelle ali oltre alla musica, in ordine: timer,
-cronometro, trasferimento. Con musica l'attività sostituisce l'equalizzatore a destra; senza,
+cronometro, timer di Orologio, trasferimento. Con musica l'attività sostituisce l'equalizzatore a destra; senza,
 occupa anche l'ala sinistra. `IslandViewModel.liveActivityChanged` tiene l'isola `compact`.
 
 - **Download e AirDrop** (`TransferMonitor`): `Progress.addSubscriber(forFileURL:)` sulla
@@ -232,6 +232,24 @@ occupa anche l'ala sinistra. `IslandViewModel.liveActivityChanged` tiene l'isola
   file.
 - **Sblocco** (`UnlockGreeter`): `com.apple.screenIsUnlocked` → avviso `.unlock`, il lucchetto
   si apre con `contentTransition(.symbolEffect(.replace))` 0,3 s dopo la comparsa.
+- **Timer di Siri e Orologio** (`SystemTimerMonitor`, `SystemTimerLogParser` e
+  `SystemTimerState` testati): `mobiletimerd` accetta solo client Apple e la voce Timer della
+  barra dei menu non è esposta all'Accessibilità, quindi Halo segue `log stream --style ndjson`
+  sui messaggi `com.apple.mobiletimer.logging` del Centro di Controllo: "has next trigger"
+  (corre, fino a una data), "next timer changed: (null)" (pausa, annullamento o fine: nel log
+  sono uguali) e "timer fired" (banner timer). Il timer diventa un `FocusTimer` `.countdown`,
+  con la durata vista al primo avvio; un timer in pausa non compare. Se `log` si chiude,
+  riprova dopo 5 s, al terzo fallimento lo scrive nelle diagnostiche.
+
+## Siri
+
+`SiriMonitor`: un `AXObserver` sui processi `com.apple.Siri` e `com.apple.campo` ("Siri AI")
+sveglia il monitor quando aprono una finestra; la lista finestre (i PID dei proprietari non
+richiedono permessi) dice se una è a schermo, e finché lo è viene ricontrollata ogni 0,5 s.
+Senza Accessibilità, controllo ogni secondo. Siri a schermo → avviso `.siri` (ali), tenuto con
+`AlertCenter.setInteracting(by: "siri")` e ritirato alla chiusura. `SiriGlowView` disegna un
+gradiente angolare che ruota lungo il bordo dell'isola (fermo con Riduci movimento o effetti
+ridotti); `SiriGlyph` un'onda nell'ala sinistra. Il pannello di Siri resta dove lo mette macOS.
 
 ## Microfono, fotocamera, tastiera
 
