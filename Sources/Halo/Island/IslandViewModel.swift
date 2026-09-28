@@ -57,7 +57,7 @@ final class IslandViewModel {
     @ObservationIgnored private var isInteracting = false
     @ObservationIgnored private var showsActivity = false
     @ObservationIgnored private var isDraggingFiles = false
-    @ObservationIgnored private var isTimerActive = false
+    @ObservationIgnored private var hasLiveActivity = false
     @ObservationIgnored private var isDeviceInUse = false
     @ObservationIgnored private var isEnergyReduced = false
     @ObservationIgnored private var lastInteractivity = false
@@ -140,10 +140,10 @@ final class IslandViewModel {
         updateContext { $0.tab = tab }
     }
 
-    /// A running or paused timer keeps the compact island up as a live activity.
-    func timerChanged(active: Bool) {
-        guard active != isTimerActive else { return }
-        isTimerActive = active
+    /// A timer, the stopwatch or a download keeps the compact island up as a live activity.
+    func liveActivityChanged(active: Bool) {
+        guard active != hasLiveActivity else { return }
+        hasLiveActivity = active
         resolveState()
     }
 
@@ -256,7 +256,7 @@ final class IslandViewModel {
             target = .alert
         } else if isHovering {
             target = .expanded
-        } else if showsActivity || isTimerActive || isDeviceInUse {
+        } else if showsActivity || hasLiveActivity || isDeviceInUse {
             target = .compact
         } else {
             target = .idle

@@ -12,12 +12,13 @@ struct IslandServices {
     let calendar: CalendarController
     let screenshots: ScreenshotController
     let timers: TimerController
+    let transfers: TransferMonitor
     let privacy: PrivacyIndicators
     let energy: EnergyMode
 
     /// What happens when an alert is clicked: a notification opens its app, a meeting
-    /// reminder joins the call (or opens Calendar), a screenshot opens; any alert is then
-    /// dismissed.
+    /// reminder joins the call (or opens Calendar), a screenshot or a finished download
+    /// opens; any alert is then dismissed.
     func activate(_ alert: IslandAlert) {
         switch alert {
         case .notification(let notification):
@@ -28,7 +29,9 @@ struct IslandServices {
             calendar.open(reminder.event)
         case .screenshot(let capture):
             screenshots.open(capture.url)
-        case .hud, .power, .audioDevice, .timer, .keyboard:
+        case .transfer(let transfer):
+            transfers.open(transfer.url)
+        case .hud, .power, .audioDevice, .timer, .keyboard, .focus, .unlock:
             break
         }
         alerts.dismissCurrent()

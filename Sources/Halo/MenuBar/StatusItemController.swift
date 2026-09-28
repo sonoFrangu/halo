@@ -12,6 +12,8 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     private var notificationsPermissionItem: NSMenuItem?
     private var timerPauseItem: NSMenuItem?
     private var timerStopItem: NSMenuItem?
+    private var stopwatchItem: NSMenuItem?
+    private var stopwatchResetItem: NSMenuItem?
 
     init(features: Features) {
         self.statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
@@ -84,7 +86,15 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         timerPauseItem = pause
         timerStopItem = stop
 
-        let item = NSMenuItem(title: "Timer", action: nil, keyEquivalent: "")
+        submenu.addItem(.separator())
+        let stopwatch = ActionMenuItem(title: "Avvia cronometro") { timers.toggleStopwatch() }
+        let reset = ActionMenuItem(title: "Azzera cronometro") { timers.resetStopwatch() }
+        submenu.addItem(stopwatch)
+        submenu.addItem(reset)
+        stopwatchItem = stopwatch
+        stopwatchResetItem = reset
+
+        let item = NSMenuItem(title: "Timer e cronometro", action: nil, keyEquivalent: "")
         item.submenu = submenu
         return item
     }
@@ -101,6 +111,14 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         timerPauseItem?.isEnabled = timer != nil
         timerPauseItem?.title = timer?.isRunning == false ? "Riprendi" : "Pausa"
         timerStopItem?.isEnabled = timer != nil
+        let stopwatch = features.timers.stopwatch
+        let stopwatchTitle: String = switch stopwatch?.isRunning {
+        case true?: "Metti in pausa il cronometro"
+        case false?: "Riprendi il cronometro"
+        case nil: "Avvia cronometro"
+        }
+        stopwatchItem?.title = stopwatchTitle
+        stopwatchResetItem?.isEnabled = stopwatch != nil
     }
 
     // MARK: Status

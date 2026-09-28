@@ -53,6 +53,7 @@ struct IslandActions {
     var calendar: CalendarActions
     var screenshot: ScreenshotActions
     var timer: TimerActions
+    var transfer: TransferActions
     var selectTab: (ExpandedTab) -> Void
 }
 
@@ -67,6 +68,7 @@ struct IslandModels {
     let thumbnails: ShelfThumbnails
     let calendar: CalendarModel
     let timers: TimerController
+    let transfers: TransferMonitor
     let privacy: PrivacyIndicators
     let energy: EnergyMode
 }

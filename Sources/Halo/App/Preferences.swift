@@ -27,6 +27,10 @@ enum Preferences {
         static let keyboardAlerts = "keyboardAlertsEnabled"
         static let presentationMode = "presentationModeEnabled"
         static let lowPowerAdaptive = "lowPowerAdaptive"
+        static let focus = "focusEnabled"
+        static let notificationsFollowFocus = "notificationsFollowFocus"
+        static let transfers = "transfersEnabled"
+        static let unlockAnimation = "unlockAnimationEnabled"
     }
 
     private static func flag(_ key: String, default value: Bool) -> Bool {
@@ -139,6 +143,30 @@ enum Preferences {
     static var lowPowerAdaptive: Bool {
         get { flag(Key.lowPowerAdaptive, default: true) }
         set { defaults.set(newValue, forKey: Key.lowPowerAdaptive) }
+    }
+
+    /// Announce Focus changes in the island.
+    static var focusEnabled: Bool {
+        get { flag(Key.focus, default: true) }
+        set { defaults.set(newValue, forKey: Key.focus) }
+    }
+
+    /// Keep mirrored notifications quiet while a Focus is on.
+    static var notificationsFollowFocus: Bool {
+        get { flag(Key.notificationsFollowFocus, default: true) }
+        set { defaults.set(newValue, forKey: Key.notificationsFollowFocus) }
+    }
+
+    /// Downloads and AirDrops as a live activity.
+    static var transfersEnabled: Bool {
+        get { flag(Key.transfers, default: true) }
+        set { defaults.set(newValue, forKey: Key.transfers) }
+    }
+
+    /// The padlock opening in the island when the Mac is unlocked.
+    static var unlockAnimationEnabled: Bool {
+        get { flag(Key.unlockAnimation, default: true) }
+        set { defaults.set(newValue, forKey: Key.unlockAnimation) }
     }
 
     /// Swipes over the island skip tracks and change the volume.

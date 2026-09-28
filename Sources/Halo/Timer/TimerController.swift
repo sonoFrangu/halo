@@ -1,16 +1,23 @@
 import AppKit
 import Observation
 
-/// Countdown and Pomodoro timer. While it runs the island shows it as a live activity in
-/// its wings; when it ends a sound plays and a banner says what comes next.
+/// Countdown, Pomodoro and stopwatch. While one runs the island shows it as a live
+/// activity in its wings; when a timer ends a sound plays and a banner says what comes
+/// next.
 ///
-/// One sleeping task waits for the end: nothing ticks while the timer runs (the views
-/// count down from the end date on their own).
+/// One sleeping task waits for the timer's end: nothing ticks while timer or stopwatch
+/// run (the views count from their dates on their own).
 @MainActor
 @Observable
 final class TimerController {
     private(set) var timer: FocusTimer?
+    private(set) var stopwatch: Stopwatch?
     private(set) var isEnabled = Preferences.timerEnabled
+
+    /// Something to show as a live activity.
+    var isActive: Bool {
+        timer != nil || stopwatch != nil
+    }
 
     @ObservationIgnored private let alerts: AlertCenter
     @ObservationIgnored private var endTask: Task<Void, Never>?
@@ -27,7 +34,28 @@ final class TimerController {
         Preferences.timerEnabled = enabled
         if !enabled {
             stop()
+            resetStopwatch()
         }
+    }
+
+    // MARK: Stopwatch
+
+    func startStopwatch() {
+        stopwatch = .started(at: Date())
+    }
+
+    /// Pauses a running stopwatch, resumes a paused one, starts one otherwise.
+    func toggleStopwatch() {
+        let now = Date()
+        guard let stopwatch else {
+            startStopwatch()
+            return
+        }
+        self.stopwatch = stopwatch.isRunning ? stopwatch.paused(at: now) : stopwatch.resumed(at: now)
+    }
+
+    func resetStopwatch() {
+        stopwatch = nil
     }
 
     // MARK: Controls

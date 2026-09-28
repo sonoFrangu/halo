@@ -25,6 +25,8 @@ final class NotificationMirror {
     @ObservationIgnored private var watcher: DatabaseChangeWatcher?
     @ObservationIgnored private var lastID: Int64 = 0
     @ObservationIgnored private var activationObserver: NSObjectProtocol?
+    /// New notifications are skipped while this says so (a Focus is on).
+    @ObservationIgnored var isSuppressed: () -> Bool = { false }
 
     /// More new records than this at once (e.g. after waking) shows only the newest.
     static let burstLimit = 3
@@ -94,6 +96,7 @@ final class NotificationMirror {
         }
         guard let newest = records.last else { return }
         lastID = newest.id
+        guard !isSuppressed() else { return }
 
         let shown = records.count > Self.burstLimit ? [newest] : records
         for record in shown {

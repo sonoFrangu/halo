@@ -8,34 +8,84 @@ struct TimerActions {
     var togglePause: () -> Void
     var addMinute: () -> Void
     var stop: () -> Void
+    var toggleStopwatch: () -> Void
+    var resetStopwatch: () -> Void
 }
 
-/// The timer tab: presets and Pomodoro when idle; a ring, the countdown and controls while
-/// a timer exists.
+/// The timer tab: presets, Pomodoro and stopwatch when idle; the running timer or
+/// stopwatch with its controls; both as two rows when both run.
 struct TimerTabView: View {
     let timers: TimerController
     let actions: TimerActions
+    /// On screen: dials and rings tick only then.
+    let isVisible: Bool
 
     var body: some View {
-        if let timer = timers.timer {
-            ActiveTimerView(timer: timer, actions: actions)
+        switch (timers.timer, timers.stopwatch) {
+        case let (timer?, stopwatch?):
+            VStack(spacing: 10) {
+                ActivityRow(
+                    title: timer.mode.label,
+                    tint: TimerPalette.tint(for: timer.mode),
+                    isRunning: timer.isRunning,
+                    onToggle: actions.togglePause,
+                    onStop: actions.stop
+                ) {
+                    TimerRingView(timer: timer, isVisible: isVisible, lineWidth: 4)
+                } value: {
+                    TimerCountdownText(timer: timer)
+                }
+                ActivityRow(
+                    title: "Cronometro",
+                    tint: StopwatchPalette.tint,
+                    isRunning: stopwatch.isRunning,
+                    onToggle: actions.toggleStopwatch,
+                    onStop: actions.resetStopwatch
+                ) {
+                    StopwatchDial(stopwatch: stopwatch, isVisible: isVisible, lineWidth: 3)
+                } value: {
+                    StopwatchText(stopwatch: stopwatch)
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .transition(.opacity)
+        case let (timer?, nil):
+            ActiveTimerView(timer: timer, actions: actions, isVisible: isVisible)
                 .transition(.opacity)
-        } else {
+        case let (nil, stopwatch?):
+            ActiveStopwatchView(stopwatch: stopwatch, actions: actions, isVisible: isVisible)
+                .transition(.opacity)
+        case (nil, nil):
             TimerPresetsView(actions: actions)
                 .transition(.opacity)
         }
     }
 }
 
+/// The timer's ring, redrawn once a second only while running and on screen.
+struct TimerRingView: View {
+    let timer: FocusTimer
+    let isVisible: Bool
+    let lineWidth: CGFloat
+
+    var body: some View {
+        TimelineView(.animation(minimumInterval: 1, paused: !isVisible || !timer.isRunning)) { context in
+            TimerRing(progress: timer.progress(at: context.date), mode: timer.mode, lineWidth: lineWidth)
+        }
+        .opacity(timer.isRunning ? 1 : 0.6)
+    }
+}
+
 struct ActiveTimerView: View {
     let timer: FocusTimer
     let actions: TimerActions
+    let isVisible: Bool
 
     var body: some View {
         let tint = TimerPalette.tint(for: timer.mode)
 
         HStack(spacing: 20) {
-            ring
+            TimerRingView(timer: timer, isVisible: isVisible, lineWidth: 7)
                 .frame(width: 82, height: 82)
                 .overlay {
                     Image(systemName: timer.mode.symbol)
@@ -70,18 +120,6 @@ struct ActiveTimerView: View {
         .padding(.horizontal, 8)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
-
-    @ViewBuilder
-    private var ring: some View {
-        if timer.isRunning {
-            TimelineView(.periodic(from: .now, by: 1)) { context in
-                TimerRing(progress: timer.progress(at: context.date), mode: timer.mode, lineWidth: 7)
-            }
-        } else {
-            TimerRing(progress: timer.progress(at: Date()), mode: timer.mode, lineWidth: 7)
-                .opacity(0.6)
-        }
-    }
 }
 
 struct TimerPresetsView: View {
@@ -96,26 +134,45 @@ struct TimerPresetsView: View {
                     }
                 }
             }
-            Button(action: actions.startPomodoro) {
-                Label("Pomodoro  25 + 5", systemImage: "leaf.fill")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 14)
-                    .frame(height: 28)
-                    .background {
-                        Capsule().fill(
-                            LinearGradient(
-                                colors: TimerPalette.colors(for: .focus(round: 1)),
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
-                        )
-                    }
-                    .contentShape(Capsule())
+            HStack(spacing: 10) {
+                CapsuleActionButton(
+                    title: "Pomodoro  25 + 5",
+                    symbol: "leaf.fill",
+                    colors: TimerPalette.colors(for: .focus(round: 1)),
+                    action: actions.startPomodoro
+                )
+                CapsuleActionButton(
+                    title: "Cronometro",
+                    symbol: "stopwatch.fill",
+                    colors: StopwatchPalette.colors,
+                    action: actions.toggleStopwatch
+                )
             }
-            .buttonStyle(PressableButtonStyle())
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
+/// A colorful capsule that starts something (Pomodoro, stopwatch).
+struct CapsuleActionButton: View {
+    let title: String
+    let symbol: String
+    let colors: [Color]
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Label(title, systemImage: symbol)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(.white)
+                .padding(.horizontal, 14)
+                .frame(height: 28)
+                .background {
+                    Capsule().fill(LinearGradient(colors: colors, startPoint: .leading, endPoint: .trailing))
+                }
+                .contentShape(Capsule())
+        }
+        .buttonStyle(PressableButtonStyle())
     }
 }
 

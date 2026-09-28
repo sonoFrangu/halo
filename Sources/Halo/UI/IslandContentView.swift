@@ -16,7 +16,9 @@ struct IslandContentView: View {
         let isExpanded = state == .expanded
         let showsPlayer = isExpanded && hasMedia && island.context.tab == .player
         let tint = player.palette.primary.color
-        let timer = models.timers.timer
+        let timers = models.timers
+        let activity = LiveActivity.current(timers: timers, transfers: models.transfers)
+        let isCompact = state == .compact
 
         ZStack(alignment: .topLeading) {
             ExpandedBackdrop(palette: player.palette, layout: layout, isVisible: showsPlayer)
@@ -33,31 +35,31 @@ struct IslandContentView: View {
             .place(in: layout.artworkFrame(for: state))
             .opacity(hasMedia && (state == .compact || showsPlayer) ? 1 : 0)
 
-            EqualizerView(isPlaying: player.isPlaying && hasMedia && state == .compact && timer == nil, tint: tint)
+            EqualizerView(isPlaying: player.isPlaying && hasMedia && isCompact && activity == nil, tint: tint)
                 .place(in: layout.equalizerFrame(for: state))
-                .opacity(hasMedia && state == .compact && timer == nil ? 1 : 0)
+                .opacity(hasMedia && isCompact && activity == nil ? 1 : 0)
 
             if let device = models.privacy.active {
-                let alone = !hasMedia && timer == nil
+                let alone = !hasMedia && activity == nil
                 if alone {
                     PrivacyGlyph(kind: device)
                         .place(in: layout.artworkFrame(for: .compact))
-                        .opacity(state == .compact ? 1 : 0)
+                        .opacity(isCompact ? 1 : 0)
                 }
                 PrivacyDot(kind: device)
                     .place(in: layout.privacyDotFrame(alone: alone))
-                    .opacity(state == .compact ? 1 : 0)
+                    .opacity(isCompact ? 1 : 0)
                     .animation(.easeOut(duration: 0.2), value: state)
             }
 
-            if let timer {
-                CompactTimerRing(timer: timer)
+            if let activity {
+                LiveActivityLeading(activity: activity, isVisible: isCompact && !hasMedia)
                     .place(in: layout.artworkFrame(for: .compact))
-                    .opacity(state == .compact && !hasMedia ? 1 : 0)
+                    .opacity(isCompact && !hasMedia ? 1 : 0)
                     .animation(.easeOut(duration: 0.2), value: state)
-                CompactTimerCountdown(timer: timer)
+                LiveActivityTrailing(activity: activity, hasMedia: hasMedia)
                     .place(in: layout.compactRightWingFrame)
-                    .opacity(state == .compact ? 1 : 0)
+                    .opacity(isCompact ? 1 : 0)
                     .animation(.easeOut(duration: 0.2), value: state)
             }
 
@@ -80,10 +82,11 @@ struct IslandContentView: View {
                 .place(in: layout.tabBodyFrame)
                 .reveal(isExpanded && island.context.tab == .calendar, order: 0)
 
-            TimerTabView(timers: models.timers, actions: actions.timer)
+            let showsTimers = isExpanded && island.context.tab == .timer
+            TimerTabView(timers: timers, actions: actions.timer, isVisible: showsTimers)
                 .place(in: layout.tabBodyFrame)
-                .reveal(isExpanded && island.context.tab == .timer, order: 0)
-                .animation(.spring(duration: 0.4, bounce: 0.15), value: timer == nil)
+                .reveal(showsTimers, order: 0)
+                .animation(.spring(duration: 0.4, bounce: 0.15), value: [timers.timer == nil, timers.stopwatch == nil])
 
             HeaderContentView(island: island, models: models, tint: tint, actions: actions, layout: layout)
 
@@ -263,6 +266,27 @@ struct AlertContentView: View {
                     .reveal(isAlert && kind == .keyboard, order: 1)
             }
 
+            if let focus = shown?.focus {
+                FocusAlertGlyph(alert: focus)
+                    .place(in: layout.hudGlyphFrame)
+                    .reveal(isAlert && kind == .focus, order: 0)
+                FocusAlertValue(alert: focus)
+                    .place(in: layout.alertRightWingFrame)
+                    .reveal(isAlert && kind == .focus, order: 1)
+            }
+
+            UnlockGlyph(isVisible: isAlert && kind == .unlock)
+                .place(in: layout.hudGlyphFrame)
+                .reveal(isAlert && kind == .unlock, order: 0)
+
+            if let transfer = shown?.transfer {
+                TransferBanner(alert: transfer, thumbnails: models.thumbnails, actions: actions.transfer)
+                    .contentShape(Rectangle())
+                    .onTapGesture { alertActions.activate(.transfer(transfer)) }
+                    .place(in: layout.bannerFrame)
+                    .reveal(isAlert && kind == .transfer, order: 0)
+            }
+
             if let device = shown?.audioDevice {
                 AudioDeviceBanner(alert: device)
                     .contentShape(Rectangle())
@@ -338,6 +362,16 @@ extension IslandAlert {
 
     var keyboard: KeyboardAlert? {
         if case .keyboard(let alert) = self { return alert }
+        return nil
+    }
+
+    var focus: FocusAlert? {
+        if case .focus(let alert) = self { return alert }
+        return nil
+    }
+
+    var transfer: TransferAlert? {
+        if case .transfer(let alert) = self { return alert }
         return nil
     }
 }

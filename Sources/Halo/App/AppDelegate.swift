@@ -18,8 +18,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let calendar = CalendarController(alerts: alerts)
         let screenshots = ScreenshotController(alerts: alerts, shelf: shelf.store)
         let timers = TimerController(alerts: alerts)
+        let transfers = TransferMonitor(alerts: alerts, shelf: shelf.store)
         let privacy = PrivacyIndicators()
         let energy = EnergyMode()
+        let focus = FocusMonitor(alerts: alerts)
+        let notifications = NotificationMirror(alerts: alerts)
+        notifications.isSuppressed = { [weak focus] in
+            Preferences.notificationsFollowFocus && focus?.active != nil
+        }
         let islands = IslandsCoordinator(
             services: IslandServices(
                 nowPlaying: nowPlaying,
@@ -31,6 +37,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 calendar: calendar,
                 screenshots: screenshots,
                 timers: timers,
+                transfers: transfers,
                 privacy: privacy,
                 energy: energy
             )
@@ -49,11 +56,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             calendar: calendar,
             screenshots: screenshots,
             timers: timers,
+            transfers: transfers,
             privacy: privacy,
             keyboard: KeyboardMonitor(alerts: alerts),
             presentation: PresentationDetector(alerts: alerts),
             energy: energy,
-            notifications: NotificationMirror(alerts: alerts),
+            focus: focus,
+            unlock: UnlockGreeter(alerts: alerts),
+            notifications: notifications,
             desktopWidget: DesktopWidgetController(
                 player: nowPlaying.model,
                 lyrics: lyrics.model,
@@ -73,7 +83,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         shelf.start()
         calendar.start()
         screenshots.start()
+        transfers.start()
         privacy.start()
+        focus.start()
+        features.unlock.start()
         features.notifications.start()
         features.keyboard.start()
         features.presentation.start()
@@ -96,9 +109,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         features.lockScreen.stop()
         features.calendar.stop()
         features.screenshots.stop()
+        features.transfers.stop()
         features.privacy.stop()
         features.keyboard.stop()
         features.presentation.stop()
+        features.focus.stop()
+        features.unlock.stop()
     }
 }
 
@@ -116,10 +132,13 @@ struct Features {
     let calendar: CalendarController
     let screenshots: ScreenshotController
     let timers: TimerController
+    let transfers: TransferMonitor
     let privacy: PrivacyIndicators
     let keyboard: KeyboardMonitor
     let presentation: PresentationDetector
     let energy: EnergyMode
+    let focus: FocusMonitor
+    let unlock: UnlockGreeter
     let notifications: NotificationMirror
     let desktopWidget: DesktopWidgetController
     let lockScreen: LockScreenController

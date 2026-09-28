@@ -19,6 +19,10 @@ enum IslandAlert: Sendable, Equatable {
     case screenshot(ScreenshotAlert)
     case timer(TimerAlert)
     case keyboard(KeyboardAlert)
+    case focus(FocusAlert)
+    case transfer(TransferAlert)
+    /// The Mac was just unlocked.
+    case unlock
 
     enum Kind: Sendable, Hashable {
         case hud
@@ -29,6 +33,9 @@ enum IslandAlert: Sendable, Equatable {
         case screenshot
         case timer
         case keyboard
+        case focus
+        case transfer
+        case unlock
     }
 
     var kind: Kind {
@@ -41,22 +48,25 @@ enum IslandAlert: Sendable, Equatable {
         case .screenshot: .screenshot
         case .timer: .timer
         case .keyboard: .keyboard
+        case .focus: .focus
+        case .transfer: .transfer
+        case .unlock: .unlock
         }
     }
 
     var style: AlertStyle {
         switch self {
-        case .hud, .power, .keyboard: .wings
-        case .audioDevice, .notification, .calendar, .screenshot, .timer: .banner
+        case .hud, .power, .keyboard, .focus, .unlock: .wings
+        case .audioDevice, .notification, .calendar, .screenshot, .timer, .transfer: .banner
         }
     }
 
     /// Dropped in presentation mode: interruptions nobody asked for right now.
     var waitsOutPresentations: Bool {
         switch self {
-        case .notification, .audioDevice, .screenshot: true
+        case .notification, .audioDevice, .screenshot, .transfer: true
         case .power(let power): power.event != .low
-        case .hud, .calendar, .timer, .keyboard: false
+        case .hud, .calendar, .timer, .keyboard, .focus, .unlock: false
         }
     }
 
@@ -71,6 +81,9 @@ enum IslandAlert: Sendable, Equatable {
         case .screenshot: .seconds(6)
         case .timer: .seconds(8)
         case .keyboard: .milliseconds(1400)
+        case .focus: .milliseconds(2200)
+        case .transfer: .seconds(5)
+        case .unlock: .milliseconds(1300)
         }
     }
 }
@@ -124,4 +137,18 @@ struct ScreenshotAlert: Sendable, Equatable {
 enum KeyboardAlert: Sendable, Equatable {
     case layout(InputSource)
     case capsLock(on: Bool)
+}
+
+/// A Focus was turned on or off.
+struct FocusAlert: Sendable, Equatable {
+    var mode: FocusMode
+    var isOn: Bool
+}
+
+/// A download or AirDrop finished.
+struct TransferAlert: Sendable, Equatable {
+    var name: String
+    var kind: Transfer.Kind
+    /// Where the file should now be (the folder the transfer was published in).
+    var url: URL
 }

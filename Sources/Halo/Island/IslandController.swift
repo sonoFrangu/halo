@@ -32,6 +32,7 @@ final class IslandController {
                     thumbnails: services.shelf.thumbnails,
                     calendar: services.calendar.model,
                     timers: services.timers,
+                    transfers: services.transfers,
                     privacy: services.privacy,
                     energy: services.energy
                 ),
@@ -63,7 +64,7 @@ final class IslandController {
         observeAlerts()
         observeLyrics()
         observeTabs()
-        observeTimer()
+        observeLiveActivities()
         observePrivacy()
         observeEnergy()
     }
@@ -82,6 +83,7 @@ final class IslandController {
         let calendar = services.calendar
         let screenshots = services.screenshots
         let timers = services.timers
+        let transfers = services.transfers
         return IslandActions(
             player: PlayerActions(
                 togglePlayPause: { [weak nowPlaying] in nowPlaying?.togglePlayPause() },
@@ -128,7 +130,13 @@ final class IslandController {
                 startPomodoro: { [weak timers] in timers?.startPomodoro() },
                 togglePause: { [weak timers] in timers?.togglePause() },
                 addMinute: { [weak timers] in timers?.addMinute() },
-                stop: { [weak timers] in timers?.stop() }
+                stop: { [weak timers] in timers?.stop() },
+                toggleStopwatch: { [weak timers] in timers?.toggleStopwatch() },
+                resetStopwatch: { [weak timers] in timers?.resetStopwatch() }
+            ),
+            transfer: TransferActions(
+                reveal: { [weak transfers] url in transfers?.reveal(url) },
+                keep: { [weak transfers] url in transfers?.keepOnShelf(url) }
             ),
             selectTab: { [weak viewModel] tab in
                 Haptics.perform(.step)
@@ -255,17 +263,18 @@ final class IslandController {
         viewModel.tabsChanged(tabs)
     }
 
-    /// A timer turns the compact island into its live activity.
-    private func observeTimer() {
+    /// A timer, the stopwatch or a download turns the compact island into a live activity.
+    private func observeLiveActivities() {
         let timers = services.timers
+        let transfers = services.transfers
         let active = withObservationTracking {
-            timers.timer != nil
+            timers.isActive || transfers.current != nil
         } onChange: { [weak self] in
             Task { @MainActor [weak self] in
-                self?.observeTimer()
+                self?.observeLiveActivities()
             }
         }
-        viewModel.timerChanged(active: active)
+        viewModel.liveActivityChanged(active: active)
     }
 
     /// A microphone or camera in use keeps the island up with its dot.
