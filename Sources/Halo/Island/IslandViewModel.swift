@@ -53,6 +53,9 @@ final class IslandViewModel {
     @ObservationIgnored var onExpandedChange: ((Bool) -> Void)?
 
     @ObservationIgnored private var isPointerInside = false
+    /// The pointer came in over the right wing while it showed a live activity: the island
+    /// opens on the Timer tab, where the timer can be paused or stopped.
+    @ObservationIgnored private var entersOverActivity = false
     @ObservationIgnored private var isHovering = false
     @ObservationIgnored private var isInteracting = false
     @ObservationIgnored private var showsActivity = false
@@ -92,6 +95,9 @@ final class IslandViewModel {
         let inside = hotZone.contains(location)
         if inside != isPointerInside {
             isPointerInside = inside
+            if inside {
+                entersOverActivity = hasLiveActivity && location.x > geometry.notchCenterX + geometry.notchSize.width / 2
+            }
             scheduleHover(inside)
         }
         publish()
@@ -265,6 +271,8 @@ final class IslandViewModel {
         let tab: ExpandedTab
         if target == .expanded && isDraggingFiles {
             tab = .shelf
+        } else if target == .expanded && state != .expanded && entersOverActivity && availableTabs.contains(.timer) {
+            tab = .timer
         } else if target != .expanded {
             tab = .player
         } else {
