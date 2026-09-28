@@ -33,6 +33,7 @@ enum Preferences {
         static let unlockAnimation = "unlockAnimationEnabled"
         static let systemTimers = "systemTimersEnabled"
         static let siri = "siriEnabled"
+        static let timerApp = "timerApp"
     }
 
     private static func flag(_ key: String, default value: Bool) -> Bool {
@@ -175,6 +176,12 @@ enum Preferences {
     static var systemTimersEnabled: Bool {
         get { flag(Key.systemTimers, default: true) }
         set { defaults.set(newValue, forKey: Key.systemTimers) }
+    }
+
+    /// Which app runs the timers started from the notch and the menu.
+    static var timerApp: TimerApp {
+        get { defaults.string(forKey: Key.timerApp).flatMap(TimerApp.init(rawValue:)) ?? .clock }
+        set { defaults.set(newValue.rawValue, forKey: Key.timerApp) }
     }
 
     /// The island glows while Siri is on screen.

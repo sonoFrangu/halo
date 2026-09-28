@@ -83,7 +83,7 @@ struct IslandContentView: View {
                 .reveal(isExpanded && island.context.tab == .calendar, order: 0)
 
             let showsTimers = isExpanded && island.context.tab == .timer
-            TimerTabView(timers: timers, actions: actions.timer, isVisible: showsTimers)
+            TimerTabView(timers: timers, systemTimers: models.systemTimers, actions: actions.timer, isVisible: showsTimers)
                 .place(in: layout.tabBodyFrame)
                 .reveal(showsTimers, order: 0)
                 .animation(.spring(duration: 0.4, bounce: 0.15), value: [timers.timer == nil, timers.stopwatch == nil])

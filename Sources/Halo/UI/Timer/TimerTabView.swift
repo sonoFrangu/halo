@@ -16,12 +16,13 @@ struct TimerActions {
 /// stopwatch with its controls; both as two rows when both run.
 struct TimerTabView: View {
     let timers: TimerController
+    let systemTimers: SystemTimerMonitor
     let actions: TimerActions
     /// On screen: dials and rings tick only then.
     let isVisible: Bool
 
     var body: some View {
-        switch (timers.timer, timers.stopwatch) {
+        switch (TimerCommands.shown(timers: timers, systemTimers: systemTimers), timers.stopwatch) {
         case let (timer?, stopwatch?):
             VStack(spacing: 10) {
                 ActivityRow(
@@ -50,7 +51,7 @@ struct TimerTabView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .transition(.opacity)
         case let (timer?, nil):
-            ActiveTimerView(timer: timer, actions: actions, isVisible: isVisible)
+            ActiveTimerView(timer: timer, canAddMinute: timers.timer != nil, actions: actions, isVisible: isVisible)
                 .transition(.opacity)
         case let (nil, stopwatch?):
             ActiveStopwatchView(stopwatch: stopwatch, actions: actions, isVisible: isVisible)
@@ -78,6 +79,8 @@ struct TimerRingView: View {
 
 struct ActiveTimerView: View {
     let timer: FocusTimer
+    /// Only Halo's own timer: the Clock app offers no way to extend one.
+    let canAddMinute: Bool
     let actions: TimerActions
     let isVisible: Bool
 
@@ -110,7 +113,9 @@ struct ActiveTimerView: View {
                         tint: tint,
                         action: actions.togglePause
                     )
-                    ControlButton(symbol: "plus", label: "Un minuto in più", diameter: 30, glyphSize: 12, action: actions.addMinute)
+                    if canAddMinute {
+                        ControlButton(symbol: "plus", label: "Un minuto in più", diameter: 30, glyphSize: 12, action: actions.addMinute)
+                    }
                     ControlButton(symbol: "xmark", label: "Ferma", diameter: 30, glyphSize: 12, action: actions.stop)
                 }
                 .padding(.top, 2)

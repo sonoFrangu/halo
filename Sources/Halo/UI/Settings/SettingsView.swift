@@ -124,6 +124,8 @@ struct SettingsItemRow: View {
             HoverDelayRow(model: model)
         case .lyricsLead:
             LyricsLeadRow(model: model)
+        case .timerApp:
+            TimerAppRow(model: model)
         }
     }
 }
@@ -201,6 +203,35 @@ struct HoverDelayRow: View {
             minimumLabel: "Subito",
             maximumLabel: "Con calma"
         )
+    }
+}
+
+/// Which app runs the timers started from the notch: Halo's own, or the Clock app.
+struct TimerAppRow: View {
+    let model: SettingsModel
+
+    var body: some View {
+        let isAvailable = model.isOn(id: "systemTimers")
+        HStack(alignment: .top, spacing: 10) {
+            SettingsIcon(symbol: "timer", tint: SettingsColor.orange)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("App dei timer della notch")
+                Text("Con Orologio, i timer avviati dalla notch e dal menu finiscono anche nell'app Orologio: a ogni comando Orologio compare per un istante. Serve Accessibilità. Pomodoro e cronometro restano di Halo.")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 8)
+            Picker("App dei timer della notch", selection: Binding(get: { model.timerApp }, set: { model.setTimerApp($0) })) {
+                Text("Halo").tag(TimerApp.halo)
+                Text("Orologio").tag(TimerApp.clock)
+            }
+            .labelsHidden()
+            .pickerStyle(.segmented)
+            .fixedSize()
+        }
+        .disabled(!isAvailable)
+        .opacity(isAvailable ? 1 : 0.5)
     }
 }
 

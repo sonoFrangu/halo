@@ -83,15 +83,18 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     /// "Timer ▸": presets and Pomodoro, then pause/stop for the running timer.
     private func timerMenuItem() -> NSMenuItem {
         let timers = features.timers
+        let systemTimers = features.systemTimers
         let submenu = NSMenu()
         submenu.autoenablesItems = false
         for minutes in TimerController.presets {
-            submenu.addItem(ActionMenuItem(title: "\(minutes) min") { timers.start(minutes: minutes) })
+            submenu.addItem(ActionMenuItem(title: "\(minutes) min") {
+                TimerCommands.start(minutes: minutes, timers: timers, systemTimers: systemTimers)
+            })
         }
         submenu.addItem(ActionMenuItem(title: "Pomodoro (25 + 5)") { timers.startPomodoro() })
         submenu.addItem(.separator())
-        let pause = ActionMenuItem(title: "Pausa") { timers.togglePause() }
-        let stop = ActionMenuItem(title: "Ferma") { timers.stop() }
+        let pause = ActionMenuItem(title: "Pausa") { TimerCommands.togglePause(timers: timers, systemTimers: systemTimers) }
+        let stop = ActionMenuItem(title: "Ferma") { TimerCommands.stop(timers: timers, systemTimers: systemTimers) }
         submenu.addItem(pause)
         submenu.addItem(stop)
         timerPauseItem = pause
@@ -126,7 +129,7 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         permissionsItem?.title = missing.count == 1
             ? "Concedi «\(missing[0].title)»…"
             : "Concedi \(missing.count) permessi mancanti…"
-        let timer = features.timers.timer
+        let timer = TimerCommands.shown(timers: features.timers, systemTimers: features.systemTimers)
         timerPauseItem?.isEnabled = timer != nil
         timerPauseItem?.title = timer?.isRunning == false ? "Riprendi" : "Pausa"
         timerStopItem?.isEnabled = timer != nil

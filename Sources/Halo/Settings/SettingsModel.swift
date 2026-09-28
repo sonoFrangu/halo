@@ -179,6 +179,7 @@ struct SettingsItem: Identifiable {
         case toggle(SettingsToggle)
         case hoverDelay
         case lyricsLead
+        case timerApp
     }
 
     let id: String
@@ -190,6 +191,7 @@ struct SettingsItem: Identifiable {
 
     static let hoverDelay = SettingsItem(id: "hoverDelay", kind: .hoverDelay)
     static let lyricsLead = SettingsItem(id: "lyricsLead", kind: .lyricsLead)
+    static let timerApp = SettingsItem(id: "timerApp", kind: .timerApp)
 }
 
 @MainActor
@@ -260,6 +262,17 @@ final class SettingsModel {
 
     func setHoverDelay(_ seconds: Double) {
         Preferences.hoverDelay = seconds
+        revision += 1
+    }
+
+    /// Which app runs the timers started from the notch.
+    var timerApp: TimerApp {
+        _ = revision
+        return Preferences.timerApp
+    }
+
+    func setTimerApp(_ app: TimerApp) {
+        Preferences.timerApp = app
         revision += 1
     }
 
@@ -505,6 +518,7 @@ final class SettingsModel {
                         isOn: { systemTimers.isEnabled },
                         setOn: { systemTimers.setEnabled($0) }
                     )),
+                    .timerApp,
                     .toggle(SettingsToggle(
                         id: "calendar", title: "Calendario e riunioni",
                         detail: "La scheda Calendario con i prossimi impegni e «Partecipa» per Zoom, Meet, Teams, Webex e FaceTime; un avviso 5 minuti prima.",

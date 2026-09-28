@@ -12,6 +12,7 @@ final class SystemTimerMonitor {
     private(set) var isEnabled = Preferences.systemTimersEnabled
 
     @ObservationIgnored private let alerts: AlertCenter
+    @ObservationIgnored private let clock = ClockAppDriver()
     @ObservationIgnored private var state = SystemTimerState()
     @ObservationIgnored private var process: Process?
     @ObservationIgnored private var consumer: Task<Void, Never>?
@@ -91,6 +92,48 @@ final class SystemTimerMonitor {
         if enabled { start() } else { stop() }
     }
 
+    // MARK: Controls (through the Clock app)
+
+    /// Whether the timers started from the notch go to the Clock app.
+    var startsInClock: Bool {
+        isEnabled && Preferences.timerApp == .clock
+    }
+
+    /// Starts a Clock timer; `false` when Clock could not be driven.
+    func startInClock(minutes: Int) async -> Bool {
+        await clock.start(minutes: minutes)
+    }
+
+    /// Pauses at once on screen (the log would only say the timer is gone), or resumes
+    /// (the log then reports the new end). Undone if Clock could not be driven.
+    func togglePause() {
+        guard let timer = current else { return }
+        let before = state
+        if timer.pausedRemaining == nil {
+            state.pause(now: Date())
+            current = state.current
+        }
+        Task {
+            if await !clock.togglePause() {
+                state = before
+                current = state.current
+            }
+        }
+    }
+
+    func cancel() {
+        guard current != nil else { return }
+        let before = state
+        state.clear()
+        current = nil
+        Task {
+            if await !clock.cancel() {
+                state = before
+                current = state.current
+            }
+        }
+    }
+
     /// One `ndjson` line: the message is in `eventMessage`. Other lines (the header `log`
     /// prints first) are skipped.
     nonisolated static func event(fromLine line: Data) -> SystemTimerEvent? {
@@ -126,5 +169,50 @@ final class SystemTimerMonitor {
             guard !Task.isCancelled else { return }
             self?.start()
         }
+    }
+}
+
+/// Which app runs the timers started from the notch and the menu.
+enum TimerApp: String {
+    case clock
+    case halo
+}
+
+/// Timer commands from the notch and the menu: a new countdown goes to the Clock app when
+/// chosen (Halo's own timer if Clock cannot be driven); pause and stop act on the timer
+/// shown, Halo's first.
+@MainActor
+enum TimerCommands {
+    static func start(minutes: Int, timers: TimerController, systemTimers: SystemTimerMonitor) {
+        guard systemTimers.startsInClock else {
+            timers.start(minutes: minutes)
+            return
+        }
+        Task {
+            if await !systemTimers.startInClock(minutes: minutes) {
+                timers.start(minutes: minutes)
+            }
+        }
+    }
+
+    static func togglePause(timers: TimerController, systemTimers: SystemTimerMonitor) {
+        if timers.timer != nil {
+            timers.togglePause()
+        } else {
+            systemTimers.togglePause()
+        }
+    }
+
+    static func stop(timers: TimerController, systemTimers: SystemTimerMonitor) {
+        if timers.timer != nil {
+            timers.stop()
+        } else {
+            systemTimers.cancel()
+        }
+    }
+
+    /// The countdown to show and control: Halo's, or the Clock one.
+    static func shown(timers: TimerController, systemTimers: SystemTimerMonitor) -> FocusTimer? {
+        timers.timer ?? systemTimers.current?.focusTimer
     }
 }

@@ -84,6 +84,7 @@ final class IslandController {
         let calendar = services.calendar
         let screenshots = services.screenshots
         let timers = services.timers
+        let systemTimers = services.systemTimers
         let transfers = services.transfers
         return IslandActions(
             player: PlayerActions(
@@ -130,11 +131,20 @@ final class IslandController {
                 trash: { [weak screenshots] url in screenshots?.moveToTrash(url) }
             ),
             timer: TimerActions(
-                start: { [weak timers] minutes in timers?.start(minutes: minutes) },
+                start: { [weak timers, weak systemTimers] minutes in
+                    guard let timers, let systemTimers else { return }
+                    TimerCommands.start(minutes: minutes, timers: timers, systemTimers: systemTimers)
+                },
                 startPomodoro: { [weak timers] in timers?.startPomodoro() },
-                togglePause: { [weak timers] in timers?.togglePause() },
+                togglePause: { [weak timers, weak systemTimers] in
+                    guard let timers, let systemTimers else { return }
+                    TimerCommands.togglePause(timers: timers, systemTimers: systemTimers)
+                },
                 addMinute: { [weak timers] in timers?.addMinute() },
-                stop: { [weak timers] in timers?.stop() },
+                stop: { [weak timers, weak systemTimers] in
+                    guard let timers, let systemTimers else { return }
+                    TimerCommands.stop(timers: timers, systemTimers: systemTimers)
+                },
                 toggleStopwatch: { [weak timers] in timers?.toggleStopwatch() },
                 resetStopwatch: { [weak timers] in timers?.resetStopwatch() }
             ),
