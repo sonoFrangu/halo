@@ -18,6 +18,7 @@ enum IslandAlert: Sendable, Equatable {
     case calendar(CalendarAlert)
     case screenshot(ScreenshotAlert)
     case timer(TimerAlert)
+    case keyboard(KeyboardAlert)
 
     enum Kind: Sendable, Hashable {
         case hud
@@ -27,6 +28,7 @@ enum IslandAlert: Sendable, Equatable {
         case calendar
         case screenshot
         case timer
+        case keyboard
     }
 
     var kind: Kind {
@@ -38,12 +40,13 @@ enum IslandAlert: Sendable, Equatable {
         case .calendar: .calendar
         case .screenshot: .screenshot
         case .timer: .timer
+        case .keyboard: .keyboard
         }
     }
 
     var style: AlertStyle {
         switch self {
-        case .hud, .power: .wings
+        case .hud, .power, .keyboard: .wings
         case .audioDevice, .notification, .calendar, .screenshot, .timer: .banner
         }
     }
@@ -58,6 +61,7 @@ enum IslandAlert: Sendable, Equatable {
         case .calendar: .seconds(12)
         case .screenshot: .seconds(6)
         case .timer: .seconds(8)
+        case .keyboard: .milliseconds(1400)
         }
     }
 }
@@ -105,4 +109,10 @@ struct CalendarAlert: Sendable, Equatable {
 /// A screenshot or screen recording was just saved.
 struct ScreenshotAlert: Sendable, Equatable {
     var url: URL
+}
+
+/// The keyboard layout changed or Caps Lock toggled.
+enum KeyboardAlert: Sendable, Equatable {
+    case layout(InputSource)
+    case capsLock(on: Bool)
 }

@@ -82,6 +82,11 @@ final class StatusItemController: NSObject, NSMenuDelegate {
             privacy.setEnabled(on)
         })
 
+        let keyboard = features.keyboard
+        menu.addItem(toggle("Lingua tastiera e Bloc Maiusc", isOn: { keyboard.isEnabled }) { on in
+            keyboard.setEnabled(on)
+        })
+
         let notifications = features.notifications
         menu.addItem(toggle("Notifiche nella notch", isOn: { notifications.isEnabled }) { on in
             notifications.setEnabled(on)

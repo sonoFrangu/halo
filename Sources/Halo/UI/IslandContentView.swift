@@ -249,6 +249,15 @@ struct AlertContentView: View {
                     .reveal(showsPower, order: 1)
             }
 
+            if let keyboard = shown?.keyboard {
+                KeyboardAlertGlyph(alert: keyboard)
+                    .place(in: layout.hudGlyphFrame)
+                    .reveal(isAlert && kind == .keyboard, order: 0)
+                KeyboardAlertValue(alert: keyboard)
+                    .place(in: layout.alertRightWingFrame)
+                    .reveal(isAlert && kind == .keyboard, order: 1)
+            }
+
             if let device = shown?.audioDevice {
                 AudioDeviceBanner(alert: device)
                     .contentShape(Rectangle())
@@ -319,6 +328,11 @@ extension IslandAlert {
 
     var timer: TimerAlert? {
         if case .timer(let alert) = self { return alert }
+        return nil
+    }
+
+    var keyboard: KeyboardAlert? {
+        if case .keyboard(let alert) = self { return alert }
         return nil
     }
 }

@@ -27,7 +27,7 @@ struct IslandServices {
             calendar.open(reminder.event)
         case .screenshot(let capture):
             screenshots.open(capture.url)
-        case .hud, .power, .audioDevice, .timer:
+        case .hud, .power, .audioDevice, .timer, .keyboard:
             break
         }
         alerts.dismissCurrent()

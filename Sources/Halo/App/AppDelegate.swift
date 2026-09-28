@@ -48,6 +48,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             screenshots: screenshots,
             timers: timers,
             privacy: privacy,
+            keyboard: KeyboardMonitor(alerts: alerts),
             notifications: NotificationMirror(alerts: alerts),
             desktopWidget: DesktopWidgetController(
                 player: nowPlaying.model,
@@ -70,6 +71,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         screenshots.start()
         privacy.start()
         features.notifications.start()
+        features.keyboard.start()
         features.desktopWidget.start()
         features.lockScreen.start()
         if Preferences.lyricsEnabled { lyrics.start() }
@@ -90,6 +92,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         features.calendar.stop()
         features.screenshots.stop()
         features.privacy.stop()
+        features.keyboard.stop()
     }
 }
 
@@ -108,6 +111,7 @@ struct Features {
     let screenshots: ScreenshotController
     let timers: TimerController
     let privacy: PrivacyIndicators
+    let keyboard: KeyboardMonitor
     let notifications: NotificationMirror
     let desktopWidget: DesktopWidgetController
     let lockScreen: LockScreenController

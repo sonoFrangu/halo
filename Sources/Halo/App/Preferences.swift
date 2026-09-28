@@ -23,6 +23,7 @@ enum Preferences {
         static let screenshots = "screenshotsEnabled"
         static let timer = "timerEnabled"
         static let privacyIndicator = "privacyIndicatorEnabled"
+        static let keyboardAlerts = "keyboardAlertsEnabled"
     }
 
     private static func flag(_ key: String, default value: Bool) -> Bool {
@@ -117,6 +118,12 @@ enum Preferences {
     static var privacyIndicatorEnabled: Bool {
         get { flag(Key.privacyIndicator, default: true) }
         set { defaults.set(newValue, forKey: Key.privacyIndicator) }
+    }
+
+    /// Brief alerts for keyboard layout changes and Caps Lock.
+    static var keyboardAlertsEnabled: Bool {
+        get { flag(Key.keyboardAlerts, default: true) }
+        set { defaults.set(newValue, forKey: Key.keyboardAlerts) }
     }
 
     /// Swipes over the island skip tracks and change the volume.
