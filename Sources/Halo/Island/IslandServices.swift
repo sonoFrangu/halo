@@ -12,6 +12,7 @@ struct IslandServices {
     let calendar: CalendarController
     let screenshots: ScreenshotController
     let timers: TimerController
+    let systemTimers: SystemTimerMonitor
     let transfers: TransferMonitor
     let privacy: PrivacyIndicators
     let energy: EnergyMode

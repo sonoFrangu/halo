@@ -17,7 +17,7 @@ struct IslandContentView: View {
         let showsPlayer = isExpanded && hasMedia && island.context.tab == .player
         let tint = player.palette.primary.color
         let timers = models.timers
-        let activity = LiveActivity.current(timers: timers, transfers: models.transfers)
+        let activity = LiveActivity.current(timers: timers, systemTimers: models.systemTimers, transfers: models.transfers)
         let isCompact = state == .compact
 
         ZStack(alignment: .topLeading) {

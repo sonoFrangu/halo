@@ -68,6 +68,7 @@ struct IslandModels {
     let thumbnails: ShelfThumbnails
     let calendar: CalendarModel
     let timers: TimerController
+    let systemTimers: SystemTimerMonitor
     let transfers: TransferMonitor
     let privacy: PrivacyIndicators
     let energy: EnergyMode

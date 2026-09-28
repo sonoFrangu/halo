@@ -31,6 +31,8 @@ enum Preferences {
         static let notificationsFollowFocus = "notificationsFollowFocus"
         static let transfers = "transfersEnabled"
         static let unlockAnimation = "unlockAnimationEnabled"
+        static let systemTimers = "systemTimersEnabled"
+        static let siri = "siriEnabled"
     }
 
     private static func flag(_ key: String, default value: Bool) -> Bool {
@@ -167,6 +169,18 @@ enum Preferences {
     static var unlockAnimationEnabled: Bool {
         get { flag(Key.unlockAnimation, default: true) }
         set { defaults.set(newValue, forKey: Key.unlockAnimation) }
+    }
+
+    /// Timers started with Siri or the Clock app, as a live activity.
+    static var systemTimersEnabled: Bool {
+        get { flag(Key.systemTimers, default: true) }
+        set { defaults.set(newValue, forKey: Key.systemTimers) }
+    }
+
+    /// The island glows while Siri is on screen.
+    static var siriEnabled: Bool {
+        get { flag(Key.siri, default: true) }
+        set { defaults.set(newValue, forKey: Key.siri) }
     }
 
     /// Swipes over the island skip tracks and change the volume.

@@ -32,6 +32,7 @@ final class IslandController {
                     thumbnails: services.shelf.thumbnails,
                     calendar: services.calendar.model,
                     timers: services.timers,
+                    systemTimers: services.systemTimers,
                     transfers: services.transfers,
                     privacy: services.privacy,
                     energy: services.energy
@@ -266,12 +267,14 @@ final class IslandController {
         viewModel.tabsChanged(tabs)
     }
 
-    /// A timer, the stopwatch or a download turns the compact island into a live activity.
+    /// A timer, the stopwatch, a Clock timer or a download turns the compact island into a
+    /// live activity.
     private func observeLiveActivities() {
         let timers = services.timers
+        let systemTimers = services.systemTimers
         let transfers = services.transfers
         let active = withObservationTracking {
-            timers.isActive || transfers.current != nil
+            LiveActivity.current(timers: timers, systemTimers: systemTimers, transfers: transfers) != nil
         } onChange: { [weak self] in
             Task { @MainActor [weak self] in
                 self?.observeLiveActivities()

@@ -368,6 +368,7 @@ final class SettingsModel {
         let weather = f.weather
         let calendar = f.calendar
         let timers = f.timers
+        let systemTimers = f.systemTimers
         let transfers = f.transfers
         let shelf = f.shelf
         let screenshots = f.screenshots
@@ -495,6 +496,13 @@ final class SettingsModel {
                         symbol: "timer", tint: SettingsColor.orange,
                         isOn: { timers.isEnabled },
                         setOn: { timers.setEnabled($0) }
+                    )),
+                    .toggle(SettingsToggle(
+                        id: "systemTimers", title: "Timer di Siri e Orologio",
+                        detail: "I timer avviati con Siri o con l'app Orologio compaiono nelle ali mentre corrono, e un avviso quando suonano. Un timer in pausa non compare.",
+                        symbol: "clock.fill", tint: SettingsColor.orange,
+                        isOn: { systemTimers.isEnabled },
+                        setOn: { systemTimers.setEnabled($0) }
                     )),
                     .toggle(SettingsToggle(
                         id: "calendar", title: "Calendario e riunioni",

@@ -18,6 +18,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let calendar = CalendarController(alerts: alerts)
         let screenshots = ScreenshotController(alerts: alerts, shelf: shelf.store)
         let timers = TimerController(alerts: alerts)
+        let systemTimers = SystemTimerMonitor(alerts: alerts)
         let transfers = TransferMonitor(alerts: alerts, shelf: shelf.store)
         let privacy = PrivacyIndicators()
         let energy = EnergyMode()
@@ -37,6 +38,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 calendar: calendar,
                 screenshots: screenshots,
                 timers: timers,
+                systemTimers: systemTimers,
                 transfers: transfers,
                 privacy: privacy,
                 energy: energy
@@ -56,6 +58,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             calendar: calendar,
             screenshots: screenshots,
             timers: timers,
+            systemTimers: systemTimers,
             transfers: transfers,
             privacy: privacy,
             keyboard: KeyboardMonitor(alerts: alerts),
@@ -84,6 +87,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         calendar.start()
         screenshots.start()
         transfers.start()
+        systemTimers.start()
         privacy.start()
         focus.start()
         features.unlock.start()
@@ -110,6 +114,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         features.calendar.stop()
         features.screenshots.stop()
         features.transfers.stop()
+        features.systemTimers.stop()
         features.privacy.stop()
         features.keyboard.stop()
         features.presentation.stop()
@@ -132,6 +137,7 @@ struct Features {
     let calendar: CalendarController
     let screenshots: ScreenshotController
     let timers: TimerController
+    let systemTimers: SystemTimerMonitor
     let transfers: TransferMonitor
     let privacy: PrivacyIndicators
     let keyboard: KeyboardMonitor

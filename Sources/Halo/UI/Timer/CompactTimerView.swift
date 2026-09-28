@@ -1,16 +1,18 @@
 import SwiftUI
 
-/// What the compact island shows besides music, most important first: the timer, the
-/// stopwatch, then a download or AirDrop.
+/// What the compact island shows besides music, most important first: Halo's timer, the
+/// stopwatch, a Clock timer (started with Siri or the Clock app), then a download or
+/// AirDrop.
 enum LiveActivity: Equatable {
     case timer(FocusTimer)
     case stopwatch(Stopwatch)
     case transfer(Transfer)
 
     @MainActor
-    static func current(timers: TimerController, transfers: TransferMonitor) -> LiveActivity? {
+    static func current(timers: TimerController, systemTimers: SystemTimerMonitor, transfers: TransferMonitor) -> LiveActivity? {
         if let timer = timers.timer { return .timer(timer) }
         if let stopwatch = timers.stopwatch { return .stopwatch(stopwatch) }
+        if let system = systemTimers.current { return .timer(system.focusTimer) }
         if let transfer = transfers.current { return .transfer(transfer) }
         return nil
     }
