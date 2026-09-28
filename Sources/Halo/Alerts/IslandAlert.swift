@@ -51,6 +51,15 @@ enum IslandAlert: Sendable, Equatable {
         }
     }
 
+    /// Dropped in presentation mode: interruptions nobody asked for right now.
+    var waitsOutPresentations: Bool {
+        switch self {
+        case .notification, .audioDevice, .screenshot: true
+        case .power(let power): power.event != .low
+        case .hud, .calendar, .timer, .keyboard: false
+        }
+    }
+
     /// How long the alert stays once nothing holds it.
     var duration: Duration {
         switch self {

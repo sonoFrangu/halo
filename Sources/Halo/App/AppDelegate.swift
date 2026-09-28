@@ -19,6 +19,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let screenshots = ScreenshotController(alerts: alerts, shelf: shelf.store)
         let timers = TimerController(alerts: alerts)
         let privacy = PrivacyIndicators()
+        let energy = EnergyMode()
         let islands = IslandsCoordinator(
             services: IslandServices(
                 nowPlaying: nowPlaying,
@@ -30,7 +31,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 calendar: calendar,
                 screenshots: screenshots,
                 timers: timers,
-                privacy: privacy
+                privacy: privacy,
+                energy: energy
             )
         )
         let cardActions = PlayerActions.card(for: nowPlaying)
@@ -49,6 +51,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             timers: timers,
             privacy: privacy,
             keyboard: KeyboardMonitor(alerts: alerts),
+            presentation: PresentationDetector(alerts: alerts),
+            energy: energy,
             notifications: NotificationMirror(alerts: alerts),
             desktopWidget: DesktopWidgetController(
                 player: nowPlaying.model,
@@ -72,6 +76,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         privacy.start()
         features.notifications.start()
         features.keyboard.start()
+        features.presentation.start()
         features.desktopWidget.start()
         features.lockScreen.start()
         if Preferences.lyricsEnabled { lyrics.start() }
@@ -93,6 +98,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         features.screenshots.stop()
         features.privacy.stop()
         features.keyboard.stop()
+        features.presentation.stop()
     }
 }
 
@@ -112,6 +118,8 @@ struct Features {
     let timers: TimerController
     let privacy: PrivacyIndicators
     let keyboard: KeyboardMonitor
+    let presentation: PresentationDetector
+    let energy: EnergyMode
     let notifications: NotificationMirror
     let desktopWidget: DesktopWidgetController
     let lockScreen: LockScreenController

@@ -68,4 +68,5 @@ struct IslandModels {
     let calendar: CalendarModel
     let timers: TimerController
     let privacy: PrivacyIndicators
+    let energy: EnergyMode
 }

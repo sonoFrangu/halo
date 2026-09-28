@@ -9,10 +9,13 @@ import Observation
 /// - Other alerts queue up and are shown one after another.
 /// - Dismissal pauses while something holds it: a drag on the HUD bar, the pointer resting
 ///   on a banner, or an expanded island (where banners would otherwise expire unseen).
+/// - While quiet (a full-screen app is in front), alerts that would only interrupt are
+///   dropped; direct feedback (HUD, keyboard), timers, meetings and low battery still show.
 @MainActor
 @Observable
 final class AlertCenter {
     private(set) var current: IslandAlert?
+    @ObservationIgnored var isQuiet = false
 
     @ObservationIgnored private var queue: [IslandAlert] = []
     @ObservationIgnored private var dismissTask: Task<Void, Never>?
@@ -22,6 +25,7 @@ final class AlertCenter {
     @ObservationIgnored private var readingHolders: Set<String> = []
 
     func post(_ alert: IslandAlert) {
+        guard !(isQuiet && alert.waitsOutPresentations) else { return }
         if let current {
             if current.kind == alert.kind {
                 self.current = alert

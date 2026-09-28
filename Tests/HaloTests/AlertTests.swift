@@ -45,6 +45,20 @@ struct AlertCenterTests {
         #expect(center.current == notification(1))
     }
 
+    @Test func quietModeDropsInterruptionsButKeepsFeedback() {
+        let center = AlertCenter()
+        center.isQuiet = true
+        center.post(notification(1))
+        center.post(charging)
+        #expect(center.current == nil)
+
+        let low = IslandAlert.power(PowerAlert(event: .low, level: 0.1, isCharging: false, minutesToFull: nil))
+        center.post(low)
+        #expect(center.current == low)
+        center.post(.hud)
+        #expect(center.current == .hud)
+    }
+
     @Test func withdrawRemovesVisibleAndQueuedAlerts() {
         let center = AlertCenter()
         center.post(charging)

@@ -32,7 +32,8 @@ final class IslandController {
                     thumbnails: services.shelf.thumbnails,
                     calendar: services.calendar.model,
                     timers: services.timers,
-                    privacy: services.privacy
+                    privacy: services.privacy,
+                    energy: services.energy
                 ),
                 actions: Self.actions(for: viewModel, services: services, dragHolder: "hud-drag-\(displayID)")
             )
@@ -64,6 +65,7 @@ final class IslandController {
         observeTabs()
         observeTimer()
         observePrivacy()
+        observeEnergy()
     }
 
     private static func actions(
@@ -277,5 +279,17 @@ final class IslandController {
             }
         }
         viewModel.privacyChanged(inUse: inUse)
+    }
+
+    private func observeEnergy() {
+        let energy = services.energy
+        let reduced = withObservationTracking {
+            energy.reducesEffects
+        } onChange: { [weak self] in
+            Task { @MainActor [weak self] in
+                self?.observeEnergy()
+            }
+        }
+        viewModel.energyChanged(reduced: reduced)
     }
 }

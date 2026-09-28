@@ -13,6 +13,7 @@ struct IslandServices {
     let screenshots: ScreenshotController
     let timers: TimerController
     let privacy: PrivacyIndicators
+    let energy: EnergyMode
 
     /// What happens when an alert is clicked: a notification opens its app, a meeting
     /// reminder joins the call (or opens Calendar), a screenshot opens; any alert is then

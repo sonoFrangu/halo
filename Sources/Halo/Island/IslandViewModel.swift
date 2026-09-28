@@ -59,6 +59,7 @@ final class IslandViewModel {
     @ObservationIgnored private var isDraggingFiles = false
     @ObservationIgnored private var isTimerActive = false
     @ObservationIgnored private var isDeviceInUse = false
+    @ObservationIgnored private var isEnergyReduced = false
     @ObservationIgnored private var lastInteractivity = false
     @ObservationIgnored private var lastHoldsAlerts = false
     @ObservationIgnored private var hoverTask: Task<Void, Never>?
@@ -153,6 +154,11 @@ final class IslandViewModel {
         resolveState()
     }
 
+    /// Low Power Mode: shape changes become brief eases, like with Reduce Motion.
+    func energyChanged(reduced: Bool) {
+        isEnergyReduced = reduced
+    }
+
     func lyricsChanged(visible: Bool) {
         updateContext { $0.showsLyrics = visible }
     }
@@ -214,7 +220,7 @@ final class IslandViewModel {
     }
 
     private var reduceMotion: Bool {
-        NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+        NSWorkspace.shared.accessibilityDisplayShouldReduceMotion || isEnergyReduced
     }
 
     private func updateContext(_ change: (inout IslandContext) -> Void) {

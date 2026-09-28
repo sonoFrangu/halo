@@ -87,6 +87,16 @@ final class StatusItemController: NSObject, NSMenuDelegate {
             keyboard.setEnabled(on)
         })
 
+        let presentation = features.presentation
+        menu.addItem(toggle("Silenzia gli avvisi con app a tutto schermo", isOn: { presentation.isEnabled }) { on in
+            presentation.setEnabled(on)
+        })
+
+        let energy = features.energy
+        menu.addItem(toggle("Alleggerisci in risparmio energetico", isOn: { energy.adapts }) { on in
+            energy.setAdapts(on)
+        })
+
         let notifications = features.notifications
         menu.addItem(toggle("Notifiche nella notch", isOn: { notifications.isEnabled }) { on in
             notifications.setEnabled(on)

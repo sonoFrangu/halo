@@ -1,15 +1,16 @@
 import SwiftUI
 
 /// Animated equalizer bars. Ticks only while `isPlaying` (TimelineView is paused
-/// otherwise), and becomes static with Reduce Motion.
+/// otherwise), and becomes static with Reduce Motion or in Low Power Mode.
 struct EqualizerView: View {
     let isPlaying: Bool
     let tint: Color
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.reducesEffects) private var reducesEffects
 
     var body: some View {
-        let animates = isPlaying && !reduceMotion
+        let animates = isPlaying && !reduceMotion && !reducesEffects
 
         TimelineView(.animation(minimumInterval: 1.0 / 30, paused: !animates)) { context in
             let time = context.date.timeIntervalSinceReferenceDate

@@ -24,6 +24,8 @@ enum Preferences {
         static let timer = "timerEnabled"
         static let privacyIndicator = "privacyIndicatorEnabled"
         static let keyboardAlerts = "keyboardAlertsEnabled"
+        static let presentationMode = "presentationModeEnabled"
+        static let lowPowerAdaptive = "lowPowerAdaptive"
     }
 
     private static func flag(_ key: String, default value: Bool) -> Bool {
@@ -124,6 +126,18 @@ enum Preferences {
     static var keyboardAlertsEnabled: Bool {
         get { flag(Key.keyboardAlerts, default: true) }
         set { defaults.set(newValue, forKey: Key.keyboardAlerts) }
+    }
+
+    /// Quiet alerts while a full-screen app is in front.
+    static var presentationModeEnabled: Bool {
+        get { flag(Key.presentationMode, default: true) }
+        set { defaults.set(newValue, forKey: Key.presentationMode) }
+    }
+
+    /// Trim animations and redraws in Low Power Mode.
+    static var lowPowerAdaptive: Bool {
+        get { flag(Key.lowPowerAdaptive, default: true) }
+        set { defaults.set(newValue, forKey: Key.lowPowerAdaptive) }
     }
 
     /// Swipes over the island skip tracks and change the volume.

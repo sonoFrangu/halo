@@ -11,14 +11,16 @@ struct RevealModifier: ViewModifier {
     let blurs: Bool
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.reducesEffects) private var reducesEffects
 
     func body(content: Content) -> some View {
-        content
+        let calm = reduceMotion || reducesEffects
+        return content
             .opacity(isVisible ? 1 : 0)
-            .blur(radius: isVisible || reduceMotion || !blurs ? 0 : 6)
-            .scaleEffect(isVisible || reduceMotion ? 1 : 0.94, anchor: .top)
+            .blur(radius: isVisible || calm || !blurs ? 0 : 6)
+            .scaleEffect(isVisible || calm ? 1 : 0.94, anchor: .top)
             .allowsHitTesting(isVisible)
-            .animation(Motion.reveal(isVisible: isVisible, order: order, reduceMotion: reduceMotion), value: isVisible)
+            .animation(Motion.reveal(isVisible: isVisible, order: order, reduceMotion: calm), value: isVisible)
     }
 }
 

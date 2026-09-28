@@ -107,6 +107,9 @@ struct PlayerContentView: View {
     let layout: IslandLayout
     let isVisible: Bool
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.reducesEffects) private var reducesEffects
+
     var body: some View {
         let player = models.player
         let lyrics = models.lyrics
@@ -118,7 +121,7 @@ struct PlayerContentView: View {
                 .place(in: layout.sourceIconFrame)
                 .reveal(isVisible, order: 1)
 
-            TrackInfoView(title: player.title, artist: player.artist)
+            TrackInfoView(title: player.title, artist: player.artist, scrolls: isVisible && !reduceMotion && !reducesEffects)
                 .place(in: layout.trackInfoFrame)
                 .reveal(isVisible, order: 1)
 
@@ -139,7 +142,8 @@ struct PlayerContentView: View {
                 isHovering: island.isScrubberHovered,
                 onHoverChanged: { hovering in island.setScrubberHovered(hovering) },
                 onScrubbingChanged: actions.setInteracting,
-                onSeek: actions.seek
+                onSeek: actions.seek,
+                minimumInterval: reducesEffects ? 0.25 : 1.0 / 30
             )
             .place(in: layout.scrubberFrame)
             .reveal(isVisible, order: 3)

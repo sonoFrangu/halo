@@ -27,7 +27,7 @@ struct IslandRootView: View {
                 )
                 .transition(
                     .asymmetric(
-                        insertion: .opacity.animation(Motion.decorationIn(reduceMotion: reduceMotion)),
+                        insertion: .opacity.animation(Motion.decorationIn(reduceMotion: reduceMotion || models.energy.reducesEffects)),
                         removal: .opacity.animation(Motion.decorationOut)
                     )
                 )
@@ -41,5 +41,6 @@ struct IslandRootView: View {
         .frame(width: canvas.width, height: canvas.height, alignment: .topLeading)
         .ignoresSafeArea()
         .animation(Motion.palette, value: palette)
+        .environment(\.reducesEffects, models.energy.reducesEffects)
     }
 }
