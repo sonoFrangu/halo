@@ -859,3 +859,27 @@ ridotti); `SiriGlyph` un'onda nell'ala sinistra. Il pannello di Siri resta dove 
 git add docs/design.md
 git commit -m "docs: Siri and Clock timers in the notch"
 ```
+
+---
+
+## Parte 3 — Comandare Orologio dalla notch
+
+### Task 6: pausa nello stato del timer di sistema
+- `SystemTimer.pausedRemaining: TimeInterval?`; `focusTimer` in pausa → `endDate: nil`, `pausedRemaining`.
+- `SystemTimerState.pause(now:)`, `clear()`; `.cleared` non tocca un timer in pausa; `.running` lo riprende (stessa durata totale).
+- Test in `SystemTimerStateTests`: pausa da Halo sopravvive a `.cleared`; ripresa; `clear()`.
+
+### Task 7: `ClockAppDriver`
+- `Sources/Halo/SystemTimer/ClockAppDriver.swift` come da specifica, parte 3. Verifica manuale: avvio 1 min, pausa, ripresa, annulla dalla notch.
+
+### Task 8: scelta dell'app, controlli, scheda Timer, menu
+- `Preferences.timerApp` (`TimerApp.clock` / `.halo`, default `.clock`).
+- `SystemTimerMonitor.start(minutes:) async -> Bool`, `togglePause()`, `cancel()` (usano il driver e aggiornano lo stato).
+- `TimerActions` in `IslandController` e il menu in `StatusItemController`: avvio verso Orologio se scelto (ripiego sul timer di Halo), pausa/ferma verso il timer mostrato.
+- `TimerTabView` mostra `timers.timer ?? systemTimers.current?.focusTimer`; `ActiveTimerView(canAddMinute:)`.
+- Impostazioni: `SettingsItem.timerApp` con `Picker` segmentato, disattivo se "Timer di Siri e Orologio" è spento.
+
+### Task 9: ala destra → scheda Timer
+- `IslandViewModel`: entrando nell'isola a destra della notch con un'attività live, l'apertura sceglie la scheda Timer (se disponibile).
+
+### Task 10: documentazione (`docs/design.md`, README).

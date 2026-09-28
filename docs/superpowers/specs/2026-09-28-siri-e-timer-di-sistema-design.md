@@ -107,3 +107,41 @@ l'avviso o l'attività.
 - `SystemTimerMonitor`: la logica degli eventi (id nuovo vs ripresa, `total` conservato) sta in
   una funzione pura testata.
 - Siri e l'aspetto grafico: prova manuale sul Mac.
+
+## Parte 3 — Comandare Orologio dalla notch (aggiunta del 2026-09-28)
+
+Verificato su questo Mac: Comandi Rapidi non serve (l'azione "Avvia timer" fallisce con
+`WFIntentExecutorErrorDomain 101` anche lanciata dall'app, e i file `.shortcut` generati con
+azioni App Intent vengono rifiutati all'importazione). L'app Orologio invece espone la scheda
+Timer all'Accessibilità: `TimePicker` (tre `AXSlider` ore/minuti/secondi), `PauseResumeButton`,
+`CancelButton`, la lista "Recenti". Orologio esegue i comandi **solo quando è l'app attiva**:
+premere o impostare valori con l'app in secondo piano restituisce successo ma non fa nulla.
+Con Orologio attivo per un istante: focus sul cursore dei minuti + cifre digitate
+(`CGEvent`) impostano la durata (verificato 00:04:00 → 00:10:00); `AXPress` su
+`PauseResumeButton` avvia, mette in pausa e riprende; su `CancelButton` annulla. Tempo con
+Orologio in primo piano: ~0,4 s per un pulsante, ~1,2 s per un avvio.
+
+**`ClockAppDriver`** (`@MainActor`): `start(minutes:)`, `togglePause()`, `cancel()`, ognuno
+`async -> Bool`, eseguiti uno alla volta. Ogni comando: Accessibilità concessa, Orologio aperto
+(se chiuso lo apre nascosto, senza attivarlo), finestra spostata fuori schermo, Orologio
+attivato, scheda Timer selezionata (l'ultimo segmento della barra, non per nome: il nome
+dipende dalla lingua), azione, focus restituito all'app di prima, Orologio nascosto. Se un
+elemento manca il comando fallisce e lo scrive nelle diagnostiche.
+
+**Quale app per i timer della notch** (Impostazioni › Attività, riga di scelta "Halo /
+Orologio", default Orologio): con Orologio, i preset della notch e del menu (1, 5, 10, 15,
+25 min) avviano un timer di Orologio; se il comando fallisce parte il timer di Halo. Pomodoro e
+cronometro restano sempre di Halo. La scelta conta solo con "Timer di Siri e Orologio" attivo.
+
+**Pausa visibile**: `SystemTimer` ha `pausedRemaining`; una pausa chiesta dalla notch mette il
+timer in pausa subito (ali ferme e più tenui) e il `.cleared` che segue nel log non lo
+cancella. Una pausa fatta dall'app Orologio lo fa sparire, come prima.
+
+**Controlli**: la scheda Timer mostra il timer di Orologio come quello di Halo, con
+Pausa/Riprendi e Ferma (senza "+1 minuto"); valgono anche per i timer di Siri. Il menu Timer
+di Halo fa lo stesso. Aprendo l'isola con il puntatore sull'ala destra mentre c'è un timer
+(di Halo o di Orologio), l'isola si apre sulla scheda Timer invece che sulla musica.
+
+**Limiti**: a ogni comando Orologio compare per un istante; durante un avvio Halo digita le
+cifre, quindi un tasto premuto in quel momento può finire altrove. Un timer messo in pausa
+dalla notch e poi annullato dall'app Orologio resta in pausa nella notch finché non lo fermi.
