@@ -7,7 +7,7 @@ class ActionMenuItem: NSMenuItem {
 
     init(title: String, keyEquivalent: String = "", handler: @escaping () -> Void) {
         self.handler = handler
-        super.init(title: title, action: #selector(run), keyEquivalent: keyEquivalent)
+        super.init(title: title, action: #selector(ActionMenuItem.run), keyEquivalent: keyEquivalent)
         target = self
     }
 
