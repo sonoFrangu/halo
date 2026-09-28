@@ -56,6 +56,9 @@ final class IslandViewModel {
     /// The pointer came in over the right wing while it showed a live activity: the island
     /// opens on the Timer tab, where the timer can be paused or stopped.
     @ObservationIgnored private var entersOverActivity = false
+    /// The tab last picked by hand: the island reopens on it. Tabs opened on their own (the
+    /// shelf during a file drag, the Timer tab from a live activity) do not change it.
+    @ObservationIgnored private var chosenTab: ExpandedTab = .player
     @ObservationIgnored private var isHovering = false
     @ObservationIgnored private var isInteracting = false
     @ObservationIgnored private var showsActivity = false
@@ -143,6 +146,7 @@ final class IslandViewModel {
 
     func selectTab(_ tab: ExpandedTab) {
         guard availableTabs.contains(tab) else { return }
+        chosenTab = tab
         updateContext { $0.tab = tab }
     }
 
@@ -175,8 +179,11 @@ final class IslandViewModel {
         withAnimation(Motion.context(reduceMotion: reduceMotion)) {
             availableTabs = tabs
         }
+        if !tabs.contains(chosenTab) {
+            chosenTab = .player
+        }
         if !tabs.contains(context.tab) {
-            updateContext { $0.tab = .player }
+            updateContext { $0.tab = chosenTab }
         }
     }
 
@@ -267,14 +274,15 @@ final class IslandViewModel {
         } else {
             target = .idle
         }
-        // A file drag opens (or turns) the island onto the shelf; closing returns to the player.
+        // A file drag opens (or turns) the island onto the shelf; closing returns to the tab
+        // picked last.
         let tab: ExpandedTab
         if target == .expanded && isDraggingFiles {
             tab = .shelf
         } else if target == .expanded && state != .expanded && entersOverActivity && availableTabs.contains(.timer) {
             tab = .timer
         } else if target != .expanded {
-            tab = .player
+            tab = chosenTab
         } else {
             tab = context.tab
         }

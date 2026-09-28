@@ -50,7 +50,7 @@ riproduzione; 1 fps sulle card sempre visibili), l'orologio del widget (1 al min
 | `idle`     | niente in riproduzione (o in pausa da >1,5 s)     | dentro la notch fisica (invisibile); pillola sui display senza notch |
 | `compact`  | musica, un timer o microfono/fotocamera in uso    | notch + due "ali": copertina (o anello del timer, o icona) a sinistra; EQ (o countdown, o pallino) a destra |
 | `alert`    | un avviso di `AlertCenter`                        | stile `wings` (HUD, ricarica: ali larghe) o `banner` (cuffie, notifiche: corpo sotto la notch) |
-| `expanded` | puntatore sopra l'isola (dopo ~90 ms, regolabile) o file trascinati sulla notch | scheda Musica (con testi), Scaffale, Calendario o Timer |
+| `expanded` | puntatore sopra l'isola (dopo ~90 ms, regolabile) o file trascinati sulla notch | scheda Musica (con testi), Scaffale, Appunti, Calendario o Timer; si riapre sull'ultima scelta a mano |
 
 Una sola `NotchShape` animabile (larghezza, altezza, raggio inferiore, raggio "orecchie"
 concave superiori) morfa fra stati e contesti. `IslandContext` (media presente, stile
