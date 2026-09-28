@@ -10,8 +10,8 @@ enum PaletteExtractor {
     private static let sampleSide = 24
     private static let clusterCount = 5
 
-    /// `CIContext` is documented as thread-safe and is expensive to create, so one is shared.
-    nonisolated(unsafe) private static let context = CIContext(options: [.cacheIntermediates: false])
+    /// `CIContext` is thread-safe (and `Sendable`) and expensive to create, so one is shared.
+    private static let context = CIContext(options: [.cacheIntermediates: false])
 
     static func palette(from data: Data) -> ArtworkPalette? {
         guard let samples = samples(from: data), !samples.isEmpty else { return nil }

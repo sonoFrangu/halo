@@ -35,8 +35,10 @@ struct IslandLayoutTests {
         for hasMedia in [true, false] {
             for state in [IslandState.idle, .compact, .expanded] {
                 let spec = layout.spec(for: state, hasMedia: hasMedia)
-                #expect(spec.width + 2 * spec.earRadius + 2 * IslandLayout.canvasMargin.width <= canvas.width)
-                #expect(spec.height + IslandLayout.canvasMargin.height <= canvas.height)
+                let neededWidth: CGFloat = spec.width + 2 * spec.earRadius + 2 * IslandLayout.canvasMargin.width
+                let neededHeight: CGFloat = spec.height + IslandLayout.canvasMargin.height
+                #expect(neededWidth <= canvas.width)
+                #expect(neededHeight <= canvas.height)
             }
         }
     }

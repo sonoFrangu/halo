@@ -92,6 +92,9 @@ xattr -dr com.apple.quarantine /Applications/Halo.app
   ritardo; al suo posto c'è un segnaposto con i colori neutri.
 - **Titoli lunghi** vengono troncati con "…" (niente scorrimento marquee, per ora).
 - **Contenuti live** (senza durata) mostrano la barra vuota e `--:--`; il seek è disattivato.
+- **Le ali coprono la menu bar**: in `compact` le ali nere stanno sopra gli elementi della menu
+  bar adiacenti alla notch. I click li raggiungono comunque (il pannello è click-through), ma
+  passarci sopra con il puntatore apre il player dopo ~90 ms.
 - **Un solo schermo**: l'isola sta sul display con la notch o, in assenza, sul display
   principale; non segue il monitor attivo.
 - **Stato "pausa"**: dopo ~1,5 s di pausa l'isola torna `idle`; in pausa resta raggiungibile

@@ -34,8 +34,12 @@ struct PaletteTests {
     }
 
     @Test func kMeansIsDeterministic() {
-        let samples = (0..<200).map { index in
-            RGBColor(red: Double(index % 7) / 7, green: Double(index % 11) / 11, blue: Double(index % 5) / 5)
+        var samples: [RGBColor] = []
+        for index in 0..<200 {
+            let red = Double(index % 7) / 7
+            let green = Double(index % 11) / 11
+            let blue = Double(index % 5) / 5
+            samples.append(RGBColor(red: red, green: green, blue: blue))
         }
         #expect(KMeans.clusters(of: samples, count: 5) == KMeans.clusters(of: samples, count: 5))
     }

@@ -26,7 +26,8 @@ struct NotchGeometryTests {
             auxiliaryRightWidth: 680,
             menuBarHeight: 32
         )
-        #expect(geometry.notchCenterX == -1470 + 600 + 95)
+        let expectedCenter: CGFloat = -1470 + 600 + 95
+        #expect(geometry.notchCenterX == expectedCenter)
     }
 
     @Test func screensWithoutNotchGetAVirtualOne() {

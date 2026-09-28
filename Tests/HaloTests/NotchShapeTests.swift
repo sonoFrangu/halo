@@ -13,8 +13,9 @@ struct NotchShapeTests {
     @Test func boundsCoverBodyAndEars() {
         let spec = IslandShapeSpec(width: 468, height: 168, bottomRadius: 28, earRadius: 14)
         let bounds = NotchShape(spec: spec).path(in: canvas).boundingRect
-        #expect(isClose(bounds.minX, 300 - 234 - 14))
-        #expect(isClose(bounds.maxX, 300 + 234 + 14))
+        let halfSpan: CGFloat = 234 + 14
+        #expect(isClose(bounds.minX, 300 - halfSpan))
+        #expect(isClose(bounds.maxX, 300 + halfSpan))
         #expect(isClose(bounds.minY, 0))
         #expect(isClose(bounds.maxY, 168))
     }
@@ -82,7 +83,8 @@ struct NotchShapeTests {
         let bounds = path.boundingRect
         #expect(isClose(bounds.minX, 100 - radius, tolerance: 0.05))
         #expect(isClose(bounds.maxY, 100, tolerance: 0.05))
-        let diagonal = CGPoint(x: 100 - radius + radius / CGFloat(2).squareRoot(), y: 100 - radius + radius / CGFloat(2).squareRoot())
+        let offset: CGFloat = radius / CGFloat(2).squareRoot()
+        let diagonal = CGPoint(x: 100 - radius + offset, y: 100 - radius + offset)
         #expect(path.strokedPath(StrokeStyle(lineWidth: 0.2)).contains(diagonal))
     }
 }
