@@ -76,13 +76,6 @@ final class NotificationMirror {
         start()
     }
 
-    func openFullDiskAccessSettings() {
-        let pane = "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles"
-        if let url = URL(string: pane) {
-            NSWorkspace.shared.open(url)
-        }
-    }
-
     // MARK: Records
 
     private func databaseChanged() {

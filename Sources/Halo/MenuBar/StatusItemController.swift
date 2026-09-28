@@ -8,8 +8,7 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     private let features: Features
     private let settings: SettingsWindowController
     private let statusLine = NSMenuItem()
-    private var hudPermissionItem: NSMenuItem?
-    private var notificationsPermissionItem: NSMenuItem?
+    private var permissionsItem: NSMenuItem?
     private var timerPauseItem: NSMenuItem?
     private var timerStopItem: NSMenuItem?
     private var stopwatchItem: NSMenuItem?
@@ -48,19 +47,12 @@ final class StatusItemController: NSObject, NSMenuDelegate {
             settings.show()
         })
 
-        let hud = features.hud
-        let accessibility = ActionMenuItem(title: "Concedi Accessibilità per l'HUD…") {
-            hud.requestPermission()
+        let permissions = ActionMenuItem(title: "Permessi mancanti…") {
+            settings.show(pane: .permissions)
         }
-        hudPermissionItem = accessibility
-        menu.addItem(accessibility)
-
-        let notifications = features.notifications
-        let fullDiskAccess = ActionMenuItem(title: "Concedi Accesso completo al disco…") {
-            notifications.openFullDiskAccessSettings()
-        }
-        notificationsPermissionItem = fullDiskAccess
-        menu.addItem(fullDiskAccess)
+        permissions.image = NSImage(systemSymbolName: "exclamationmark.triangle.fill", accessibilityDescription: nil)
+        permissionsItem = permissions
+        menu.addItem(permissions)
 
         menu.addItem(.separator())
         menu.addItem(ActionMenuItem(title: "Esci da Halo", keyEquivalent: "q") {
@@ -104,9 +96,13 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     func menuNeedsUpdate(_ menu: NSMenu) {
         statusLine.title = statusText
         statusLine.toolTip = statusTooltip
-        hudPermissionItem?.isHidden = features.hud.status != .needsPermission
         features.notifications.refreshAccess()
-        notificationsPermissionItem?.isHidden = features.notifications.status != .needsFullDiskAccess
+        features.focus.refreshAccess()
+        let missing = settings.missingPermissions
+        permissionsItem?.isHidden = missing.isEmpty
+        permissionsItem?.title = missing.count == 1
+            ? "Concedi «\(missing[0].title)»…"
+            : "Concedi \(missing.count) permessi mancanti…"
         let timer = features.timers.timer
         timerPauseItem?.isEnabled = timer != nil
         timerPauseItem?.title = timer?.isRunning == false ? "Riprendi" : "Pausa"
