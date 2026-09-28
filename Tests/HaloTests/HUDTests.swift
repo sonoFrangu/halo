@@ -19,6 +19,15 @@ struct HUDStepTests {
         #expect(isClose(down, 0.5))
     }
 
+    /// Levels as the display reads them back after being set on the grid (Float rounding in
+    /// corebrightnessd): 81.25 % reads 0.812500119, 87.5 % reads 0.874999881. They must still
+    /// move a whole step, or the key does nothing.
+    @Test func levelsReadBackWithFloatErrorStillMove() {
+        #expect(isClose(HUDStep.next(from: 0.874999881, up: true, fine: false), 0.9375))
+        #expect(isClose(HUDStep.next(from: 0.812500119, up: false, fine: false), 0.75))
+        #expect(isClose(HUDStep.next(from: Double(Float(0.515625)) - 2e-7, up: true, fine: true), 0.53125))
+    }
+
     @Test func fineStepsAreQuarterSteps() {
         #expect(isClose(HUDStep.next(from: 0.5, up: true, fine: true), 0.515625))
     }

@@ -8,10 +8,13 @@ enum HUDStep {
     static func next(from level: Double, up: Bool, fine isFine: Bool) -> Double {
         let step = isFine ? fine : regular
         let units = min(max(level, 0), 1) / step
-        // The epsilon keeps values already on the grid from being treated as off-grid.
+        // A level within a thousandth of a step of the grid counts as on it: the display and
+        // CoreAudio store Float32 and read back a hair off (87.5 % reads 0.874999881), and
+        // a tighter tolerance made such a key press land on the same level again.
+        let tolerance = 1e-3
         let snapped = up
-            ? (units + 1e-6).rounded(.down) + 1
-            : (units - 1e-6).rounded(.up) - 1
+            ? (units + tolerance).rounded(.down) + 1
+            : (units - tolerance).rounded(.up) - 1
         return min(max(snapped * step, 0), 1)
     }
 }

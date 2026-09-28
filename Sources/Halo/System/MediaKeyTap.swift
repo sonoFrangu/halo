@@ -97,6 +97,9 @@ final class MediaKeyTap {
     fileprivate func handle(type: CGEventType, event: CGEvent) -> Bool {
         if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
             // The system disables slow or interrupted taps; turn it back on.
+            let reason = type == .tapDisabledByTimeout ? "timeout" : "user input"
+            Log.hud.error("media key tap disabled by \(reason, privacy: .public), re-enabling")
+            Diagnostics.shared.record("tasti: tap disattivato da macOS (\(reason)), riattivato")
             if let tap { CGEvent.tapEnable(tap: tap, enable: true) }
             return false
         }
@@ -121,7 +124,14 @@ final class MediaKeyTap {
             isRepeat: flags & 0x1 == 1,
             isFine: nsEvent.modifierFlags.contains([.option, .shift])
         )
+        // How long the key waited for the main thread, and how long handling it took.
+        let lag = ProcessInfo.processInfo.systemUptime - nsEvent.timestamp
+        let started = ContinuousClock.now
         let handled = onPress(press)
+        let took = ContinuousClock.now - started
+        if lag > 0.1 || took > .milliseconds(30) {
+            Log.hud.notice("slow key \(String(describing: key), privacy: .public): waited \(Int(lag * 1000)) ms, handled in \(Int(took / .milliseconds(1))) ms, handled=\(handled)")
+        }
         if handled {
             swallowed.insert(key)
         }

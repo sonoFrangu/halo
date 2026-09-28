@@ -30,6 +30,7 @@ struct ClipboardTests {
     }
 }
 
+@MainActor
 struct ExpandedTabsTests {
     @Test(arguments: IslandLayoutTests.layouts)
     func everyTabFitsTheWing(layout: IslandLayout) {

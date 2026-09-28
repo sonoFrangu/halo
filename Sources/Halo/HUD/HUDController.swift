@@ -111,9 +111,15 @@ final class HUDController {
     private func handle(_ press: MediaKeyTap.Press) -> Bool {
         switch press.key {
         case .brightnessUp, .brightnessDown:
-            guard let current = brightness.level() else { return false }
+            guard let current = brightness.level() else {
+                Log.hud.error("brightness key: could not read the brightness, passing it to the system")
+                return false
+            }
             let target = HUDStep.next(from: current, up: press.key == .brightnessUp, fine: press.isFine)
-            guard brightness.setLevel(target) else { return false }
+            guard brightness.setLevel(target) else {
+                Log.hud.error("brightness key: could not set \(target), passing it to the system")
+                return false
+            }
             present(.brightness, level: target, muted: false)
             return true
 
