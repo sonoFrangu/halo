@@ -48,9 +48,9 @@ riproduzione; 1 fps sulle card sempre visibili), l'orologio del widget (1 al min
 | Stato      | Quando                                            | Forma                                     |
 |------------|---------------------------------------------------|-------------------------------------------|
 | `idle`     | niente in riproduzione (o in pausa da >1,5 s)     | dentro la notch fisica (invisibile); pillola sui display senza notch |
-| `compact`  | musica in riproduzione                            | notch + due "ali": mini copertina a sinistra, EQ a destra |
+| `compact`  | musica, un timer o microfono/fotocamera in uso    | notch + due "ali": copertina (o anello del timer, o icona) a sinistra; EQ (o countdown, o pallino) a destra |
 | `alert`    | un avviso di `AlertCenter`                        | stile `wings` (HUD, ricarica: ali larghe) o `banner` (cuffie, notifiche: corpo sotto la notch) |
-| `expanded` | puntatore sopra l'isola (dopo ~90 ms) o file trascinati sulla notch | scheda Player (con testi) o Scaffale |
+| `expanded` | puntatore sopra l'isola (dopo ~90 ms, regolabile) o file trascinati sulla notch | scheda Musica (con testi), Scaffale, Calendario o Timer |
 
 Una sola `NotchShape` animabile (larghezza, altezza, raggio inferiore, raggio "orecchie"
 concave superiori) morfa fra stati e contesti. `IslandContext` (media presente, stile
@@ -169,6 +169,62 @@ ogni cambio di app attiva.
   `SLSSpaceAddWindowsAndRemoveFromSpaces`, risolti a runtime). La finestra di login dopo un
   riavvio precede ogni app utente: lì non si può mostrare nulla.
 
+## Gesti
+
+`IslandHostingView` offre gli eventi di scroll a `IslandController`, che li riduce a
+`ScrollSample` e li passa a `ScrollGestureInterpreter` (puro, testato): blocco dell'asse dopo
+6 pt, un salto di brano per gesto oltre 60 pt, volume continuo (1/220 per punto, 1/16 per
+scatto di rotella), inerzia ignorata, scorrimento naturale gestito. Attivo solo sull'isola
+aperta sulla scheda Musica o sopra l'HUD del volume; altrove l'evento prosegue (es. lo
+scaffale scorre). `Haptics` usa `NSHapticFeedbackManager`.
+
+## Calendario
+
+`CalendarController` (EventKit, accesso completo) legge gli eventi da −12 h a +36 h e si
+aggiorna su `EKEventStoreChanged`, `NSCalendarDayChanged`, risveglio e **un solo** task
+dormiente fino al prossimo confine (`CalendarSchedule.nextChange`: ingresso
+nell'intestazione a −60 min, promemoria a −5 min, inizio, fine). `MeetingLink` trova i link
+delle videochiamate con espressioni regolari; `CalendarText` scrive gli orari relativi.
+
+## Screenshot
+
+`ScreenshotWatcher` è una `NSMetadataQuery` viva su `kMDItemIsScreenCapture == 1` e data di
+creazione ≥ avvio, in tutta la home: Spotlight notifica ogni nuovo file. Il banner usa le
+miniature Quick Look già usate dallo scaffale.
+
+## Timer
+
+`FocusTimer` è un valore (data di fine mentre corre, tempo residuo in pausa) e `Pomodoro` la
+macchina a stati del ciclo, entrambi testati. `TimerController` dorme fino alla fine; le viste
+contano alla rovescia con `Text(timerInterval:countsDown:)` (lo aggiorna il sistema) e
+ridisegnano l'anello una volta al secondo solo se visibile. Con un timer l'isola resta
+`compact` (attività live).
+
+## Microfono, fotocamera, tastiera
+
+- `PrivacyIndicators`: listener CoreAudio su `kAudioDevicePropertyDeviceIsRunningSomewhere` di
+  ogni dispositivo d'ingresso e CoreMediaIO su `kCMIODevicePropertyDeviceIsRunningSomewhere` di
+  ogni fotocamera, più i listener sugli elenchi dei dispositivi per ri-registrarsi.
+- `KeyboardMonitor`: notifica distribuita `TISNotifySelectedKeyboardInputSourceChanged` e
+  monitor `flagsChanged` (serve Accessibilità) per Bloc Maiusc; avvisi "ali" brevi.
+
+## Presentazione ed energia
+
+- `PresentationDetector`: al cambio di app o di Spazio (con 0,6 s di assestamento) legge
+  `CGWindowListCopyWindowInfo` e imposta `AlertCenter.isQuiet` se l'app in primo piano ha una
+  finestra grande quanto un display. In quiete `IslandAlert.waitsOutPresentations` scarta
+  notifiche, cuffie, alimentatore, screenshot.
+- `EnergyMode` segue `NSProcessInfoPowerStateDidChange`; con Low Power Mode imposta
+  l'ambiente `reducesEffects` (EQ fermo, rivelazioni senza blur/scale, barra a 4 fps, niente
+  marquee) e il view model usa animazioni brevi come con Riduci movimento.
+
+## Impostazioni
+
+`SettingsWindowController` apre una finestra SwiftUI (`Form` raggruppato) costruita da
+`SettingsModel`: un catalogo di `SettingsToggle` (lettura e azione sulle funzioni vive) e un
+contatore `revision` che fa rileggere i valori non osservabili. Il menu della barra dei menu
+contiene solo stato, Timer, Impostazioni, permessi mancanti ed Esci.
+
 ## Geometria della notch
 
 `NotchGeometry` usa `safeAreaInsets.top` (altezza) e la larghezza di
@@ -190,7 +246,8 @@ Vendor/mediaremote-adapter            submodule git (ungive/mediaremote-adapter,
 Sources/Halo/
   App/            HaloApp, AppDelegate (composition root), Log, Preferences
   MenuBar/        StatusItemController, MenuItems, LoginItemController (SMAppService)
-  System/         DisplayBrightness, SystemVolume, MediaKeyTap, AccessibilityPermission, LockScreenSpace
+  System/         DisplayBrightness, SystemVolume, MediaKeyTap, AccessibilityPermission, LockScreenSpace,
+                  PrivacyIndicators, KeyboardMonitor, PresentationDetector, EnergyMode
   HUD/            HUDController, HUDModel, HUDStep
   Alerts/         IslandAlert, AlertCenter
   Power/          PowerSnapshot (+ PowerTransition), PowerMonitor
@@ -200,6 +257,11 @@ Sources/Halo/
   Shelf/          ShelfStore, FileDragMonitor, ShelfThumbnails, ShelfController
   Notifications/  NotificationPayload, NotificationDatabase, DatabaseChangeWatcher, NotificationMirror
   Widgets/        CardState, CardPanel, DesktopWidgetController, LockScreenController
+  Gestures/       ScrollGestureInterpreter, Haptics
+  Calendar/       CalendarEvent (+ MeetingLink, CalendarSchedule), CalendarText, CalendarController
+  Screenshots/    ScreenshotWatcher, ScreenshotController
+  Timer/          FocusTimer (+ TimerMode, Pomodoro), TimerAlert, TimerController
+  Settings/       SettingsModel, SettingsWindowController
   NowPlaying/     NowPlayingSnapshot, PlaybackTimeline, MediaCommand, NowPlayingModel, NowPlayingController
   NowPlaying/Adapter/  AdapterResources, AdapterStream, AdapterCommandRunner, LineSplitter,
                        NowPlayingStreamDecoder, StderrTail
@@ -213,11 +275,16 @@ Sources/Halo/
                   ExpandedTabsView, PressableButtonStyle, RevealModifier, ExpandedBackdrop,
                   EmptyStateView, PlayerActions
   UI/HUD/         HUDGlyph, HUDLevelBar, HUDValueLabel, InlineHUDView
-  UI/Alerts/      BatteryGlyph, PowerValueView, BatteryRing, AudioDeviceBanner, NotificationBanner
+  UI/Alerts/      BatteryGlyph, PowerValueView, BatteryRing, AudioDeviceBanner, NotificationBanner,
+                  CalendarBanner, ScreenshotBanner, TimerBanner, KeyboardAlertView
   UI/Shelf/       ShelfView (+ ShelfTile, ShelfDropDelegate)
   UI/Widgets/     CardBackdrop, PlayerCardView, ClockCardView, DesktopWidgetView, LockScreenView
+  UI/Calendar/    CalendarTabView (+ CalendarEventRow, JoinButton), NextEventBadge
+  UI/Timer/       TimerRing (+ TimerCountdownText), TimerTabView, CompactTimerView
+  UI/Settings/    SettingsView
+  UI/             … PrivacyIndicatorView, TrackInfoView (+ MarqueeText)
 Tests/HaloTests/  Swift Testing: parsing, timeline, geometria, layout, forma, palette, HUD, avvisi,
-                  batteria, cuffie, LRC, meteo, notifiche
+                  batteria, cuffie, LRC, meteo, notifiche, gesti, calendario, timer
 ```
 
 ## Flusso dati Now Playing
