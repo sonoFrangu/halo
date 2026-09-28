@@ -285,7 +285,7 @@ deriva dimensioni e cornici per ogni stato e contesto.
 Package.swift                         SwiftPM, macOS 26, Swift 6
 Support/Info.plist                    LSUIElement, bundle id, versione, testo del permesso di posizione
 scripts/build-adapter.sh              compila MediaRemoteAdapter.framework con clang (niente CMake)
-scripts/bundle.sh                     swift build -c release + assemblaggio Halo.app + codesign (ad-hoc o "Halo Local")
+scripts/bundle.sh                     swift build -c release + assemblaggio Halo.app + codesign (ad-hoc, "Halo Local" o "Apple Development")
 Vendor/mediaremote-adapter            submodule git (ungive/mediaremote-adapter, tag v0.7.7, BSD-3)
 .github/workflows/build.yml           CI: macos-26 (Xcode 26.6/26.0.1) test + bundle + artifact; xcode-27 build SDK 27
                                       con Xcode e Command Line Tools; blocco macro SwiftUI
@@ -405,6 +405,6 @@ scripts/icon/render-icon.py           disegna Support/AppIcon.png (NumPy + Pillo
   in `idle` la forma è leggermente più piccola della notch per restare invisibile.
 - **Hover e drop su pannelli non-key**: da verificare a mano.
 - **Notifiche e Full Immersion**: Halo non vede lo stato delle Full Immersion.
-- **Firma ad-hoc**: i permessi TCC vanno riconcessi a ogni build (usa "Halo Local").
+- **Firma ad-hoc**: i permessi TCC vanno riconcessi a ogni build (usa "Halo Local" o un certificato "Apple Development").
 - **Build solo in CI**: nessun Mac nel cloud; tutto ciò che è visivo va verificato in locale.
 - **Processo figlio orfano**: se Halo va in crash, perl muore al primo write su pipe chiusa.

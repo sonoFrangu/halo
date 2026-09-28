@@ -17,7 +17,8 @@
 # so the permission would have to be granted again after each rebuild. To keep it, create a
 # self-signed code-signing certificate named "Halo Local" in Keychain Access (Certificate
 # Assistant › Create a Certificate…, identity type "Self Signed Root", certificate type
-# "Code Signing"): the script picks it up automatically. HALO_SIGN_IDENTITY overrides the
+# "Code Signing"): the script picks it up automatically, and otherwise uses an "Apple
+# Development" certificate if the keychain has one. HALO_SIGN_IDENTITY overrides the
 # identity explicitly.
 set -euo pipefail
 
@@ -70,6 +71,10 @@ if [[ -z "$SIGN_IDENTITY" ]]; then
     identities="$(security find-identity -p codesigning 2>/dev/null || true)"
     if [[ "$identities" == *'"Halo Local"'* ]]; then
         SIGN_IDENTITY="Halo Local"
+    else
+        # An Apple Development certificate (free with any Apple ID in Xcode) is just as
+        # stable across builds. By hash: the name can match more than one certificate.
+        SIGN_IDENTITY="$(awk '/"Apple Development: / { print $2; exit }' <<< "$identities")"
     fi
 fi
 SIGN_IDENTITY="${SIGN_IDENTITY:--}"

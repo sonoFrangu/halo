@@ -70,13 +70,15 @@ scripts/bundle.sh
    `iconutil` da `Support/AppIcon.png` (disegnata da `scripts/icon/render-icon.py`; il PNG è già
    nel repository, quindi per compilare non servono né Python né altri pacchetti);
 4. firma tutto e verifica la firma: ad-hoc (`codesign -s -`) per default, oppure con il
-   certificato locale "Halo Local" se esiste (vedi sotto).
+   certificato locale "Halo Local" se esiste, altrimenti con un certificato "Apple Development"
+   se il portachiavi ne ha uno (vedi sotto).
 
 ### Firma stabile (consigliata)
 
 macOS lega i permessi (Accessibilità, Accesso completo al disco) alla firma dell'app. Con la
 firma ad-hoc la firma cambia a ogni build, quindi dopo ogni `scripts/bundle.sh` i permessi vanno
-rimossi e concessi di nuovo. Per evitarlo, una volta sola:
+rimossi e concessi di nuovo. Se hai un certificato "Apple Development" (gratis con qualsiasi
+Apple ID, da Xcode › Settings › Accounts) lo script lo usa da solo. Altrimenti, una volta sola:
 
 1. Accesso Portachiavi › Assistente Certificato › Crea un certificato…
 2. Nome **`Halo Local`**, Tipo di identità **Radice autofirmata**, Tipo di certificato
