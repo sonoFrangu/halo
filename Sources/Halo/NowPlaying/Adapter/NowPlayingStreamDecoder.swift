@@ -107,7 +107,8 @@ struct NowPlayingStreamDecoder {
             album: nonEmptyString(Key.album),
             isPlaying: isPlaying,
             timeline: makeTimeline(isPlaying: isPlaying, hasFreshTiming: hasFreshTiming),
-            artwork: artwork
+            artwork: artwork,
+            reported: NowPlayingSnapshot.ReportedState(playing: flag, rate: number(Key.playbackRate))
         )
     }
 

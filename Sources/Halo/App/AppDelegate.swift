@@ -95,7 +95,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if Preferences.lyricsEnabled { lyrics.start() }
         if Preferences.chargingAlertsEnabled { features.power.start() }
         if Preferences.headphoneAlertsEnabled { features.audioDevices.start() }
-        Log.app.info("Halo started")
+        Diagnostics.shared.record("Halo avviato, versione \(Diagnostics.build)")
     }
 
     func applicationWillTerminate(_ notification: Notification) {

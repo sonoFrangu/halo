@@ -78,9 +78,15 @@ final class NowPlayingController {
     /// Asks for the opposite of what is on screen. The button changes at once; the
     /// reconciler then gets the player there (or the real state comes back).
     func togglePlayPause() {
-        guard let shown = model.snapshot else { return }
+        guard let shown = model.snapshot else {
+            Diagnostics.shared.record("clic play/pausa ignorato: nessun player")
+            return
+        }
         let playing = !shown.isPlaying
         let now = Date()
+        Diagnostics.shared.record(
+            "clic play/pausa: a schermo \(shown.isPlaying ? "in riproduzione" : "in pausa") → chiedo \(playing ? "play" : "pausa") a \(currentApp ?? "?")"
+        )
         optimistic = (shown.title, shown.timeline?.settingPlaying(playing, at: now))
         let action = reconciler.request(
             playing: playing,
@@ -147,14 +153,15 @@ final class NowPlayingController {
         case .none:
             break
         case .send(let playing, let route):
-            Log.adapter.info("\(playing ? "play" : "pause", privacy: .public) → \(self.currentApp ?? "?", privacy: .public) via \(route.rawValue, privacy: .public)")
+            Diagnostics.shared.record("invio \(playing ? "play" : "pausa") a \(currentApp ?? "?") via \(route.rawValue)")
             scheduleAttemptCheck()
             deliverPlayback(playing, via: route)
         case .settled:
             optimistic = nil
+            Diagnostics.shared.record("ok: il player è nello stato chiesto")
         case .failed:
             optimistic = nil
-            Log.adapter.error("play/pause did not reach \(self.currentApp ?? "?", privacy: .public) by any route; showing its real state")
+            Diagnostics.shared.record("FALLITO: nessuna via ha cambiato lo stato di \(currentApp ?? "?"); mostro lo stato reale")
         }
     }
 
@@ -197,7 +204,7 @@ final class NowPlayingController {
     private func attemptFailed() {
         let (action, failed) = reconciler.attemptFailed(now: Date(), routes: playbackRoutes())
         if let failed {
-            Log.adapter.info("\(failed.rawValue, privacy: .public) did not change the play state of \(self.currentApp ?? "?", privacy: .public) in time")
+            Diagnostics.shared.record("\(failed.rawValue): nessun cambio di stato in tempo")
             remember(failed, worked: false)
         }
         perform(action)
@@ -279,13 +286,14 @@ final class NowPlayingController {
     private func scriptFinished(_ error: Int?, app: String) {
         guard let error else {
             automationGranted = true
+            Diagnostics.shared.record("AppleScript a \(app) eseguito")
             return
         }
         if error == ScriptRunner.notPermitted {
             automationDenied.insert(app)
-            Log.adapter.info("control of \(app, privacy: .public) was not allowed (Automation); using MediaRemote")
+            Diagnostics.shared.record("AppleScript a \(app) negato (permesso Automazione): uso MediaRemote")
         } else {
-            Log.adapter.info("AppleScript to \(app, privacy: .public) failed with \(error)")
+            Diagnostics.shared.record("AppleScript a \(app) fallito, errore \(error)")
         }
     }
 
@@ -348,7 +356,13 @@ final class NowPlayingController {
     // MARK: Model updates
 
     private func streamUpdated(_ snapshot: NowPlayingSnapshot?) {
+        let previous = streamSnapshot
         streamSnapshot = snapshot
+        if snapshot?.reported != previous?.reported
+            || snapshot?.isPlaying != previous?.isPlaying
+            || snapshot?.sourceBundleIdentifier != previous?.sourceBundleIdentifier {
+            Diagnostics.shared.record(Self.describe(snapshot))
+        }
         if let snapshot {
             if !scriptsPrewarmed, ScriptablePlayer(bundleIdentifier: snapshot.sourceBundleIdentifier) != nil {
                 scriptsPrewarmed = true
@@ -360,13 +374,20 @@ final class NowPlayingController {
                 routes: playbackRoutes()
             )
             if let confirmed {
-                Log.adapter.info("\(confirmed.rawValue, privacy: .public) changed the play state of \(snapshot.sourceBundleIdentifier ?? "?", privacy: .public)")
+                Diagnostics.shared.record("\(confirmed.rawValue) ha funzionato")
                 attemptTask?.cancel()
                 remember(confirmed, worked: true)
             }
             perform(action)
         }
         refreshDisplay()
+    }
+
+    /// "stream: com.spotify.client playing=true rate=0 → in pausa".
+    private static func describe(_ snapshot: NowPlayingSnapshot?) -> String {
+        guard let snapshot else { return "stream: nessun player" }
+        let rate = snapshot.reported.rate.map { String(format: "%g", $0) } ?? "assente"
+        return "stream: \(snapshot.sourceBundleIdentifier ?? "?") playing=\(snapshot.reported.playing) rate=\(rate) → \(snapshot.isPlaying ? "in riproduzione" : "in pausa")"
     }
 
     /// The stream's state, with the play state the user asked for while it is pursued.

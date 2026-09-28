@@ -45,7 +45,11 @@ rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$ADAPTER_DEST"
 cp "$BIN_DIR/Halo" "$APP/Contents/MacOS/Halo"
 cp "$ROOT/Support/Info.plist" "$APP/Contents/Info.plist"
+# Which build is running, shown in Settings › Informazioni and in the diagnostics.
+BUILD_STAMP="$(git -C "$ROOT" rev-parse --short HEAD 2>/dev/null || echo "senza git") $(date '+%Y-%m-%d %H:%M')"
+plutil -insert HaloBuild -string "$BUILD_STAMP" "$APP/Contents/Info.plist"
 plutil -lint "$APP/Contents/Info.plist" > /dev/null
+echo "    build $BUILD_STAMP"
 
 # App icon: every size of the iconset from the 1024 pt master (scripts/icon/render-icon.py).
 ICONSET="$BUILD_DIR/AppIcon.iconset"

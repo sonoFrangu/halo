@@ -22,6 +22,13 @@ struct NowPlayingSnapshot: Sendable, Equatable {
     /// `nil` for content without a known duration (e.g. live streams).
     var timeline: PlaybackTimeline?
     var artwork: ArtworkPayload?
+    /// What the player itself reported, before Halo's interpretation (diagnostics).
+    var reported = ReportedState()
+
+    struct ReportedState: Sendable, Equatable {
+        var playing = false
+        var rate: Double?
+    }
 
     /// The app to show as the source: browsers report a helper process as the player and
     /// the browser itself as the parent application.

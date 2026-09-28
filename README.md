@@ -304,13 +304,19 @@ Sistema; lo stato si aggiorna da solo quando torni su Halo.
 - **Testo in anticipo o in ritardo sulla voce**: Impostazioni › Musica › Sincronia del testo.
 - **Play/pausa che non rispondono**: con Spotify e Musica controlla Impostazioni › Permessi ›
   Automazione (se l'hai negata: Impostazioni di Sistema › Privacy e sicurezza › Automazione ›
-  Halo). Il log dice per ogni clic quale via è stata usata e se ha funzionato: righe
-  `pause → com.spotify.client via AppleScript`, `… changed the play state …` oppure
-  `… did not change the play state … in time`.
+  Halo). Prova anche la voce *Play/Pausa* nel menu di Halo: se quella funziona e il pulsante
+  nella notch no, il problema è il clic, non il comando.
+- **Diagnostica**: menu di Halo › *Copia diagnostica* (o Impostazioni › Informazioni) copia un
+  resoconto degli ultimi eventi: build in esecuzione, clic, comandi inviati con la via usata,
+  cosa riporta il player (`playing=… rate=…`) ed esito. Da Terminale:
+  `log stream --level info --predicate 'subsystem == "io.github.sonofrangu.halo"'`.
 - **Meteo assente**: senza rete o con entrambi i servizi irraggiungibili il badge resta vuoto;
   riprova aprendo l'isola dopo qualche minuto.
 - Le prime righe di `scripts/bundle.sh` stampano toolchain, versione di Swift e SDK in uso.
-- Log: `log stream --predicate 'subsystem == "io.github.sonofrangu.halo"'`.
+- Log: `log stream --level info --predicate 'subsystem == "io.github.sonofrangu.halo"'` (senza
+  `--level info` si vedono solo i messaggi principali). La build in esecuzione (commit e ora di
+  `scripts/bundle.sh`) è in Impostazioni › Informazioni: se non corrisponde all'ultima, esci
+  da Halo prima di riaprirlo (`open` riporta in primo piano l'istanza già aperta).
 
 ## Limiti noti
 

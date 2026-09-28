@@ -9,6 +9,8 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     private let settings: SettingsWindowController
     private let statusLine = NSMenuItem()
     private var permissionsItem: NSMenuItem?
+    private var playPauseItem: NSMenuItem?
+    private var nextItem: NSMenuItem?
     private var timerPauseItem: NSMenuItem?
     private var timerStopItem: NSMenuItem?
     private var stopwatchItem: NSMenuItem?
@@ -39,6 +41,19 @@ final class StatusItemController: NSObject, NSMenuDelegate {
 
         statusLine.isEnabled = false
         menu.addItem(statusLine)
+
+        let nowPlaying = features.nowPlaying
+        let playPause = ActionMenuItem(title: "Play/Pausa") {
+            Diagnostics.shared.record("menu: play/pausa")
+            nowPlaying.togglePlayPause()
+        }
+        let next = ActionMenuItem(title: "Brano successivo") {
+            nowPlaying.nextTrack()
+        }
+        playPauseItem = playPause
+        nextItem = next
+        menu.addItem(playPause)
+        menu.addItem(next)
         menu.addItem(.separator())
 
         menu.addItem(timerMenuItem())
@@ -53,6 +68,10 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         permissions.image = NSImage(systemSymbolName: "exclamationmark.triangle.fill", accessibilityDescription: nil)
         permissionsItem = permissions
         menu.addItem(permissions)
+
+        menu.addItem(ActionMenuItem(title: "Copia diagnostica") {
+            Diagnostics.shared.copyReport()
+        })
 
         menu.addItem(.separator())
         menu.addItem(ActionMenuItem(title: "Esci da Halo", keyEquivalent: "q") {
@@ -96,6 +115,10 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     func menuNeedsUpdate(_ menu: NSMenu) {
         statusLine.title = statusText
         statusLine.toolTip = statusTooltip
+        let snapshot = features.player.snapshot
+        playPauseItem?.isEnabled = snapshot != nil
+        playPauseItem?.title = snapshot?.isPlaying == true ? "Pausa" : "Riproduci"
+        nextItem?.isEnabled = snapshot != nil
         features.notifications.refreshAccess()
         features.focus.refreshAccess()
         let missing = settings.missingPermissions

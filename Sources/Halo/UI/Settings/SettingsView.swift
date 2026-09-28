@@ -342,9 +342,10 @@ struct PermissionRow: View {
     }
 }
 
-/// Where things come from.
+/// Where things come from, and the diagnostics to send when something misbehaves.
 struct AboutSection: View {
     var body: some View {
+        DiagnosticsSection(diagnostics: Diagnostics.shared)
         Section("Come si usa") {
             Hint(symbol: "cursorarrow.motionlines", text: "Passa il puntatore sulla notch per aprire l'isola; allontanati per chiuderla.")
             Hint(symbol: "hand.draw", text: "Sull'isola aperta scorri a destra o a sinistra per cambiare brano, in su o in giù per il volume.")
@@ -355,6 +356,50 @@ struct AboutSection: View {
             Hint(symbol: "music.note", text: "Now Playing tramite mediaremote-adapter di Jonas van den Berg (licenza BSD a 3 clausole).")
             Hint(symbol: "quote.bubble", text: "Testi sincronizzati da LRCLIB.")
             Hint(symbol: "cloud.sun", text: "Meteo da Open-Meteo.")
+        }
+    }
+}
+
+/// The latest entries of `Diagnostics`, newest first, and the button that copies them all.
+struct DiagnosticsSection: View {
+    let diagnostics: Diagnostics
+
+    var body: some View {
+        Section {
+            HStack {
+                Text("Versione \(Diagnostics.build)")
+                    .font(.system(size: 11).monospaced())
+                    .foregroundStyle(.secondary)
+                    .textSelection(.enabled)
+                Spacer()
+                Button("Copia diagnostica") {
+                    diagnostics.copyReport()
+                }
+            }
+            if diagnostics.entries.isEmpty {
+                Text("Ancora niente: usa il player nella notch e torna qui.")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+            } else {
+                VStack(alignment: .leading, spacing: 3) {
+                    ForEach(Array(diagnostics.entries.suffix(14).reversed())) { entry in
+                        HStack(alignment: .firstTextBaseline, spacing: 8) {
+                            Text(entry.date, format: .dateTime.hour().minute().second())
+                                .foregroundStyle(.secondary)
+                            Text(entry.text)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        .font(.system(size: 10.5).monospaced())
+                    }
+                }
+                .textSelection(.enabled)
+            }
+        } header: {
+            Text("Diagnostica")
+        } footer: {
+            Text("Se qualcosa non funziona (per esempio la pausa), riprova e poi premi «Copia diagnostica»: il testo copiato dice cosa è successo, passo per passo.")
+                .font(.system(size: 11))
+                .foregroundStyle(.secondary)
         }
     }
 }

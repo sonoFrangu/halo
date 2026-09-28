@@ -86,7 +86,10 @@ final class IslandController {
         let transfers = services.transfers
         return IslandActions(
             player: PlayerActions(
-                togglePlayPause: { [weak nowPlaying] in nowPlaying?.togglePlayPause() },
+                togglePlayPause: { [weak nowPlaying] in
+                    Diagnostics.shared.record("notch: pulsante play/pausa premuto")
+                    nowPlaying?.togglePlayPause()
+                },
                 nextTrack: { [weak nowPlaying] in nowPlaying?.nextTrack() },
                 previousTrack: { [weak nowPlaying] in nowPlaying?.previousTrack() },
                 seek: { [weak nowPlaying] position in nowPlaying?.seek(to: position) },
