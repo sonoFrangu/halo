@@ -10,6 +10,7 @@ final class IslandController {
     private let services: IslandServices
     private let panelController: IslandPanelController
     private let holderID: String
+    private var scrollGesture = ScrollGestureInterpreter()
 
     init(screen: NSScreen, displayID: CGDirectDisplayID, services: IslandServices) {
         self.displayID = displayID
@@ -49,6 +50,9 @@ final class IslandController {
         panelController.onPointerActivity = { [weak self] in
             self?.pointerMoved(to: NSEvent.mouseLocation)
         }
+        panelController.onScroll = { [weak self] event in
+            self?.scrolled(event) ?? false
+        }
 
         panelController.show(geometry: geometry, layout: viewModel.layout)
         observePlayback()
@@ -78,6 +82,7 @@ final class IslandController {
                     guard let lyrics else { return }
                     lyrics.setPanelEnabled(!lyrics.isPanelEnabled)
                 },
+                openSource: { [weak nowPlaying] in nowPlaying?.openSourceApp() },
                 setInteracting: { [weak viewModel] interacting in
                     viewModel?.setInteracting(interacting, pointer: NSEvent.mouseLocation)
                 }
@@ -98,8 +103,49 @@ final class IslandController {
                 remove: { [weak store] item in store?.remove(item) },
                 clear: { [weak store] in store?.clear() }
             ),
-            selectTab: { [weak viewModel] tab in viewModel?.selectTab(tab) }
+            selectTab: { [weak viewModel] tab in
+                Haptics.perform(.step)
+                viewModel?.selectTab(tab)
+            }
         )
+    }
+
+    // MARK: Gestures
+
+    /// Swipes over the open player: horizontal skips a track, vertical changes the volume.
+    private func scrolled(_ event: NSEvent) -> Bool {
+        guard Preferences.gesturesEnabled, viewModel.acceptsVolumeGestures else { return false }
+        let sample = ScrollSample(
+            deltaX: Double(event.scrollingDeltaX),
+            deltaY: Double(event.scrollingDeltaY),
+            phase: Self.phase(of: event),
+            isMomentum: event.momentumPhase != [],
+            isPrecise: event.hasPreciseScrollingDeltas,
+            isInverted: event.isDirectionInvertedFromDevice
+        )
+        switch scrollGesture.handle(sample, allowsTrackSkip: viewModel.acceptsTrackGestures) {
+        case .nextTrack:
+            services.nowPlaying.nextTrack()
+            Haptics.perform(.action)
+        case .previousTrack:
+            services.nowPlaying.previousTrack()
+            Haptics.perform(.action)
+        case .volume(let delta):
+            if services.hud.nudgeVolume(by: delta) {
+                Haptics.perform(.limit)
+            }
+        case nil:
+            break
+        }
+        return true
+    }
+
+    private static func phase(of event: NSEvent) -> ScrollSample.Phase {
+        let phase = event.phase
+        if phase.contains(.began) || phase.contains(.mayBegin) { return .began }
+        if phase.contains(.ended) || phase.contains(.cancelled) { return .ended }
+        if phase.contains(.changed) || phase.contains(.stationary) { return .changed }
+        return .none
     }
 
     /// Makes the island a file drop target while a file drag is in progress.

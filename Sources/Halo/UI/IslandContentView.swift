@@ -26,6 +26,9 @@ struct IslandContentView: View {
                 cornerRadius: isExpanded ? 14 : 6,
                 isProminent: isExpanded
             )
+            .onTapGesture { actions.player.openSource() }
+            .accessibilityAddTraits(.isButton)
+            .accessibilityLabel("Apri l'app in riproduzione")
             .place(in: layout.artworkFrame(for: state))
             .opacity(hasMedia && (state == .compact || showsPlayer) ? 1 : 0)
 

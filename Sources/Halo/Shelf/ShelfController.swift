@@ -36,6 +36,7 @@ final class ShelfController {
 
     /// Adds the files behind dropped item providers.
     func drop(_ providers: [NSItemProvider]) {
+        Haptics.perform(.action)
         let store = self.store
         for provider in providers {
             _ = provider.loadObject(ofClass: URL.self) { url, _ in

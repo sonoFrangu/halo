@@ -16,6 +16,9 @@ enum Preferences {
         static let notifications = "notificationsEnabled"
         static let desktopWidget = "desktopWidgetEnabled"
         static let lockScreen = "lockScreenEnabled"
+        static let gestures = "gesturesEnabled"
+        static let haptics = "hapticsEnabled"
+        static let hoverDelay = "hoverDelay"
     }
 
     private static func flag(_ key: String, default value: Bool) -> Bool {
@@ -86,6 +89,24 @@ enum Preferences {
     static var lockScreenEnabled: Bool {
         get { flag(Key.lockScreen, default: true) }
         set { defaults.set(newValue, forKey: Key.lockScreen) }
+    }
+
+    /// Swipes over the island skip tracks and change the volume.
+    static var gesturesEnabled: Bool {
+        get { flag(Key.gestures, default: true) }
+        set { defaults.set(newValue, forKey: Key.gestures) }
+    }
+
+    /// Force Touch trackpad feedback for gestures.
+    static var hapticsEnabled: Bool {
+        get { flag(Key.haptics, default: true) }
+        set { defaults.set(newValue, forKey: Key.haptics) }
+    }
+
+    /// Seconds the pointer rests on the notch before the island opens.
+    static var hoverDelay: Double {
+        get { (defaults.object(forKey: Key.hoverDelay) as? Double).map { min(max($0, 0), 0.6) } ?? 0.09 }
+        set { defaults.set(newValue, forKey: Key.hoverDelay) }
     }
 
     /// The Accessibility prompt is shown automatically only once; afterwards it is reachable

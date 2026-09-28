@@ -34,6 +34,7 @@ struct PlayerCardView: View {
                     isProminent: true
                 )
                 .frame(width: metrics.artworkSide, height: metrics.artworkSide)
+                .onTapGesture { actions.openSource() }
                 .overlay(alignment: .bottomTrailing) {
                     SourceIconView(icon: player.sourceIcon)
                         .frame(width: 22, height: 22)

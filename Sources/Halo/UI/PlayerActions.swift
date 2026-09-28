@@ -8,6 +8,8 @@ struct PlayerActions {
     var previousTrack: () -> Void
     var seek: (TimeInterval) -> Void
     var toggleLyrics: () -> Void
+    /// Brings the playing app to the front (click on the artwork).
+    var openSource: () -> Void
     /// A bar is being dragged: keep the island open and interactive.
     var setInteracting: (Bool) -> Void
 }
@@ -22,6 +24,7 @@ extension PlayerActions {
             previousTrack: { [weak nowPlaying] in nowPlaying?.previousTrack() },
             seek: { [weak nowPlaying] position in nowPlaying?.seek(to: position) },
             toggleLyrics: {},
+            openSource: { [weak nowPlaying] in nowPlaying?.openSourceApp() },
             setInteracting: { _ in }
         )
     }

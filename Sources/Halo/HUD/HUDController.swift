@@ -72,6 +72,21 @@ final class HUDController {
         }
     }
 
+    /// Changes the output volume by `delta` (a scroll over the island) and shows the HUD.
+    /// Works without Accessibility: only the keys need it. Returns whether the volume just
+    /// reached 0 or 100 %.
+    @discardableResult
+    func nudgeVolume(by delta: Double) -> Bool {
+        guard let current = volume.level() else { return false }
+        if delta > 0 && volume.isMuted() {
+            volume.setMuted(false)
+        }
+        let target = min(max(current + delta, 0), 1)
+        guard target != current, volume.setLevel(target) else { return false }
+        present(.volume, level: target, muted: volume.isMuted())
+        return target == 0 || target == 1
+    }
+
     // MARK: Keys
 
     private func refresh(prompt: Bool) {

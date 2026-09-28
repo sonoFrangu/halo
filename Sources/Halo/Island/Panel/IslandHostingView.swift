@@ -7,8 +7,11 @@ import SwiftUI
 /// - Reports pointer movement through an `.activeAlways` tracking area: while the panel
 ///   accepts mouse events the cursor's events are routed to it, and this keeps hover
 ///   detection working whether or not Halo is the active app.
+/// - Offers scroll events to `onScroll` (island gestures); unhandled ones go on as usual.
 final class IslandHostingView<Content: View>: NSHostingView<Content> {
     var onPointerActivity: (() -> Void)?
+    /// Returns `true` when the event was used by a gesture.
+    var onScroll: ((NSEvent) -> Bool)?
     private var pointerTrackingArea: NSTrackingArea?
 
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool {
@@ -28,6 +31,13 @@ final class IslandHostingView<Content: View>: NSHostingView<Content> {
         )
         addTrackingArea(area)
         pointerTrackingArea = area
+    }
+
+    override func scrollWheel(with event: NSEvent) {
+        if onScroll?(event) == true {
+            return
+        }
+        super.scrollWheel(with: event)
     }
 
     override func mouseMoved(with event: NSEvent) {

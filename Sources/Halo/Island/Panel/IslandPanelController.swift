@@ -13,6 +13,11 @@ final class IslandPanelController {
         set { hostingView.onPointerActivity = newValue }
     }
 
+    var onScroll: ((NSEvent) -> Bool)? {
+        get { hostingView.onScroll }
+        set { hostingView.onScroll = newValue }
+    }
+
     init(rootView: IslandRootView) {
         panel = IslandPanel.make()
         hostingView = IslandHostingView(rootView: rootView)

@@ -67,6 +67,15 @@ final class NowPlayingController {
         commands?.seek(to: position)
     }
 
+    /// Brings the playing app to the front (Safari for a YouTube tab).
+    func openSourceApp() {
+        guard
+            let identifier = model.snapshot?.sourceBundleIdentifier,
+            let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: identifier)
+        else { return }
+        NSWorkspace.shared.openApplication(at: url, configuration: NSWorkspace.OpenConfiguration())
+    }
+
     // MARK: Stream
 
     private func launchStream() {

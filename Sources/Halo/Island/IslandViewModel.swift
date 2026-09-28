@@ -35,6 +35,16 @@ final class IslandViewModel {
         context.hasMedia
     }
 
+    /// Swipes can skip tracks: the player is open on screen.
+    var acceptsTrackGestures: Bool {
+        state == .expanded && context.tab == .player && context.hasMedia
+    }
+
+    /// Scrolling changes the volume: over the open player or over the volume HUD.
+    var acceptsVolumeGestures: Bool {
+        (state == .expanded && context.tab == .player) || (state == .alert && alert == .hud)
+    }
+
     /// Called with `true` when the panel should receive mouse events.
     @ObservationIgnored var onInteractivityChange: ((Bool) -> Void)?
     /// Called with `true` while alerts should wait (player open, pointer on a banner).
@@ -52,8 +62,11 @@ final class IslandViewModel {
     @ObservationIgnored private var hoverTask: Task<Void, Never>?
     @ObservationIgnored private var lingerTask: Task<Void, Never>?
 
-    /// Short dwell so sweeping the cursor across the menu bar does not open the island.
-    static let expandDelay: Duration = .milliseconds(90)
+    /// Short dwell so sweeping the cursor across the menu bar does not open the island
+    /// (adjustable in Settings).
+    static var expandDelay: Duration {
+        .milliseconds(Int((Preferences.hoverDelay * 1000).rounded()))
+    }
     /// Forgiveness for brief exits while using the player.
     static let collapseDelay: Duration = .milliseconds(200)
     /// Keeps the compact island through a quick pause/play.
