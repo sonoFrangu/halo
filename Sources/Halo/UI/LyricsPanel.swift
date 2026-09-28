@@ -49,13 +49,19 @@ struct LyricsPanel: View {
     private func column(current: Int?) -> some View {
         let lineHeight = Self.lineHeight
         return GeometryReader { proxy in
+            // `.clipped()` hides the lines scrolled out of the panel but they still take
+            // clicks, and the past ones sit over the play/pause button and the progress
+            // bar: only lines inside the panel can be tapped.
+            let reach = Int((proxy.size.height / 2 - lineHeight / 2) / lineHeight)
             VStack(alignment: .leading, spacing: 0) {
                 ForEach(Array(lines.enumerated()), id: \.offset) { index, line in
-                    lineView(line, isCurrent: index == current, distance: abs(index - (current ?? -1)))
+                    let distance = abs(index - (current ?? -1))
+                    lineView(line, isCurrent: index == current, distance: distance)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .frame(height: lineHeight)
                         .contentShape(Rectangle())
                         .onTapGesture { onSeek(line.time) }
+                        .allowsHitTesting(distance <= reach)
                 }
             }
             .offset(y: proxy.size.height / 2 - lineHeight / 2 - CGFloat(current ?? -1) * lineHeight)
