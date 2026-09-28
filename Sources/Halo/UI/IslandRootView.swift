@@ -37,6 +37,11 @@ struct IslandRootView: View {
 
             IslandContentView(island: island, models: models, actions: actions, layout: layout)
                 .clipShape(shape)
+
+            if island.state == .alert && island.alert?.kind == .siri {
+                SiriGlowView(shape: shape)
+                    .transition(.opacity.animation(.easeInOut(duration: 0.3)))
+            }
         }
         .frame(width: canvas.width, height: canvas.height, alignment: .topLeading)
         .ignoresSafeArea()

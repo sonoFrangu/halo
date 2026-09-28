@@ -377,6 +377,7 @@ final class SettingsModel {
         let notifications = f.notifications
         let focus = f.focus
         let unlock = f.unlock
+        let siri = f.siri
         let privacy = f.privacy
         let keyboard = f.keyboard
         let desktopWidget = f.desktopWidget
@@ -581,6 +582,13 @@ final class SettingsModel {
                     symbol: "lock.open.fill", tint: SettingsColor.gray,
                     isOn: { unlock.isEnabled },
                     setOn: { unlock.setEnabled($0) }
+                )),
+                .toggle(SettingsToggle(
+                    id: "siri", title: "Siri nella notch",
+                    detail: "Mentre Siri ascolta e risponde la notch si illumina con i suoi colori. Il pannello di Siri resta dov'è.",
+                    symbol: "waveform", tint: SettingsColor.indigo,
+                    isOn: { siri.isEnabled },
+                    setOn: { siri.setEnabled($0) }
                 )),
             ]),
         ]

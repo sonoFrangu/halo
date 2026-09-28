@@ -279,6 +279,10 @@ struct AlertContentView: View {
                 .place(in: layout.hudGlyphFrame)
                 .reveal(isAlert && kind == .unlock, order: 0)
 
+            SiriGlyph(isActive: isAlert && kind == .siri)
+                .place(in: layout.hudGlyphFrame)
+                .reveal(isAlert && kind == .siri, order: 0)
+
             if let transfer = shown?.transfer {
                 TransferBanner(alert: transfer, thumbnails: models.thumbnails, actions: actions.transfer)
                     .contentShape(Rectangle())

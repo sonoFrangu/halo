@@ -32,7 +32,7 @@ struct IslandServices {
             screenshots.open(capture.url)
         case .transfer(let transfer):
             transfers.open(transfer.url)
-        case .hud, .power, .audioDevice, .timer, .keyboard, .focus, .unlock:
+        case .hud, .power, .audioDevice, .timer, .keyboard, .focus, .unlock, .siri:
             break
         }
         alerts.dismissCurrent()

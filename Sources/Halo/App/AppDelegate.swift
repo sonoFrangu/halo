@@ -66,6 +66,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             energy: energy,
             focus: focus,
             unlock: UnlockGreeter(alerts: alerts),
+            siri: SiriMonitor(alerts: alerts),
             notifications: notifications,
             desktopWidget: DesktopWidgetController(
                 player: nowPlaying.model,
@@ -91,6 +92,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         privacy.start()
         focus.start()
         features.unlock.start()
+        features.siri.start()
         features.notifications.start()
         features.keyboard.start()
         features.presentation.start()
@@ -120,6 +122,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         features.presentation.stop()
         features.focus.stop()
         features.unlock.stop()
+        features.siri.stop()
     }
 }
 
@@ -145,6 +148,7 @@ struct Features {
     let energy: EnergyMode
     let focus: FocusMonitor
     let unlock: UnlockGreeter
+    let siri: SiriMonitor
     let notifications: NotificationMirror
     let desktopWidget: DesktopWidgetController
     let lockScreen: LockScreenController

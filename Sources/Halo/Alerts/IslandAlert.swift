@@ -23,6 +23,8 @@ enum IslandAlert: Sendable, Equatable {
     case transfer(TransferAlert)
     /// The Mac was just unlocked.
     case unlock
+    /// Siri is on screen; held up by `SiriMonitor` until it closes.
+    case siri
 
     enum Kind: Sendable, Hashable {
         case hud
@@ -36,6 +38,7 @@ enum IslandAlert: Sendable, Equatable {
         case focus
         case transfer
         case unlock
+        case siri
     }
 
     var kind: Kind {
@@ -51,12 +54,13 @@ enum IslandAlert: Sendable, Equatable {
         case .focus: .focus
         case .transfer: .transfer
         case .unlock: .unlock
+        case .siri: .siri
         }
     }
 
     var style: AlertStyle {
         switch self {
-        case .hud, .power, .keyboard, .focus, .unlock: .wings
+        case .hud, .power, .keyboard, .focus, .unlock, .siri: .wings
         case .audioDevice, .notification, .calendar, .screenshot, .timer, .transfer: .banner
         }
     }
@@ -66,7 +70,7 @@ enum IslandAlert: Sendable, Equatable {
         switch self {
         case .notification, .audioDevice, .screenshot, .transfer: true
         case .power(let power): power.event != .low
-        case .hud, .calendar, .timer, .keyboard, .focus, .unlock: false
+        case .hud, .calendar, .timer, .keyboard, .focus, .unlock, .siri: false
         }
     }
 
@@ -84,6 +88,8 @@ enum IslandAlert: Sendable, Equatable {
         case .focus: .milliseconds(2200)
         case .transfer: .seconds(5)
         case .unlock: .milliseconds(1300)
+        // Counts only once `SiriMonitor` lets go, and it withdraws the alert right away.
+        case .siri: .seconds(1)
         }
     }
 }
