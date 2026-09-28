@@ -4,6 +4,7 @@
 #   Halo.app/Contents/
 #     Info.plist                      (Support/Info.plist, LSUIElement = true)
 #     MacOS/Halo                      (swift build -c release)
+#     Resources/AppIcon.icns          (from Support/AppIcon.png, via sips + iconutil)
 #     Resources/MediaRemoteAdapter/
 #       mediaremote-adapter.pl        (vendored Perl entry point)
 #       MediaRemoteAdapter.framework  (scripts/build-adapter.sh)
@@ -45,6 +46,16 @@ mkdir -p "$APP/Contents/MacOS" "$ADAPTER_DEST"
 cp "$BIN_DIR/Halo" "$APP/Contents/MacOS/Halo"
 cp "$ROOT/Support/Info.plist" "$APP/Contents/Info.plist"
 plutil -lint "$APP/Contents/Info.plist" > /dev/null
+
+# App icon: every size of the iconset from the 1024 pt master (scripts/icon/render-icon.py).
+ICONSET="$BUILD_DIR/AppIcon.iconset"
+rm -rf "$ICONSET"
+mkdir -p "$ICONSET" "$APP/Contents/Resources"
+for size in 16 32 128 256 512; do
+    sips -z "$size" "$size" "$ROOT/Support/AppIcon.png" --out "$ICONSET/icon_${size}x${size}.png" > /dev/null
+    sips -z "$((size * 2))" "$((size * 2))" "$ROOT/Support/AppIcon.png" --out "$ICONSET/icon_${size}x${size}@2x.png" > /dev/null
+done
+iconutil -c icns "$ICONSET" -o "$APP/Contents/Resources/AppIcon.icns"
 ditto "$ADAPTER_OUT/MediaRemoteAdapter.framework" "$ADAPTER_DEST/MediaRemoteAdapter.framework"
 cp "$ADAPTER_SRC/bin/mediaremote-adapter.pl" "$ADAPTER_DEST/mediaremote-adapter.pl"
 cp "$ADAPTER_SRC/LICENSE" "$ADAPTER_DEST/LICENSE"

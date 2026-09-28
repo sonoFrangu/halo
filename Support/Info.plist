@@ -8,6 +8,8 @@
 	<string>Halo</string>
 	<key>CFBundleExecutable</key>
 	<string>Halo</string>
+	<key>CFBundleIconFile</key>
+	<string>AppIcon</string>
 	<key>CFBundleIdentifier</key>
 	<string>io.github.sonofrangu.halo</string>
 	<key>CFBundleInfoDictionaryVersion</key>
