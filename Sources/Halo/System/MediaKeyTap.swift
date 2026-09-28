@@ -129,8 +129,17 @@ final class MediaKeyTap {
     }
 }
 
-/// C callback of the event tap. The tap's run loop source is on the main run loop, so the
-/// callback always runs on the main thread.
+/// What the C callback hands to the main actor.
+///
+/// `@unchecked Sendable`: the tap's run loop source is on the main run loop, so the callback
+/// runs on the main thread and these values never actually cross threads; the box only
+/// tells the compiler so.
+private struct MediaKeyTapCallbackContext: @unchecked Sendable {
+    let tap: UnsafeMutableRawPointer
+    let event: CGEvent
+}
+
+/// C callback of the event tap (always on the main thread, see above).
 private func mediaKeyTapCallback(
     proxy: CGEventTapProxy,
     type: CGEventType,
@@ -138,8 +147,11 @@ private func mediaKeyTapCallback(
     userInfo: UnsafeMutableRawPointer?
 ) -> Unmanaged<CGEvent>? {
     guard let userInfo else { return Unmanaged.passUnretained(event) }
+    let context = MediaKeyTapCallbackContext(tap: userInfo, event: event)
     let swallow = MainActor.assumeIsolated {
-        Unmanaged<MediaKeyTap>.fromOpaque(userInfo).takeUnretainedValue().handle(type: type, event: event)
+        Unmanaged<MediaKeyTap>.fromOpaque(context.tap)
+            .takeUnretainedValue()
+            .handle(type: type, event: context.event)
     }
     return swallow ? nil : Unmanaged.passUnretained(event)
 }
