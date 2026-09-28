@@ -16,10 +16,17 @@ final class LyricsModel {
     private(set) var lines: [LyricLine] = []
     /// The user wants the lyrics panel (toggled from the player).
     private(set) var isPanelEnabled = Preferences.showsLyrics
+    /// Seconds lines appear ahead of their timestamps (adjustable in Settings).
+    private(set) var lead = Preferences.lyricsLead
 
     func setPanelEnabled(_ enabled: Bool) {
         isPanelEnabled = enabled
         Preferences.showsLyrics = enabled
+    }
+
+    func setLead(_ seconds: TimeInterval) {
+        Preferences.lyricsLead = seconds
+        lead = Preferences.lyricsLead
     }
 
     /// The panel is shown only when the user wants it and the track has synced lyrics.

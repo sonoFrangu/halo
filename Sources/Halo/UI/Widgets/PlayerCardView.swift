@@ -70,6 +70,7 @@ struct PlayerCardView: View {
                 LyricsPanel(
                     lines: lyrics.lines,
                     timeline: player.timeline,
+                    lead: lyrics.lead,
                     palette: player.palette,
                     isVisible: card.isVisible,
                     onSeek: actions.seek

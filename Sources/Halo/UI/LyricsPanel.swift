@@ -10,6 +10,8 @@ import SwiftUI
 struct LyricsPanel: View {
     let lines: [LyricLine]
     let timeline: PlaybackTimeline?
+    /// Seconds lines appear ahead of their timestamps.
+    let lead: TimeInterval
     let palette: ArtworkPalette
     let isVisible: Bool
     let onSeek: (TimeInterval) -> Void
@@ -20,12 +22,14 @@ struct LyricsPanel: View {
 
     var body: some View {
         let dates = isVisible
-            ? timeline.map { LyricsTimeline.changeDates(for: lines, timeline: $0, from: Date(), limit: 512) } ?? []
+            ? timeline.map { LyricsTimeline.changeDates(for: lines, timeline: $0, lead: lead, from: Date(), limit: 512) } ?? []
             : []
 
         TimelineView(.explicit(dates)) { context in
-            let elapsed = timeline?.elapsed(at: context.date) ?? 0
-            column(current: LyricsTimeline.index(at: elapsed, in: lines))
+            let current = timeline.flatMap {
+                LyricsTimeline.displayedIndex(at: context.date, in: lines, timeline: $0, lead: lead)
+            }
+            column(current: current)
         }
         .mask {
             LinearGradient(

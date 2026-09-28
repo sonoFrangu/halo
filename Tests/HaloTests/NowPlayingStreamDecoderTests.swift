@@ -2,6 +2,15 @@ import Foundation
 import Testing
 @testable import Halo
 
+/// A clock tests move by hand.
+final class ManualClock: @unchecked Sendable {
+    var now: Date
+
+    init(now: Date) {
+        self.now = now
+    }
+}
+
 struct NowPlayingStreamDecoderTests {
     private let now = Date(timeIntervalSince1970: 1_800_000_000)
 
@@ -138,6 +147,32 @@ struct NowPlayingStreamDecoderTests {
 
         let result = try #require(resultOutput)
         #expect(result.sourceBundleIdentifier == "com.apple.Safari")
+    }
+
+    @Test func playStateChangeReanchorsTheKnownPosition() throws {
+        let clock = ManualClock(now: now)
+        var decoder = NowPlayingStreamDecoder(clock: { clock.now })
+        var payload = fullPayload
+        payload["playing"] = false
+        _ = try decode(&decoder, diff: false, payload)
+
+        // Resumed two minutes later; the player has not republished its position yet.
+        clock.now = now.addingTimeInterval(120)
+        let resumedOutput = try decode(&decoder, diff: true, ["playing": true])
+        let resumed = try #require(resumedOutput?.timeline)
+        #expect(resumed.elapsed(at: clock.now) == 50)
+        #expect(resumed.rate == 1)
+
+        // Paused again ten seconds in: the position keeps what was played.
+        clock.now = clock.now.addingTimeInterval(10)
+        let pausedOutput = try decode(&decoder, diff: true, ["playing": false])
+        let paused = try #require(pausedOutput?.timeline)
+        #expect(paused.elapsed(at: clock.now.addingTimeInterval(30)) == 60)
+
+        // Fresh timing from the player always wins.
+        let seekedOutput = try decode(&decoder, diff: true, ["elapsedTimeMicros": 90_000_000])
+        let seeked = try #require(seekedOutput?.timeline)
+        #expect(seeked.elapsed == 90)
     }
 
     @Test func liveContentHasNoTimeline() throws {

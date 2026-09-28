@@ -124,8 +124,6 @@ struct TimerPresetButton: View {
     let minutes: Int
     let action: () -> Void
 
-    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
-
     var body: some View {
         Button(action: action) {
             VStack(spacing: -1) {
@@ -136,16 +134,8 @@ struct TimerPresetButton: View {
                     .foregroundStyle(.white.opacity(0.6))
             }
             .foregroundStyle(.white)
-            .frame(width: 42, height: 42)
-            .contentShape(Circle())
         }
-        .buttonStyle(PressableButtonStyle())
-        .background {
-            if reduceTransparency {
-                Circle().fill(Color(white: 0.16))
-            }
-        }
-        .glassEffect(reduceTransparency ? .identity : Glass.regular.interactive(true), in: Circle())
+        .buttonStyle(GlassDiscButtonStyle(diameter: 42))
         .accessibilityLabel("Timer di \(minutes) minuti")
     }
 }

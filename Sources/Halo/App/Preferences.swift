@@ -11,6 +11,7 @@ enum Preferences {
         static let headphoneAlerts = "headphoneAlertsEnabled"
         static let lyrics = "showsLyrics"
         static let lyricsFeature = "lyricsEnabled"
+        static let lyricsLead = "lyricsLead"
         static let weather = "weatherEnabled"
         static let shelf = "shelfEnabled"
         static let notifications = "notificationsEnabled"
@@ -150,6 +151,12 @@ enum Preferences {
     static var hapticsEnabled: Bool {
         get { flag(Key.haptics, default: true) }
         set { defaults.set(newValue, forKey: Key.haptics) }
+    }
+
+    /// Seconds synced lyrics are shown ahead of their timestamps (negative: later).
+    static var lyricsLead: Double {
+        get { (defaults.object(forKey: Key.lyricsLead) as? Double).map { min(max($0, -1), 2) } ?? 0.25 }
+        set { defaults.set(newValue, forKey: Key.lyricsLead) }
     }
 
     /// Seconds the pointer rests on the notch before the island opens.

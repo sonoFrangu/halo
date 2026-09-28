@@ -72,7 +72,45 @@ enum LRCParser {
 }
 
 /// Where playback is within the lyrics.
+///
+/// Lines are shown `lead` seconds before their timestamp (the glide to the next line
+/// takes a moment, and LRC timings mark where the singing starts). Evaluating the line
+/// exactly at a scheduled change date could land a hair before the boundary through
+/// floating-point rounding, which kept the previous line on screen until the next change:
+/// the lyrics ran a whole line late. `tolerance` keeps every scheduled evaluation safely
+/// past its boundary.
 enum LyricsTimeline {
+    static let tolerance: TimeInterval = 0.02
+
+    /// The line to show at `date`.
+    static func displayedIndex(
+        at date: Date,
+        in lines: [LyricLine],
+        timeline: PlaybackTimeline,
+        lead: TimeInterval
+    ) -> Int? {
+        index(at: timeline.elapsed(at: date) + lead + tolerance, in: lines)
+    }
+
+    /// Wall-clock moments at which the displayed line changes, from `now` on. Feeding them
+    /// to an explicit `TimelineView` schedule redraws the lyrics exactly on line changes.
+    static func changeDates(
+        for lines: [LyricLine],
+        timeline: PlaybackTimeline,
+        lead: TimeInterval,
+        from now: Date,
+        limit: Int = 64
+    ) -> [Date] {
+        guard timeline.isAdvancing else { return [] }
+        let position = timeline.elapsed(at: now) + lead
+        var dates: [Date] = []
+        for line in lines where line.time > position + tolerance {
+            dates.append(now.addingTimeInterval((line.time - position) / timeline.rate))
+            if dates.count == limit { break }
+        }
+        return dates
+    }
+
     /// Index of the line being sung at `elapsed`, or `nil` before the first line.
     static func index(at elapsed: TimeInterval, in lines: [LyricLine]) -> Int? {
         var low = 0
@@ -88,18 +126,5 @@ enum LyricsTimeline {
             }
         }
         return found
-    }
-
-    /// Wall-clock moments at which the current line changes, from `now` on. Feeding them to
-    /// an explicit `TimelineView` schedule redraws the lyrics exactly on line changes.
-    static func changeDates(for lines: [LyricLine], timeline: PlaybackTimeline, from now: Date, limit: Int = 64) -> [Date] {
-        guard timeline.isAdvancing, timeline.rate > 0 else { return [] }
-        let elapsed = timeline.elapsed(at: now)
-        var dates: [Date] = []
-        for line in lines where line.time > elapsed {
-            dates.append(now.addingTimeInterval((line.time - elapsed) / timeline.rate))
-            if dates.count == limit { break }
-        }
-        return dates
     }
 }

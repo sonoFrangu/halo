@@ -28,10 +28,13 @@ struct NowPlayingStreamDecoder {
         static let timestampEpochMicros = "timestampEpochMicros"
         static let playbackRate = "playbackRate"
         static let artworkData = "artworkData"
+        static let timing = [durationMicros, elapsedTimeMicros, timestampEpochMicros]
     }
 
     private var fields: [String: Any] = [:]
     private var artwork: ArtworkPayload?
+    /// The last timeline decoded, re-anchored when only the play state changes.
+    private var timeline: PlaybackTimeline?
     private let clock: () -> Date
 
     init(clock: @escaping () -> Date = { Date() }) {
@@ -65,7 +68,10 @@ struct NowPlayingStreamDecoder {
                 fields[key] = value
             }
         }
-        return .update(makeSnapshot())
+        let hasFreshTiming = !isDiff || Key.timing.contains { payload[$0] != nil }
+        let snapshot = makeSnapshot(hasFreshTiming: hasFreshTiming)
+        timeline = snapshot?.timeline
+        return .update(snapshot)
     }
 
     private mutating func applyArtwork(_ value: Any) {
@@ -83,7 +89,7 @@ struct NowPlayingStreamDecoder {
         artwork = ArtworkPayload(id: UUID(), data: data)
     }
 
-    private func makeSnapshot() -> NowPlayingSnapshot? {
+    private func makeSnapshot(hasFreshTiming: Bool) -> NowPlayingSnapshot? {
         guard let title = nonEmptyString(Key.title) else {
             return nil
         }
@@ -95,23 +101,35 @@ struct NowPlayingStreamDecoder {
             artist: nonEmptyString(Key.artist),
             album: nonEmptyString(Key.album),
             isPlaying: isPlaying,
-            timeline: makeTimeline(isPlaying: isPlaying),
+            timeline: makeTimeline(isPlaying: isPlaying, hasFreshTiming: hasFreshTiming),
             artwork: artwork
         )
     }
 
-    private func makeTimeline(isPlaying: Bool) -> PlaybackTimeline? {
+    private func makeTimeline(isPlaying: Bool, hasFreshTiming: Bool) -> PlaybackTimeline? {
         guard let durationMicros = number(Key.durationMicros), durationMicros > 0 else {
             return nil
         }
+        let duration = durationMicros / 1_000_000
+        let reportedRate = number(Key.playbackRate) ?? 1
+        let rate = isPlaying ? (reportedRate > 0 ? reportedRate : 1) : 0
+
+        // A play/pause often arrives on its own, before the player republishes its
+        // position. Re-reading the stored elapsed/timestamp pair would then be stale (a
+        // resume jumped ahead by the whole pause), so the known position is re-anchored.
+        if !hasFreshTiming, let timeline, timeline.duration == duration {
+            guard timeline.rate != rate else { return timeline }
+            let now = clock()
+            return PlaybackTimeline(duration: duration, elapsed: timeline.elapsed(at: now), timestamp: now, rate: rate)
+        }
+
         let timestamp = number(Key.timestampEpochMicros)
             .map { Date(timeIntervalSince1970: $0 / 1_000_000) } ?? clock()
-        let reportedRate = number(Key.playbackRate) ?? 1
         return PlaybackTimeline(
-            duration: durationMicros / 1_000_000,
+            duration: duration,
             elapsed: (number(Key.elapsedTimeMicros) ?? 0) / 1_000_000,
             timestamp: timestamp,
-            rate: isPlaying ? (reportedRate > 0 ? reportedRate : 1) : 0
+            rate: rate
         )
     }
 

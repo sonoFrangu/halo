@@ -52,6 +52,10 @@ struct TransportControls: View {
     }
 }
 
+/// A round glass control. The glass is drawn by the button style, inside the button, and
+/// is not `interactive`: interactive glass wrapped around a `Button` runs its own press
+/// tracking, which could swallow a click (the play button sometimes needed several). The
+/// whole disc is the hit area and shrinks while pressed.
 struct ControlButton: View {
     let symbol: String
     let label: String
@@ -60,25 +64,41 @@ struct ControlButton: View {
     var tint: Color?
     let action: () -> Void
 
-    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
-
     var body: some View {
         Button(action: action) {
             Image(systemName: symbol)
                 .font(.system(size: glyphSize, weight: .semibold))
                 .foregroundStyle(.white)
                 .contentTransition(.symbolEffect(.replace))
-                .frame(width: diameter, height: diameter)
-                .contentShape(Circle())
         }
-        .buttonStyle(PressableButtonStyle())
-        .background {
-            if reduceTransparency {
-                Circle().fill(Color(white: tint == nil ? 0.14 : 0.2))
-            }
-        }
-        .glassEffect(glass, in: Circle())
+        .buttonStyle(GlassDiscButtonStyle(diameter: diameter, tint: tint))
         .accessibilityLabel(label)
+    }
+}
+
+struct GlassDiscButtonStyle: ButtonStyle {
+    let diameter: CGFloat
+    var tint: Color?
+
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    func makeBody(configuration: Configuration) -> some View {
+        let pressed = configuration.isPressed
+        return configuration.label
+            .frame(width: diameter, height: diameter)
+            .background {
+                if reduceTransparency {
+                    Circle().fill(Color(white: tint == nil ? 0.14 : 0.2))
+                }
+            }
+            .glassEffect(glass, in: Circle())
+            .overlay {
+                Circle().fill(.white.opacity(pressed ? 0.12 : 0))
+            }
+            .contentShape(Circle())
+            .scaleEffect(pressed && !reduceMotion ? 0.88 : 1)
+            .animation(reduceMotion ? .easeOut(duration: 0.1) : Motion.press, value: pressed)
     }
 
     private var glass: Glass {
@@ -86,8 +106,8 @@ struct ControlButton: View {
             return .identity
         }
         if let tint {
-            return Glass.regular.tint(tint.opacity(0.35)).interactive(true)
+            return Glass.regular.tint(tint.opacity(0.35))
         }
-        return Glass.regular.interactive(true)
+        return .regular
     }
 }

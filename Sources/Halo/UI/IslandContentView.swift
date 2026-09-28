@@ -151,6 +151,7 @@ struct PlayerContentView: View {
             LyricsPanel(
                 lines: lyrics.lines,
                 timeline: player.timeline,
+                lead: lyrics.lead,
                 palette: player.palette,
                 isVisible: isVisible && island.context.showsLyrics,
                 onSeek: actions.seek

@@ -59,11 +59,37 @@ struct LyricsTimelineTests {
     @Test func schedulesUpcomingLineChanges() {
         let now = Date(timeIntervalSince1970: 1_000)
         let playing = PlaybackTimeline(duration: 60, elapsed: 8, timestamp: now, rate: 1)
-        let dates = LyricsTimeline.changeDates(for: lines, timeline: playing, from: now)
+        let dates = LyricsTimeline.changeDates(for: lines, timeline: playing, lead: 0, from: now)
         #expect(dates == [now.addingTimeInterval(2), now.addingTimeInterval(12)])
 
+        let early = LyricsTimeline.changeDates(for: lines, timeline: playing, lead: 0.5, from: now)
+        #expect(early == [now.addingTimeInterval(1.5), now.addingTimeInterval(11.5)])
+
         let paused = PlaybackTimeline(duration: 60, elapsed: 8, timestamp: now, rate: 0)
-        #expect(LyricsTimeline.changeDates(for: lines, timeline: paused, from: now).isEmpty)
+        #expect(LyricsTimeline.changeDates(for: lines, timeline: paused, lead: 0, from: now).isEmpty)
+    }
+
+    /// Regression: evaluated exactly at a scheduled change date, the line used to stay on
+    /// the previous one whenever rounding landed a hair before the boundary.
+    @Test func everyScheduledChangeShowsTheNewLine() {
+        let lines = (1...200).map { LyricLine(time: Double($0) * 3.37 + 0.123, text: "\($0)") }
+        let now = Date(timeIntervalSinceReferenceDate: 812_345_678.912_345)
+        for lead in [0, 0.25, -0.4] {
+            let timeline = PlaybackTimeline(duration: 900, elapsed: 1.7, timestamp: now.addingTimeInterval(-0.31), rate: 1)
+            let dates = LyricsTimeline.changeDates(for: lines, timeline: timeline, lead: lead, from: now, limit: 512)
+            #expect(dates.count == lines.count)
+            for (offset, date) in dates.enumerated() {
+                let shown = LyricsTimeline.displayedIndex(at: date, in: lines, timeline: timeline, lead: lead)
+                #expect(shown == offset, "line \(offset) at lead \(lead)")
+            }
+        }
+    }
+
+    @Test func leadShowsLinesEarly() {
+        let now = Date(timeIntervalSince1970: 1_000)
+        let timeline = PlaybackTimeline(duration: 60, elapsed: 9.8, timestamp: now, rate: 1)
+        #expect(LyricsTimeline.displayedIndex(at: now, in: lines, timeline: timeline, lead: 0) == 0)
+        #expect(LyricsTimeline.displayedIndex(at: now, in: lines, timeline: timeline, lead: 0.25) == 1)
     }
 }
 
