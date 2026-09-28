@@ -49,6 +49,8 @@ struct IslandContentView: View {
                 timeline: player.timeline,
                 isActive: showsPlayer,
                 tint: tint,
+                isHovering: island.isScrubberHovered,
+                onHoverChanged: { hovering in island.setScrubberHovered(hovering) },
                 onScrubbingChanged: actions.setScrubbing,
                 onSeek: actions.seek
             )

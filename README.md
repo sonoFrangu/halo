@@ -10,8 +10,11 @@ Stato: **MVP** — shell della notch + Now Playing. Architettura e scelte in
 ## Requisiti
 
 - Mac Apple Silicon con macOS 26 o successivo (sviluppata per MacBook Air M2 con macOS 27).
-- Per compilare: Xcode 26+ (o i Command Line Tools con Swift 6.2+). Niente CMake, niente
-  progetto Xcode: solo Swift Package Manager e `clang`.
+- Per compilare: Xcode 26+ oppure i soli Command Line Tools (Swift 6.2+). Niente CMake,
+  niente progetto Xcode: solo Swift Package Manager e `clang`.
+  - Con i Command Line Tools e l'SDK di macOS 27 le macro di SwiftUI (`@State`, `@Entry`,
+    `#Preview`, `@Previewable`) non si espandono: il plugin `SwiftUIMacros` c'è solo in Xcode.
+    Il codice non le usa e la CI blocca chi le reintroduce.
 
 ## Compilare
 
@@ -52,6 +55,16 @@ notarizzata). Sbloccalo una volta:
 ```sh
 xattr -dr com.apple.quarantine /Applications/Halo.app
 ```
+
+## Risoluzione problemi
+
+- **`Undefined symbols … PackageDescription.Package.__allocating_init(… SwiftVersion …)`**
+  (o `reference to member 'v26' cannot be resolved`) anche su un progetto vuoto creato con
+  `swift package init`: i Command Line Tools sono incoerenti (resti di una versione precedente).
+  Reinstallali: `sudo rm -rf /Library/Developer/CommandLineTools && xcode-select --install`.
+- **`plugin for module 'SwiftUIMacros' not found`**: codice con macro SwiftUI compilato con i
+  soli Command Line Tools sull'SDK di macOS 27 (vedi Requisiti). Usa Xcode o evita la macro.
+- Le prime righe di `scripts/bundle.sh` stampano toolchain, versione di Swift e SDK in uso.
 
 ## Permessi richiesti
 

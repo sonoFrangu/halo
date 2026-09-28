@@ -6,14 +6,18 @@ import SwiftUI
 /// ticks while the player is visible and playing, and never while dragging. The track
 /// thickens on hover or drag. The drag state is a `GestureState`, so a cancelled drag
 /// resets itself and releases the "keep expanded" lock.
+///
+/// Hover is owned by the caller rather than kept in `@State`: in the macOS 27 SDK `@State`
+/// is a macro whose plugin ships only with Xcode, so it breaks Command Line Tools builds.
 struct ScrubberView: View {
     let timeline: PlaybackTimeline?
     let isActive: Bool
     let tint: Color
+    let isHovering: Bool
+    let onHoverChanged: (Bool) -> Void
     let onScrubbingChanged: (Bool) -> Void
     let onSeek: (TimeInterval) -> Void
 
-    @State private var isHovering = false
     @GestureState private var dragProgress: Double? = nil
 
     var body: some View {
@@ -23,7 +27,7 @@ struct ScrubberView: View {
             content(at: context.date)
         }
         .onHover { hovering in
-            isHovering = hovering
+            onHoverChanged(hovering)
         }
         .onChange(of: dragProgress != nil) { _, isDragging in
             onScrubbingChanged(isDragging)

@@ -41,6 +41,15 @@ jobs:
           xcodebuild -version
           swift --version
 
+      - name: No SwiftUI macros (Command Line Tools compatibility)
+        # On the macOS 27 SDK these SwiftUI attributes are macros whose plugin ships
+        # only with Xcode, so a Command Line Tools-only build cannot expand them.
+        run: |
+          if grep -rnE '^[[:space:]]*(@(State|Entry|Previewable)\b|#Preview\b)' Sources; then
+            echo "::error::SwiftUI macros break Command Line Tools builds on the macOS 27 SDK"
+            exit 1
+          fi
+
       - name: Unit tests
         run: swift test
 
@@ -68,3 +77,34 @@ jobs:
           name: Halo-app-xcode-${{ matrix.xcode }}
           path: build/Halo.zip
           if-no-files-found: error
+
+  sdk27:
+    name: Build against the macOS 27 SDK (Xcode 27 preview + Command Line Tools)
+    runs-on: xcode-27
+    timeout-minutes: 30
+    steps:
+      - name: Check out
+        uses: actions/checkout@v5
+        with:
+          submodules: recursive
+
+      - name: Toolchain
+        run: |
+          sw_vers
+          xcodebuild -version
+          swift --version
+          ls -d /Library/Developer/CommandLineTools/SDKs/*.sdk 2>/dev/null || true
+
+      - name: Build with Xcode 27
+        run: swift build -c release --product Halo
+
+      - name: Build with the Command Line Tools (if they ship the macOS 27 SDK)
+        run: |
+          CLT=/Library/Developer/CommandLineTools
+          if ls -d "$CLT"/SDKs/MacOSX27*.sdk >/dev/null 2>&1; then
+            rm -rf .build
+            DEVELOPER_DIR="$CLT" swift --version
+            DEVELOPER_DIR="$CLT" swift build -c release --product Halo
+          else
+            echo "No macOS 27 SDK in the Command Line Tools on this image; skipped."
+          fi

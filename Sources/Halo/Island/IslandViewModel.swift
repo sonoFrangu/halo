@@ -14,6 +14,9 @@ final class IslandViewModel {
     /// Mirrors the player, but changes inside an animation so the shape morphs smoothly
     /// when media appears or disappears.
     private(set) var hasMedia = false
+    /// Pointer over the progress bar (it thickens). Kept here instead of view `@State`,
+    /// which Command Line Tools builds cannot expand on the macOS 27 SDK.
+    private(set) var isScrubberHovered = false
 
     var layout: IslandLayout {
         IslandLayout(geometry: geometry)
@@ -101,6 +104,11 @@ final class IslandViewModel {
         publishInteractivity()
     }
 
+    func setScrubberHovered(_ hovered: Bool) {
+        guard hovered != isScrubberHovered else { return }
+        isScrubberHovered = hovered
+    }
+
     // MARK: State
 
     private var hotZone: CGRect {
@@ -137,6 +145,10 @@ final class IslandViewModel {
 
         withAnimation(Motion.shape(from: state, to: target, reduceMotion: reduceMotion)) {
             state = target
+        }
+        if target != .expanded {
+            // The panel turns click-through when collapsing, so no hover-exit may arrive.
+            isScrubberHovered = false
         }
         publishInteractivity()
     }
