@@ -82,10 +82,10 @@ progresso reale.
   monitor si ferma.
 - Un'ora di fine già passata viene ignorata.
 
-**Nella notch**: nuovo caso `LiveActivity.systemTimer(SystemTimer)`, dopo `.timer` e `.stopwatch`
-di Halo e prima di `.transfer`. A sinistra un anello (progresso `1 - rimanente / total`), a
-destra `Text(timerInterval: adesso...end, countsDown: true)`, nella tinta del timer countdown
-di Halo.
+**Nella notch**: il timer di sistema diventa un `FocusTimer` in modalità `.countdown`
+(`duration = total`, `endDate = end`) e usa il caso esistente `LiveActivity.timer`, dopo il
+timer e il cronometro di Halo e prima di `.transfer`: stesso anello e stesso conto alla
+rovescia del timer di Halo, nessuna vista nuova.
 
 ## Impostazioni
 
