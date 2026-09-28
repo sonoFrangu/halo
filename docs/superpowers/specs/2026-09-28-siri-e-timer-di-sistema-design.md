@@ -129,7 +129,7 @@ dipende dalla lingua), azione, focus restituito all'app di prima, Orologio nasco
 elemento manca il comando fallisce e lo scrive nelle diagnostiche.
 
 **Quale app per i timer della notch** (Impostazioni › Attività, riga di scelta "Halo /
-Orologio", default Orologio): con Orologio, i preset della notch e del menu (1, 5, 10, 15,
+Orologio", default Halo): con Orologio, i preset della notch e del menu (1, 5, 10, 15,
 25 min) avviano un timer di Orologio; se il comando fallisce parte il timer di Halo. Pomodoro e
 cronometro restano sempre di Halo. La scelta conta solo con "Timer di Siri e Orologio" attivo.
 

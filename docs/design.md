@@ -243,15 +243,20 @@ occupa anche l'ala sinistra. `IslandViewModel.liveActivityChanged` tiene l'isola
 - **Comandare Orologio** (`ClockAppDriver`, `TimerCommands`): Comandi Rapidi non serve
   (l'azione "Avvia timer" fallisce con errore 101 su macOS 26). La scheda Timer di Orologio è
   esposta all'Accessibilità (`TimePicker`, `PauseResumeButton`, `CancelButton`, "Recenti").
+  Le rotelle accettano `AXValue` e `AXIncrement` ma Orologio in secondo piano li ignora. I
+  Recenti mostrano al massimo 7 voci con una regola interna: 4 e 5 min avviati e annullati non
+  compaiono, quindi non si possono riempire in anticipo. Su Mac Comandi Rapidi non ha le azioni
+  di pausa e ripresa del timer.
   Orologio ignora i clic mentre è nascosto ma non mentre è solo in secondo piano: ogni comando
   lo mostra senza attivarlo, con la finestra spinta nell'angolo in basso a sinistra (macOS ne
   lascia visibili circa 40 × 110 punti), preme e lo nasconde; il focus non si sposta. Un avvio
-  usa la voce dei Recenti con la stessa durata; se non c'è, scrive le cifre nelle rotelle, e i
-  tasti arrivano solo all'app attiva con la finestra sullo schermo: Orologio compare per circa
-  un secondo, poi il focus torna all'app di prima (`AXFrontmost`, perché `activate()` da
-  un'app in secondo piano è rifiutato da macOS 14). Impostazioni › Attività sceglie l'app dei
-  timer della notch (Orologio o Halo); se Orologio non risponde parte il timer di Halo. Una
-  pausa chiesta dalla notch resta visibile (`SystemTimer.pausedRemaining`). Entrando
+  usa la voce dei Recenti con la stessa durata; se non c'è, scrive le cifre nelle rotelle, le
+  rilegge e riscrive se diverse (i primi tasti dopo l'attivazione possono perdersi, e partirebbe
+  la durata rimasta). I tasti arrivano solo all'app attiva con la finestra sullo schermo:
+  Orologio compare per circa un secondo, poi il focus torna all'app di prima (`AXFrontmost`,
+  perché `activate()` da un'app in secondo piano è rifiutato da macOS 14). Impostazioni ›
+  Attività sceglie l'app dei timer della notch (Halo, predefinito, o Orologio); se Orologio non
+  risponde parte il timer di Halo. Una pausa chiesta dalla notch resta visibile (`SystemTimer.pausedRemaining`). Entrando
   nell'isola sopra l'ala destra mentre c'è un timer, l'isola si apre sulla scheda Timer.
 
 ## Siri

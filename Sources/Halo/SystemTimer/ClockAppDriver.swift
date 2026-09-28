@@ -35,14 +35,23 @@ final class ClockAppDriver {
             else {
                 return false
             }
-            for (wheel, value) in zip(wheels, [0, minutes, 0]) {
-                AXUIElementSetAttributeValue(wheel, kAXFocusedAttribute as CFString, kCFBooleanTrue)
-                AXUIElementPerformAction(wheel, kAXPressAction as CFString)
-                await Self.settle(0.08)
-                Self.type(String(value))
-                await Self.settle(0.08)
+            // Right after Clock comes forward the first keys can be lost, which would start
+            // the duration left on the wheels: read them back, and type again if they differ.
+            let values = [0, minutes, 0]
+            for _ in 0..<3 {
+                for (wheel, value) in zip(wheels, values) {
+                    AXUIElementSetAttributeValue(wheel, kAXFocusedAttribute as CFString, kCFBooleanTrue)
+                    AXUIElementPerformAction(wheel, kAXPressAction as CFString)
+                    await Self.settle(0.08)
+                    Self.type(String(value))
+                    await Self.settle(0.08)
+                }
+                await Self.settle(0.1)
+                if zip(wheels, values).allSatisfy({ Self.number(on: $0) == $1 }) {
+                    return AXUIElementPerformAction(button, kAXPressAction as CFString) == .success
+                }
             }
-            return AXUIElementPerformAction(button, kAXPressAction as CFString) == .success
+            return false
         }
     }
 
@@ -151,6 +160,13 @@ final class ClockAppDriver {
     private static func press(identifier: String, in root: AXUIElement) -> Bool {
         guard let button = element(in: root, identifier: identifier) else { return false }
         return AXUIElementPerformAction(button, kAXPressAction as CFString) == .success
+    }
+
+    /// A wheel's value: "5 minutes", in any language, is 5.
+    private static func number(on wheel: AXUIElement) -> Int? {
+        let value = attribute(wheel, kAXValueAttribute)
+        if let number = value as? Int { return number }
+        return (value as? String).flatMap { Int($0.prefix(while: \.isNumber)) }
     }
 
     /// Into the bottom-left corner, as far off screen as macOS allows.

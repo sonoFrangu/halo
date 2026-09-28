@@ -180,7 +180,7 @@ enum Preferences {
 
     /// Which app runs the timers started from the notch and the menu.
     static var timerApp: TimerApp {
-        get { defaults.string(forKey: Key.timerApp).flatMap(TimerApp.init(rawValue:)) ?? .clock }
+        get { defaults.string(forKey: Key.timerApp).flatMap(TimerApp.init(rawValue:)) ?? .halo }
         set { defaults.set(newValue.rawValue, forKey: Key.timerApp) }
     }
 
