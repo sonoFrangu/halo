@@ -3,7 +3,9 @@ import PackageDescription
 
 let package = Package(
     name: "Halo",
-    platforms: [.macOS(.v26)],
+    // String form instead of `.v26`: the `.v26` constant is missing from some
+    // Command Line Tools releases of PackageDescription.
+    platforms: [.macOS("26.0")],
     products: [
         .executable(name: "Halo", targets: ["Halo"]),
     ],
