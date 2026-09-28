@@ -2,16 +2,20 @@ import SwiftUI
 
 /// Content appearance for the expanded player: after the shape has opened, elements come
 /// in one after another from a slight blur and scale; they leave quickly and together.
+///
+/// `blurs: false` skips the blur for content that is expensive to filter every frame, such
+/// as Liquid Glass controls (which sample what is behind them).
 struct RevealModifier: ViewModifier {
     let isVisible: Bool
     let order: Int
+    let blurs: Bool
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     func body(content: Content) -> some View {
         content
             .opacity(isVisible ? 1 : 0)
-            .blur(radius: isVisible || reduceMotion ? 0 : 6)
+            .blur(radius: isVisible || reduceMotion || !blurs ? 0 : 6)
             .scaleEffect(isVisible || reduceMotion ? 1 : 0.94, anchor: .top)
             .allowsHitTesting(isVisible)
             .animation(Motion.reveal(isVisible: isVisible, order: order, reduceMotion: reduceMotion), value: isVisible)
@@ -19,8 +23,8 @@ struct RevealModifier: ViewModifier {
 }
 
 extension View {
-    func reveal(_ isVisible: Bool, order: Int) -> some View {
-        modifier(RevealModifier(isVisible: isVisible, order: order))
+    func reveal(_ isVisible: Bool, order: Int, blurs: Bool = true) -> some View {
+        modifier(RevealModifier(isVisible: isVisible, order: order, blurs: blurs))
     }
 
     /// Positions a view at `frame`, given in the parent's coordinate space.

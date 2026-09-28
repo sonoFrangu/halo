@@ -39,12 +39,16 @@ struct ArtworkView: View {
         .overlay {
             shape.strokeBorder(.white.opacity(0.08), lineWidth: 0.5)
         }
-        .shadow(
-            color: palette.primary.color.opacity(isProminent ? 0.45 : 0),
-            radius: isProminent ? 14 : 0,
-            x: 0,
-            y: isProminent ? 6 : 0
-        )
+        // The colored shadow follows its own delayed animation: it only appears once the
+        // artwork has reached its expanded frame, so it is not re-rendered while it moves.
+        .animation(isProminent ? .easeOut(duration: 0.3).delay(0.25) : .easeOut(duration: 0.1)) { content in
+            content.shadow(
+                color: palette.primary.color.opacity(isProminent ? 0.45 : 0),
+                radius: isProminent ? 14 : 0,
+                x: 0,
+                y: isProminent ? 6 : 0
+            )
+        }
         .accessibilityHidden(true)
     }
 }

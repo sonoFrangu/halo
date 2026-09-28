@@ -15,7 +15,7 @@ final class NowPlayingController {
     private var isStopping = false
     private var restartAttempts = 0
     private var restartTask: Task<Void, Never>?
-    private var paletteTask: Task<Void, Never>?
+    private var artworkTask: Task<Void, Never>?
 
     init(model: NowPlayingModel) {
         self.model = model
@@ -38,7 +38,7 @@ final class NowPlayingController {
     func stop() {
         isStopping = true
         restartTask?.cancel()
-        paletteTask?.cancel()
+        artworkTask?.cancel()
         stream?.stop()
         stream = nil
         commands?.shutdown()
@@ -136,23 +136,25 @@ final class NowPlayingController {
         }
     }
 
+    /// Decodes and analyzes artwork off the main actor. The previous image stays on screen
+    /// until the new one is ready, so a track change never flashes the placeholder.
     private func updateArtwork(_ artwork: ArtworkPayload?) {
-        paletteTask?.cancel()
+        artworkTask?.cancel()
         guard let artwork else {
             model.artworkImage = nil
             model.palette = .neutral
             return
         }
-        model.artworkImage = NSImage(data: artwork.data)
 
         let data = artwork.data
         let id = artwork.id
-        paletteTask = Task { [weak self] in
-            let palette = await Task.detached(priority: .utility) {
-                PaletteExtractor.palette(from: data)
+        artworkTask = Task { [weak self] in
+            let decoded = await Task.detached(priority: .userInitiated) {
+                ArtworkDecoder.decode(data)
             }.value
             guard let self, !Task.isCancelled, self.model.snapshot?.artwork?.id == id else { return }
-            self.model.palette = palette ?? .neutral
+            self.model.artworkImage = decoded.map { NSImage(cgImage: $0.image, size: .zero) }
+            self.model.palette = decoded?.palette ?? .neutral
         }
     }
 

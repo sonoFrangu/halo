@@ -33,7 +33,7 @@ struct IslandLayoutTests {
     func canvasHasRoomForEveryShapeAndItsGlow(layout: IslandLayout) {
         let canvas = layout.canvasSize
         for hasMedia in [true, false] {
-            for state in [IslandState.idle, .compact, .expanded] {
+            for state in [IslandState.idle, .compact, .hud, .expanded] {
                 let spec = layout.spec(for: state, hasMedia: hasMedia)
                 let neededWidth: CGFloat = spec.width + 2 * spec.earRadius + 2 * IslandLayout.canvasMargin.width
                 let neededHeight: CGFloat = spec.height + IslandLayout.canvasMargin.height

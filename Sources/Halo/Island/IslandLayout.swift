@@ -46,6 +46,11 @@ struct IslandLayout: Sendable, Equatable {
         (notchSize.height + 10).rounded()
     }
 
+    /// Wider than the compact wings: the right one holds the level bar and its value.
+    var hudWingWidth: CGFloat {
+        max(96, (notchSize.height * 3.5).rounded())
+    }
+
     func spec(for state: IslandState, hasMedia: Bool) -> IslandShapeSpec {
         let notch = notchSize
         switch state {
@@ -68,6 +73,13 @@ struct IslandLayout: Sendable, Equatable {
         case .compact:
             return IslandShapeSpec(
                 width: notch.width + 2 * compactWingWidth,
+                height: notch.height,
+                bottomRadius: min(12, notch.height / 2 - 2),
+                earRadius: 6
+            )
+        case .hud:
+            return IslandShapeSpec(
+                width: notch.width + 2 * hudWingWidth,
                 height: notch.height,
                 bottomRadius: min(12, notch.height / 2 - 2),
                 earRadius: 6
@@ -100,6 +112,7 @@ struct IslandLayout: Sendable, Equatable {
             spec(for: .expanded, hasMedia: true),
             spec(for: .expanded, hasMedia: false),
             spec(for: .compact, hasMedia: true),
+            spec(for: .hud, hasMedia: true),
         ]
         let width = specs.map { $0.width + 2 * $0.earRadius }.max() ?? 0
         let height = specs.map(\.height).max() ?? 0
@@ -118,7 +131,7 @@ struct IslandLayout: Sendable, Equatable {
     /// The artwork is one persistent view whose frame morphs between states.
     func artworkFrame(for state: IslandState) -> CGRect {
         switch state {
-        case .idle:
+        case .idle, .hud:
             // Slides inward under the notch while shrinking.
             return square(side: 10, centerX: centerX - notchSize.width / 2 + 14, centerY: notchSize.height / 2)
         case .compact:
@@ -136,7 +149,7 @@ struct IslandLayout: Sendable, Equatable {
     /// The equalizer is persistent too: right wing when compact, top-right when expanded.
     func equalizerFrame(for state: IslandState) -> CGRect {
         switch state {
-        case .idle:
+        case .idle, .hud:
             return CGRect(x: centerX + notchSize.width / 2 - 18, y: notchSize.height / 2 - 3, width: 8, height: 6)
         case .compact:
             let height = max(10, notchSize.height - 18)
@@ -177,6 +190,29 @@ struct IslandLayout: Sendable, Equatable {
     var emptyStateFrame: CGRect {
         let width = expandedWidth(hasMedia: false) - 2 * Self.contentInset
         return CGRect(x: centerX - width / 2, y: notchSize.height + 6, width: width, height: 40)
+    }
+
+    // MARK: HUD frames (canvas coordinates)
+
+    /// Brightness/volume glyph, centered in the left wing.
+    var hudGlyphFrame: CGRect {
+        square(
+            side: notchSize.height - 8,
+            centerX: centerX - notchSize.width / 2 - hudWingWidth / 2,
+            centerY: notchSize.height / 2
+        )
+    }
+
+    /// Level bar (the frame is the full-height hit area; the bar is drawn centered in it).
+    var hudBarFrame: CGRect {
+        let x = centerX + notchSize.width / 2 + 14
+        return CGRect(x: x, y: 0, width: hudWingWidth - 14 - 16 - 32, height: notchSize.height)
+    }
+
+    /// Numeric value after the bar.
+    var hudValueFrame: CGRect {
+        let bar = hudBarFrame
+        return CGRect(x: bar.maxX + 6, y: 0, width: 26, height: notchSize.height)
     }
 
     // MARK: Helpers

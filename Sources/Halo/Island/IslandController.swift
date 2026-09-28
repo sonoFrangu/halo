@@ -7,11 +7,12 @@ import Observation
 final class IslandController {
     private let viewModel: IslandViewModel
     private let player: NowPlayingModel
+    private let hud: HUDModel
     private let panelController: IslandPanelController
     private var screenTracker: ScreenTracker?
     private var pointerMonitor: PointerMonitor?
 
-    init(nowPlaying: NowPlayingController) {
+    init(nowPlaying: NowPlayingController, hud hudController: HUDController) {
         let screen = ScreenTracker.preferredScreen()
         let geometry = screen.map { NotchGeometry(screen: $0) } ?? Self.fallbackGeometry
         let viewModel = IslandViewModel(geometry: geometry)
@@ -20,15 +21,29 @@ final class IslandController {
             nextTrack: { [weak nowPlaying] in nowPlaying?.nextTrack() },
             previousTrack: { [weak nowPlaying] in nowPlaying?.previousTrack() },
             seek: { [weak nowPlaying] position in nowPlaying?.seek(to: position) },
-            setScrubbing: { [weak viewModel] scrubbing in
-                viewModel?.setScrubbing(scrubbing, pointer: NSEvent.mouseLocation)
+            setInteracting: { [weak viewModel] interacting in
+                viewModel?.setInteracting(interacting, pointer: NSEvent.mouseLocation)
+            }
+        )
+        let hudActions = HUDActions(
+            setLevel: { [weak hudController] level in hudController?.setLevel(level) },
+            setInteracting: { [weak viewModel, weak hudController] interacting in
+                viewModel?.setInteracting(interacting, pointer: NSEvent.mouseLocation)
+                hudController?.setInteracting(interacting)
             }
         )
 
         self.viewModel = viewModel
         self.player = nowPlaying.model
+        self.hud = hudController.model
         self.panelController = IslandPanelController(
-            rootView: IslandRootView(island: viewModel, player: nowPlaying.model, actions: actions)
+            rootView: IslandRootView(
+                island: viewModel,
+                player: nowPlaying.model,
+                hud: hudController.model,
+                actions: actions,
+                hudActions: hudActions
+            )
         )
 
         viewModel.onInteractivityChange = { [weak self] interactive in
@@ -48,6 +63,7 @@ final class IslandController {
             panelController.show(geometry: geometry, layout: viewModel.layout)
         }
         observePlayback()
+        observeHUD()
     }
 
     private static let fallbackGeometry = NotchGeometry.resolve(
@@ -83,5 +99,16 @@ final class IslandController {
             }
         }
         viewModel.playbackChanged(isPlaying: isPlaying, hasMedia: hasMedia)
+    }
+
+    private func observeHUD() {
+        let isVisible = withObservationTracking {
+            hud.isVisible
+        } onChange: { [weak self] in
+            Task { @MainActor [weak self] in
+                self?.observeHUD()
+            }
+        }
+        viewModel.hudChanged(isVisible: isVisible)
     }
 }

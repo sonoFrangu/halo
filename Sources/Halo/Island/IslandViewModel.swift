@@ -2,7 +2,8 @@ import AppKit
 import Observation
 import SwiftUI
 
-/// Decides which shape the island takes: hover wins, then playback activity, else idle.
+/// Decides which shape the island takes: an ongoing drag keeps the current shape, then the
+/// brightness/volume HUD, then hover, then playback activity, else idle.
 ///
 /// Inputs are pushed in (pointer positions, playback changes, geometry); state changes are
 /// wrapped in the matching spring so every view derived from `state` animates together.
@@ -27,8 +28,9 @@ final class IslandViewModel {
 
     @ObservationIgnored private var isPointerInside = false
     @ObservationIgnored private var isHovering = false
-    @ObservationIgnored private var isScrubbing = false
+    @ObservationIgnored private var isInteracting = false
     @ObservationIgnored private var showsActivity = false
+    @ObservationIgnored private var showsHUD = false
     @ObservationIgnored private var lastInteractivity = false
     @ObservationIgnored private var hoverTask: Task<Void, Never>?
     @ObservationIgnored private var lingerTask: Task<Void, Never>?
@@ -92,14 +94,21 @@ final class IslandViewModel {
         }
     }
 
-    /// While the progress bar is dragged the island stays open and interactive even if the
-    /// cursor leaves it.
-    func setScrubbing(_ scrubbing: Bool, pointer location: CGPoint) {
-        guard scrubbing != isScrubbing else { return }
-        isScrubbing = scrubbing
-        if !scrubbing {
+    func hudChanged(isVisible: Bool) {
+        guard isVisible != showsHUD else { return }
+        showsHUD = isVisible
+        resolveState()
+    }
+
+    /// While a bar (progress or HUD level) is dragged the island keeps its shape and stays
+    /// interactive even if the cursor leaves it.
+    func setInteracting(_ interacting: Bool, pointer location: CGPoint) {
+        guard interacting != isInteracting else { return }
+        isInteracting = interacting
+        if !interacting {
             isPointerInside = hotZone.contains(location)
             scheduleHover(isPointerInside)
+            resolveState()
         }
         publishInteractivity()
     }
@@ -134,7 +143,11 @@ final class IslandViewModel {
 
     private func resolveState() {
         let target: IslandState
-        if isHovering || (isScrubbing && state == .expanded) {
+        if isInteracting && (state == .expanded || state == .hud) {
+            target = state
+        } else if showsHUD {
+            target = .hud
+        } else if isHovering {
             target = .expanded
         } else if showsActivity {
             target = .compact
@@ -154,7 +167,8 @@ final class IslandViewModel {
     }
 
     private func publishInteractivity() {
-        let interactive = state == .expanded && (isPointerInside || isScrubbing)
+        let isOpen = state == .expanded || state == .hud
+        let interactive = isOpen && (isPointerInside || isInteracting)
         guard interactive != lastInteractivity else { return }
         lastInteractivity = interactive
         onInteractivityChange?(interactive)

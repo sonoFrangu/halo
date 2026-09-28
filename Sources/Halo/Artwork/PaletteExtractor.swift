@@ -13,13 +13,13 @@ enum PaletteExtractor {
     /// `CIContext` is thread-safe (and `Sendable`) and expensive to create, so one is shared.
     private static let context = CIContext(options: [.cacheIntermediates: false])
 
-    static func palette(from data: Data) -> ArtworkPalette? {
-        guard let samples = samples(from: data), !samples.isEmpty else { return nil }
+    static func palette(from cgImage: CGImage) -> ArtworkPalette? {
+        guard let samples = samples(from: cgImage), !samples.isEmpty else { return nil }
         return PaletteSelector.palette(from: KMeans.clusters(of: samples, count: clusterCount))
     }
 
-    static func samples(from data: Data) -> [RGBColor]? {
-        guard let image = CIImage(data: data) else { return nil }
+    static func samples(from cgImage: CGImage) -> [RGBColor]? {
+        let image = CIImage(cgImage: cgImage)
         let extent = image.extent
         guard extent.width >= 1, extent.height >= 1, !extent.isInfinite else { return nil }
 

@@ -2,9 +2,9 @@
 
 App macOS personale che trasforma la notch del MacBook in una "Dynamic Island": un'isola nera
 che cresce dalla notch fisica e mostra cosa stai ascoltando, da qualsiasi app (Spotify, Musica,
-Safari/YouTube, …).
+Safari/YouTube, …), e sostituisce l'HUD di sistema di luminosità e volume.
 
-Stato: **MVP** — shell della notch + Now Playing. Architettura e scelte in
+Stato: shell della notch + Now Playing + HUD luminosità/volume. Architettura e scelte in
 [`docs/design.md`](docs/design.md).
 
 ## Requisiti
@@ -31,9 +31,25 @@ scripts/bundle.sh
    (submodule; se manca, lo script lo scarica con `git submodule update --init`);
 3. assembla `build/Halo.app` (`LSUIElement = true`, nessuna icona nel Dock) con l'adapter in
    `Contents/Resources/MediaRemoteAdapter/`;
-4. firma tutto ad-hoc (`codesign -s -`) e verifica la firma.
+4. firma tutto e verifica la firma: ad-hoc (`codesign -s -`) per default, oppure con il
+   certificato locale "Halo Local" se esiste (vedi sotto).
 
-Test unitari (parsing dello stream, timeline, geometria, forma, palette): `swift test`.
+### Firma stabile (consigliata per l'HUD)
+
+macOS lega il permesso di Accessibilità alla firma dell'app. Con la firma ad-hoc la firma
+cambia a ogni build, quindi dopo ogni `scripts/bundle.sh` il permesso va rimosso e concesso di
+nuovo. Per evitarlo, una volta sola:
+
+1. Accesso Portachiavi › Assistente Certificato › Crea un certificato…
+2. Nome **`Halo Local`**, Tipo di identità **Radice autofirmata**, Tipo di certificato
+   **Firma codice** › Crea.
+
+Da quel momento `scripts/bundle.sh` firma con `Halo Local` (lo stampa a video) e il permesso
+sopravvive alle ricompilazioni. `HALO_SIGN_IDENTITY="Altro nome" scripts/bundle.sh` forza
+un'altra identità.
+
+Test unitari (parsing dello stream, timeline, geometria, forma, palette, passi dell'HUD):
+`swift test` (richiede Xcode per Swift Testing).
 
 La CI (`.github/workflows/build.yml`, runner `macos-26`) esegue test e bundle a ogni push e
 carica `Halo.zip` come artifact. Se il runner `macos-26` non fosse disponibile, lancia il
@@ -47,7 +63,8 @@ open build/Halo.app
 
 Oppure copia `build/Halo.app` in `/Applications` (consigliato se attivi "Avvia al login": il
 login item punta al percorso dell'app). Halo compare solo nella barra dei menu (icona a
-capsula): il menu mostra lo stato di Now Playing, **Avvia al login** ed **Esci**.
+capsula): il menu mostra lo stato di Now Playing, **HUD luminosità e volume nella notch**,
+**Avvia al login** ed **Esci**.
 
 Se usi lo zip scaricato dalla CI, macOS lo mette in quarantena (firma ad-hoc, non
 notarizzata). Sbloccalo una volta:
@@ -68,14 +85,33 @@ xattr -dr com.apple.quarantine /Applications/Halo.app
 
 ## Permessi richiesti
 
-- **Nessun permesso di Accessibilità, Registrazione schermo o Monitoraggio input.** L'hover
-  usa monitor di eventi *mouse* (`NSEvent`), che non richiedono autorizzazioni.
+- **Accessibilità** (solo per l'HUD di luminosità e volume): per sostituire l'HUD di sistema
+  Halo intercetta i tasti luminosità/volume/muto con un event tap, e macOS lo consente solo alle
+  app autorizzate in Impostazioni › Privacy e sicurezza › Accessibilità. Al primo avvio compare
+  la richiesta; poi è raggiungibile dal menu ("Concedi Accessibilità per l'HUD…"). Senza
+  permesso, o con l'HUD disattivato dal menu, i tasti funzionano come sempre con l'HUD di
+  sistema. Con la firma ad-hoc il permesso va riconcesso dopo ogni build: vedi *Firma stabile*.
+- **Nessuna Registrazione schermo né Monitoraggio input.** L'hover usa monitor di eventi
+  *mouse* (`NSEvent`), che non richiedono autorizzazioni.
 - **Elementi di login**: attivando "Avvia al login" macOS può chiedere conferma in
   Impostazioni di Sistema › Generali › Elementi login; Halo apre quella pagina se serve.
 - **Now Playing**: nessun prompt. Halo avvia `/usr/bin/perl` con
   [mediaremote-adapter](https://github.com/ungive/mediaremote-adapter): perl è un binario di
   sistema ancora autorizzato a usare il framework privato MediaRemote (bloccato per le app di
   terzi da macOS 15.4).
+
+## HUD luminosità e volume
+
+- I tasti luminosità (F1/F2), volume (F11/F12) e muto (F10) mostrano l'isola in modalità HUD:
+  a sinistra l'icona (il sole ruota con la luminosità; per il volume compaiono AirPods, AirPods
+  Pro/Max o cuffie quando sono l'uscita attiva), a destra una barra con bagliore proporzionale
+  al livello e la percentuale.
+- **Regolazione personalizzata**: la barra si trascina con il mouse; Opzione+Maiusc con i tasti
+  fa passi fini da 1/64 come in macOS. La luminosità è caldo-solare, il volume prende i colori
+  della copertina in riproduzione.
+- Luminosità tramite il framework privato DisplayServices (solo display integrato), volume
+  tramite CoreAudio sul dispositivo di uscita predefinito. Se una delle due non è regolabile
+  (es. uscita HDMI senza volume), il tasto passa al sistema.
 
 ## Come funziona (in breve)
 
@@ -112,6 +148,9 @@ xattr -dr com.apple.quarantine /Applications/Halo.app
   principale; non segue il monitor attivo.
 - **Stato "pausa"**: dopo ~1,5 s di pausa l'isola torna `idle`; in pausa resta raggiungibile
   con l'hover (player completo).
+- **HUD**: niente suono di feedback del volume (il tasto non arriva al sistema); luminosità solo
+  del display integrato (non dei monitor esterni); niente tasti retroilluminazione tastiera
+  (il MacBook Air M2 non li ha).
 - **Solo arm64**: `scripts/build-adapter.sh` compila l'adapter per l'architettura della
   macchina che builda.
 - **Build verificata solo in CI.** Lo sviluppo è avvenuto senza un Mac: tutto ciò che è visivo

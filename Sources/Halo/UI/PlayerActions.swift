@@ -7,5 +7,13 @@ struct PlayerActions {
     var nextTrack: () -> Void
     var previousTrack: () -> Void
     var seek: (TimeInterval) -> Void
-    var setScrubbing: (Bool) -> Void
+    /// A bar is being dragged: keep the island open and interactive.
+    var setInteracting: (Bool) -> Void
+}
+
+/// What the HUD can ask for.
+@MainActor
+struct HUDActions {
+    var setLevel: (Double) -> Void
+    var setInteracting: (Bool) -> Void
 }

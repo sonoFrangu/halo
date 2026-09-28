@@ -38,6 +38,7 @@ quando la musica non suona → CPU ~0% da ferma.
 |------------|---------------------------------------------------|-------------------------------------------|
 | `idle`     | niente in riproduzione (o in pausa da >1,5 s)     | dentro la notch fisica (invisibile); pillola finta sui monitor senza notch |
 | `compact`  | musica in riproduzione                            | notch + due "ali": mini copertina a sinistra, EQ a destra |
+| `hud`      | tasto luminosità/volume/muto (per ~1,6 s)         | notch + ali larghe: icona a sinistra, barra e % a destra |
 | `expanded` | puntatore sopra l'isola (dopo ~90 ms)             | player completo (o stato vuoto se non c'è media) |
 
 Una sola `NotchShape` animabile (larghezza, altezza, raggio inferiore, raggio "orecchie"
@@ -60,6 +61,33 @@ una molla più corta e senza ritardi.
 - `IslandHostingView.acceptsFirstMouse = true`: i pulsanti funzionano al primo click senza
   attivare l'app.
 
+Priorità: trascinamento in corso (mantiene la forma) > `hud` > hover (`expanded`) >
+riproduzione (`compact`) > `idle`.
+
+## Fluidità
+
+Durante il morph a ogni fotogramma cambia solo il tracciato della forma e le cornici del
+contenuto. Tutto ciò che richiede un filtro costoso è statico o arriva dopo che la molla si è
+assestata:
+
+- ombra e alone (`IslandDecoration`) sono copie sfocate del contorno *finale* espanso, inserite
+  con ~0,28 s di ritardo e tolte subito in chiusura (prima erano ricalcolate su un contorno che
+  cambiava a ogni fotogramma);
+- l'ombra colorata della copertina ha un'animazione propria ritardata;
+- i controlli Liquid Glass entrano senza blur;
+- la copertina è decodificata fuori dal main thread (miniatura ImageIO da 320 px) invece che
+  al primo disegno, proprio mentre l'isola si apre.
+
+## HUD luminosità e volume
+
+`MediaKeyTap` (event tap attivo su `NX_SYSDEFINED`, sottotipo 8) intercetta luminosità, volume
+e muto; `HUDController` applica il passo (`HUDStep`: 1/16, o 1/64 con Opzione+Maiusc, agganciato
+alla griglia) con `DisplayBrightness` (DisplayServices, privato, caricato con `dlopen`) o
+`SystemVolume` (CoreAudio) e mostra l'isola in stato `hud`. Se la regolazione non è possibile il
+tasto passa al sistema. Serve il permesso di Accessibilità: `AccessibilityPermission` lo chiede
+una volta e ascolta `com.apple.accessibility.api` per attivare il tap appena viene concesso
+(niente polling). La barra dell'HUD è trascinabile. Preferenza in `Preferences` (UserDefaults).
+
 ## Geometria della notch
 
 `NotchGeometry` usa `safeAreaInsets.top` (altezza) e la larghezza di
@@ -74,25 +102,31 @@ il primario. Ricalcolo su `NSApplication.didChangeScreenParametersNotification`.
 Package.swift                         SwiftPM, macOS 26, Swift 6
 Support/Info.plist                    LSUIElement, bundle id, versione
 scripts/build-adapter.sh              compila MediaRemoteAdapter.framework con clang (niente CMake)
-scripts/bundle.sh                     swift build -c release + assemblaggio Halo.app + codesign ad-hoc
+scripts/bundle.sh                     swift build -c release + assemblaggio Halo.app + codesign (ad-hoc o "Halo Local")
 Vendor/mediaremote-adapter            submodule git (ungive/mediaremote-adapter, tag v0.7.7, BSD-3)
-.github/workflows/build.yml           CI su macos-26: test + bundle + artifact zip
+.github/workflows/build.yml           CI: macos-26 (Xcode 26.6/26.0.1) test + bundle + artifact; xcode-27 build SDK 27
+                                      con Xcode e Command Line Tools; blocco macro SwiftUI
 
 Sources/Halo/
-  App/          HaloApp (entry point), AppDelegate (composition root), Log
-  MenuBar/      StatusItemController (menu: stato, Avvia al login, Esci), LoginItemController (SMAppService)
+  App/          HaloApp (entry point), AppDelegate (composition root), Log, Preferences
+  MenuBar/      StatusItemController (menu: stato, HUD, Avvia al login, Esci), LoginItemController (SMAppService)
+  System/       DisplayBrightness (DisplayServices), SystemVolume (CoreAudio), MediaKeyTap (CGEventTap),
+                AccessibilityPermission
+  HUD/          HUDController, HUDModel, HUDStep
   NowPlaying/   NowPlayingSnapshot, PlaybackTimeline, MediaCommand, NowPlayingModel, NowPlayingController
   NowPlaying/Adapter/  AdapterResources, AdapterStream, AdapterCommandRunner, LineSplitter,
                        NowPlayingStreamDecoder, StderrTail
-  Artwork/      RGBColor, ArtworkPalette, PaletteExtractor (Core Image), KMeans, PaletteSelector
+  Artwork/      ArtworkDecoder (ImageIO), RGBColor, ArtworkPalette, PaletteExtractor (Core Image), KMeans,
+                PaletteSelector
   Island/       IslandState, NotchGeometry, IslandLayout, IslandViewModel, IslandController,
                 ScreenTracker, PointerMonitor, Motion
   Island/Panel/ IslandPanel, IslandHostingView, IslandPanelController
-  UI/           IslandRootView, IslandContentView, NotchShape (+ NotchOutline, SmoothCorner),
+  UI/           IslandRootView, IslandDecoration, IslandContentView, NotchShape (+ NotchOutline, SmoothCorner),
                 ArtworkView, SourceIconView, EqualizerView (+ EqualizerWave), TrackInfoView,
                 ScrubberView (+ TimeFormatting), TransportControls, PressableButtonStyle,
-                RevealModifier, HaloGlow, ExpandedBackdrop, EmptyStateView, PlayerActions
-Tests/HaloTests/                      Swift Testing: parsing, timeline, geometria, forma, palette
+                RevealModifier, ExpandedBackdrop, EmptyStateView, PlayerActions;
+                HUD/ HUDGlyph, HUDLevelBar, HUDValueLabel
+Tests/HaloTests/                      Swift Testing: parsing, timeline, geometria, layout, forma, palette, HUD
 ```
 
 ## Flusso dati Now Playing
@@ -136,5 +170,8 @@ Tests/HaloTests/                      Swift Testing: parsing, timeline, geometri
 - **Firma ad-hoc**: `SMAppService` può richiedere approvazione in Impostazioni; l'artifact della CI è
   in quarantena (Gatekeeper) e va sbloccato a mano.
 - **Build solo in CI**: nessun Mac nel cloud; tutto ciò che è visivo va verificato in locale.
+- **HUD**: DisplayServices è privato; il tap dei tasti richiede Accessibilità, legata alla firma
+  (con firma ad-hoc va riconcessa a ogni build: `scripts/bundle.sh` usa il certificato locale
+  "Halo Local" se presente).
 - **Processo figlio orfano**: se Halo va in crash, perl muore al primo write su pipe chiusa (SIGPIPE),
   non immediatamente.

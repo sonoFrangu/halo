@@ -1,14 +1,17 @@
 import SwiftUI
 
-/// The whole panel canvas: optional halo glow, the black morphing body, and the content
-/// clipped to the body. Everything is derived from `island.state`, which changes inside
-/// a spring, so shape, content frames and effects animate as one.
+/// The whole panel canvas: the expanded decoration (shadow and halo), the black morphing
+/// body, and the content clipped to the body. Everything is derived from `island.state`,
+/// which changes inside a spring, so shape and content frames animate as one.
 struct IslandRootView: View {
     let island: IslandViewModel
     let player: NowPlayingModel
+    let hud: HUDModel
     let actions: PlayerActions
+    let hudActions: HUDActions
 
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         let layout = island.layout
@@ -17,16 +20,30 @@ struct IslandRootView: View {
         let canvas = layout.canvasSize
 
         ZStack(alignment: .topLeading) {
-            if isExpanded && island.hasMedia && !reduceTransparency {
-                HaloGlow(shape: shape, palette: player.palette)
-                    .transition(.opacity.animation(.easeOut(duration: 0.14)))
+            if isExpanded {
+                IslandDecoration(
+                    spec: layout.spec(for: .expanded, hasMedia: island.hasMedia),
+                    palette: player.palette,
+                    showsGlow: island.hasMedia && !reduceTransparency
+                )
+                .transition(
+                    .asymmetric(
+                        insertion: .opacity.animation(Motion.decorationIn(reduceMotion: reduceMotion)),
+                        removal: .opacity.animation(Motion.decorationOut)
+                    )
+                )
             }
 
-            shape
-                .fill(Color.black)
-                .shadow(color: .black.opacity(isExpanded ? 0.5 : 0), radius: 16, x: 0, y: 8)
+            shape.fill(Color.black)
 
-            IslandContentView(island: island, player: player, actions: actions, layout: layout)
+            IslandContentView(
+                island: island,
+                player: player,
+                hud: hud,
+                actions: actions,
+                hudActions: hudActions,
+                layout: layout
+            )
                 .clipShape(shape)
         }
         .frame(width: canvas.width, height: canvas.height, alignment: .topLeading)

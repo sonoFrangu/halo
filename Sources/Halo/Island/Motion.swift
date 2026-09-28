@@ -25,6 +25,14 @@ enum Motion {
         return .spring(duration: 0.42, bounce: 0.16).delay(0.1 + 0.04 * Double(order))
     }
 
+    /// Shadow and halo arrive once the opening spring has nearly settled, so they are never
+    /// re-blurred on a moving outline.
+    static func decorationIn(reduceMotion: Bool) -> Animation {
+        reduceMotion ? .easeOut(duration: 0.2) : .easeOut(duration: 0.3).delay(0.28)
+    }
+
+    static var decorationOut: Animation { .easeOut(duration: 0.1) }
+
     static var hoverFeedback: Animation { .spring(duration: 0.25, bounce: 0.3) }
     static var press: Animation { .spring(duration: 0.2, bounce: 0.45) }
     static var palette: Animation { .easeInOut(duration: 0.6) }
@@ -36,7 +44,7 @@ enum Motion {
     private static func rank(_ state: IslandState) -> Int {
         switch state {
         case .idle: 0
-        case .compact: 1
+        case .compact, .hud: 1
         case .expanded: 2
         }
     }

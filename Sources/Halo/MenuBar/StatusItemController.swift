@@ -1,17 +1,21 @@
 import AppKit
 
-/// The menu bar item: current status, "Avvia al login", "Esci".
+/// The menu bar item: current status, HUD replacement, "Avvia al login", "Esci".
 @MainActor
 final class StatusItemController: NSObject, NSMenuDelegate {
     private let statusItem: NSStatusItem
     private let player: NowPlayingModel
+    private let hud: HUDController
     private let loginItem: LoginItemController
     private let statusLine = NSMenuItem()
+    private let hudItem = NSMenuItem()
+    private let hudPermissionItem = NSMenuItem()
     private let launchAtLoginItem = NSMenuItem()
 
-    init(player: NowPlayingModel, loginItem: LoginItemController) {
+    init(player: NowPlayingModel, hud: HUDController, loginItem: LoginItemController) {
         self.statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         self.player = player
+        self.hud = hud
         self.loginItem = loginItem
         super.init()
 
@@ -27,6 +31,14 @@ final class StatusItemController: NSObject, NSMenuDelegate {
 
         statusLine.isEnabled = false
 
+        hudItem.title = "HUD luminosità e volume nella notch"
+        hudItem.target = self
+        hudItem.action = #selector(toggleHUD(_:))
+
+        hudPermissionItem.title = "Concedi Accessibilità per l'HUD…"
+        hudPermissionItem.target = self
+        hudPermissionItem.action = #selector(requestHUDPermission(_:))
+
         launchAtLoginItem.title = "Avvia al login"
         launchAtLoginItem.target = self
         launchAtLoginItem.action = #selector(toggleLaunchAtLogin(_:))
@@ -39,6 +51,8 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         menu.delegate = self
         menu.addItem(statusLine)
         menu.addItem(.separator())
+        menu.addItem(hudItem)
+        menu.addItem(hudPermissionItem)
         menu.addItem(launchAtLoginItem)
         menu.addItem(.separator())
         menu.addItem(quitItem)
@@ -51,6 +65,8 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         statusLine.title = statusText
         statusLine.toolTip = statusTooltip
         launchAtLoginItem.state = loginItem.isEnabled ? .on : .off
+        hudItem.state = hud.isEnabled ? .on : .off
+        hudPermissionItem.isHidden = hud.status != .needsPermission
     }
 
     // MARK: Actions
@@ -74,6 +90,14 @@ final class StatusItemController: NSObject, NSMenuDelegate {
                 loginItem.openSystemSettings()
             }
         }
+    }
+
+    @objc private func toggleHUD(_ sender: NSMenuItem) {
+        hud.setEnabled(!hud.isEnabled)
+    }
+
+    @objc private func requestHUDPermission(_ sender: NSMenuItem) {
+        hud.requestPermission()
     }
 
     @objc private func quit(_ sender: NSMenuItem) {
