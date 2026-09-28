@@ -2,9 +2,9 @@
 
 App macOS personale che trasforma la notch del MacBook in una "Dynamic Island": un'isola nera
 che cresce dalla notch fisica e mostra cosa stai ascoltando da qualsiasi app (Spotify, Musica,
-Safari/YouTube, …), sostituisce l'HUD di luminosità e volume, avvisa di ricarica, AirPods e
-notifiche, tiene uno scaffale di file e porta musica e testi sul desktop e sulla schermata di
-blocco.
+Safari/YouTube, …), sostituisce l'HUD di luminosità e volume, avvisa di ricarica, AirPods,
+notifiche e Full Immersione, tiene timer, cronometro e download come attività live, uno
+scaffale di file, e porta musica e testi sul desktop e sulla schermata di blocco.
 
 Architettura e scelte in [`docs/design.md`](docs/design.md).
 
@@ -27,14 +27,21 @@ Architettura e scelte in [`docs/design.md`](docs/design.md).
 | **Calendario** | scheda dell'isola, intestazione, banner | prossimi impegni, riunione entro l'ora al posto del meteo, promemoria 5 min prima con "Partecipa" |
 | **Anteprima screenshot** | banner sotto la notch | trascina la miniatura dove vuoi, copia, scaffale, cestino |
 | **Timer e Pomodoro** | scheda dell'isola, ali (attività live), menu | countdown nelle ali, anello, ciclo 4 × 25 + 5 min |
+| **Cronometro** | scheda Timer, ali (attività live), menu | quadrante con lancetta; con un timer attivo, due righe |
+| **Download e AirDrop** | ali (attività live), banner alla fine | anello e percentuale; poi Mostra nel Finder / Scaffale |
+| **Full Immersione** | ali dell'isola | simbolo, colore e nome quando la attivi o la disattivi; notifiche zitte mentre è attiva |
+| **Sblocco** | ali dell'isola | il lucchetto che si apre quando sblocchi il Mac |
 | **Microfono e fotocamera** | ali dell'isola | pallino arancione/verde quando un'app li usa |
 | **Lingua tastiera e Bloc Maiusc** | ali dell'isola | avviso breve al cambio |
 | **Modalità presentazione** | — | con un'app a tutto schermo gli avvisi che interrompono restano zitti |
 | **Risparmio energetico** | — | in modalità basso consumo meno animazioni e ridisegni |
 
-Tutto si accende e spegne dalle **Impostazioni** (menu della capsula › Impostazioni…, ⌘,).
-Il menu contiene lo stato di Now Playing, il sottomenu Timer, le Impostazioni, le scorciatoie per
-i permessi mancanti ed Esci.
+Tutto si accende e spegne dalle **Impostazioni** (menu della capsula › Impostazioni…, ⌘,),
+organizzate come Impostazioni di Sistema: una pagina per argomento (Generale, Isola, Musica,
+Attività, Avvisi, Scaffale e screenshot, Permessi, Informazioni), ogni opzione con la
+spiegazione di cosa fa e dove si vede; un'opzione accesa a cui manca un permesso lo segnala con
+il pulsante per concederlo. Il menu contiene lo stato di Now Playing, il sottomenu Timer e
+cronometro, le Impostazioni, una voce per i permessi mancanti (solo se ce ne sono) ed Esci.
 
 ## Requisiti
 
@@ -59,7 +66,9 @@ scripts/bundle.sh
 2. compila `MediaRemoteAdapter.framework` dai sorgenti in `Vendor/mediaremote-adapter`
    (submodule; se manca, lo script lo scarica con `git submodule update --init`);
 3. assembla `build/Halo.app` (`LSUIElement = true`, nessuna icona nel Dock) con l'adapter in
-   `Contents/Resources/MediaRemoteAdapter/`;
+   `Contents/Resources/MediaRemoteAdapter/` e l'icona `AppIcon.icns`, generata con `sips` e
+   `iconutil` da `Support/AppIcon.png` (disegnata da `scripts/icon/render-icon.py`; il PNG è già
+   nel repository, quindi per compilare non servono né Python né altri pacchetti);
 4. firma tutto e verifica la firma: ad-hoc (`codesign -s -`) per default, oppure con il
    certificato locale "Halo Local" se esiste (vedi sotto).
 
@@ -78,8 +87,8 @@ sopravvivono alle ricompilazioni. `HALO_SIGN_IDENTITY="Altro nome" scripts/bundl
 un'altra identità.
 
 Test unitari (stream Now Playing, timeline, geometria e layout, forma, palette, HUD, avvisi,
-batterie, LRC, meteo, notifiche, gesti, calendario, timer): `swift test` (richiede Xcode per
-Swift Testing).
+batterie, LRC e sincronia dei testi, meteo, notifiche, gesti, calendario, timer, cronometro,
+Full Immersione, download): `swift test` (richiede Xcode per Swift Testing).
 
 La CI (`.github/workflows/build.yml`) esegue test e bundle a ogni push con Xcode 26.0.1 e 26.6
 (runner `macos-26`) e con Xcode 27 + Command Line Tools su SDK 27, e carica `Halo.zip` come
@@ -107,14 +116,21 @@ xattr -dr com.apple.quarantine /Applications/Halo.app
 | --- | --- | --- |
 | **Accessibilità** | HUD luminosità/volume (event tap sui tasti) e avviso Bloc Maiusc | i tasti usano l'HUD di sistema; niente avviso Bloc Maiusc |
 | **Localizzazione** (quando in uso) | meteo del posto in cui sei | posizione approssimata dall'IP ([ipwho.is](https://ipwho.is)) |
-| **Accesso completo al disco** | notifiche nella notch: leggere il database di Centro Notifiche | nessuna notifica nella notch (tutto il resto funziona) |
+| **Accesso completo al disco** | notifiche e Full Immersione nella notch: leggere il database di Centro Notifiche e quello di Non disturbare | niente notifiche né cambi di Full Immersione nella notch (tutto il resto funziona) |
 | **Calendario** (accesso completo) | prossimi impegni e promemoria delle riunioni | scheda Calendario con il pulsante per concederlo |
 
-- Accessibilità: richiesta al primo avvio; poi dal menu o dalle Impostazioni.
-- Calendario: richiesto al primo avvio; se negato, le Impostazioni mostrano "Concedi…".
-- Accesso completo al disco: dal menu o dalle Impostazioni, "Concedi…" apre Impostazioni di Sistema ›
-  Privacy e sicurezza › Accesso completo al disco; aggiungi `Halo.app` con **+**. Halo se ne
-  accorge da solo quando torni a un'altra app (non serve riavviarlo).
+La pagina **Impostazioni › Permessi** li elenca tutti con lo stato (Concesso / Necessario / Verrà
+chiesto al primo uso), a cosa servono e il pulsante che apre la pagina giusta di Impostazioni di
+Sistema; lo stato si aggiorna da solo quando torni su Halo.
+
+- Accessibilità: richiesta al primo avvio; poi da Impostazioni › Permessi o dal menu.
+- Calendario: richiesto al primo avvio; se negato, "Concedi…" apre la pagina Calendari.
+- Accesso completo al disco: "Concedi…" apre Impostazioni di Sistema › Privacy e sicurezza ›
+  Accesso completo al disco; aggiungi `Halo.app` con **+**. Halo se ne accorge da solo quando
+  torni a un'altra app (non serve riavviarlo).
+- **Download e AirDrop**: Halo non legge i file; si iscrive all'avanzamento che browser e
+  AirDrop pubblicano per i file nella cartella Download. Se macOS chiede l'accesso alla cartella
+  Download è per questo (negandolo si perde solo questa funzione).
 - **Nessuna Registrazione schermo né Monitoraggio input.** Hover e trascinamento file usano
   monitor di eventi *mouse* (`NSEvent`), che non richiedono autorizzazioni. Microfono e
   fotocamera "in uso" si leggono da CoreAudio/CoreMediaIO senza permessi e senza accenderli;
@@ -124,7 +140,9 @@ xattr -dr com.apple.quarantine /Applications/Halo.app
 - **Now Playing**: nessun prompt. Halo avvia `/usr/bin/perl` con
   [mediaremote-adapter](https://github.com/ungive/mediaremote-adapter): perl è un binario di
   sistema ancora autorizzato a usare il framework privato MediaRemote (bloccato per le app di
-  terzi da macOS 15.4).
+  terzi da macOS 15.4). I *comandi* (play, pausa, brani, seek) partono invece direttamente da
+  Halo, che è istantaneo; il primo play/pausa viene verificato sullo stream e, se non ha
+  effetto, Halo ripiega sull'adapter per il resto della sessione.
 - **Rete**: LRCLIB (testi), Open-Meteo (meteo), ipwho.is (solo se la posizione è negata). Nessun
   altro traffico, nessun account.
 
@@ -137,12 +155,19 @@ xattr -dr com.apple.quarantine /Applications/Halo.app
 - Player: copertina con badge dell'app sorgente, titolo, controlli in Liquid Glass, barra di
   avanzamento trascinabile che si ispessisce all'hover, pulsante testi. Alone e sfumatura
   interna prendono i colori dominanti della copertina.
+- **Play/pausa immediati**: il pulsante cambia subito e manda un *play* o una *pausa* espliciti
+  (mai un "inverti", che con due clic ravvicinati si annullava); gli aggiornamenti in ritardo
+  del player non lo fanno più rimbalzare. Il vetro dei pulsanti è disegnato dallo stile del
+  pulsante, così nessun clic va perso.
 
 ### Testi sincronizzati
 - Cercati su LRCLIB a ogni cambio brano (con debounce e cache); se esistono solo testi non
   sincronizzati non vengono mostrati. Il pulsante con le virgolette apre/chiude il pannello.
 - La riga cantata è centrata, grande, sfumata con i colori della copertina; il pannello si
   ridisegna **solo** quando cambia riga (nessun timer).
+- Ogni riga compare un attimo prima del suo tempo (0,25 s, regolabile in Impostazioni › Musica ›
+  Sincronia del testo, da 1 s dopo a 1,5 s prima): con cuffie Bluetooth o testi di LRCLIB un po'
+  sfasati basta spostare il cursore.
 
 ### HUD luminosità e volume
 - Luminosità (F1/F2), volume (F11/F12) e muto (F10) mostrano l'HUD nelle ali: icona animata
@@ -184,7 +209,7 @@ xattr -dr com.apple.quarantine /Applications/Halo.app
   adegua a collegamenti, scollegamenti e cambi di risoluzione.
 
 ### Widget sul desktop
-- Spento per default (Impostazioni › Musica › Widget sul desktop). Una card in vetro con la copertina sfocata
+- Spento per default (Impostazioni › Musica › Widget sulla scrivania). Una card in vetro con la copertina sfocata
   come sfondo, controlli, avanzamento e testi; quando non suona nulla mostra ora, data e meteo.
   Si trascina dove vuoi (la posizione viene ricordata) e sta sotto tutte le finestre.
 
@@ -223,6 +248,27 @@ xattr -dr com.apple.quarantine /Applications/Halo.app
 - Alla fine: suono "Glass", banner con cosa viene dopo; il Pomodoro passa da solo alla fase
   successiva ("Ferma" interrompe il ciclo). Durata massima 59:59.
 
+### Cronometro
+- Nella scheda Timer (pulsante "Cronometro") o dal menu. Nell'isola aperta un quadrante con la
+  lancetta dei secondi e il tempo grande, pausa/riprendi e azzera; nelle ali il tempo che sale
+  (contato dal sistema, come il countdown). Con timer e cronometro insieme la scheda mostra due
+  righe e le ali danno la precedenza al timer.
+
+### Download e AirDrop
+- Mentre un file arriva nella cartella Download (Safari, Chrome e gli altri browser che
+  pubblicano l'avanzamento, oppure AirDrop) le ali mostrano un anello con la freccia e la
+  percentuale; con la musica l'anello va nell'ala destra al posto dell'equalizzatore.
+- Alla fine un banner con l'anteprima del file (trascinabile), "Download completato" o
+  "Ricevuto con AirDrop": clic per aprirlo, oppure Mostra nel Finder / Tieni sullo scaffale.
+- Gli aggiornamenti vengono sfoltiti al punto percentuale prima di arrivare all'interfaccia;
+  senza trasferimenti in corso non gira nulla.
+
+### Full Immersione e sblocco
+- Attivando o disattivando una Full Immersione (Centro di Controllo, barra dei menu,
+  Comandi rapidi) le ali mostrano il suo simbolo nel suo colore e il nome ("Lavoro · Attiva").
+  Mentre è attiva le notifiche non compaiono nella notch (disattivabile).
+- Quando sblocchi il Mac il lucchetto nell'isola si apre, come su iPhone.
+
 ### Microfono, fotocamera, tastiera
 - Quando un'app usa il microfono (arancione) o una fotocamera (verde) l'isola mostra un
   pallino; senza musica né timer anche l'icona del dispositivo.
@@ -247,9 +293,12 @@ xattr -dr com.apple.quarantine /Applications/Halo.app
   Reinstallali: `sudo rm -rf /Library/Developer/CommandLineTools && xcode-select --install`.
 - **`plugin for module 'SwiftUIMacros' not found`**: codice con macro SwiftUI compilato con i
   soli Command Line Tools sull'SDK di macOS 27 (vedi Requisiti). Usa Xcode o evita la macro.
-- **Nessuna notifica nella notch**: controlla che nel menu non compaia "Concedi Accesso completo
-  al disco…"; se hai ricompilato con firma ad-hoc, rimuovi Halo dall'elenco e aggiungilo di
-  nuovo (vedi *Firma stabile*).
+- **Nessuna notifica nella notch**: guarda Impostazioni › Permessi (o la voce "Concedi…" nel
+  menu); se hai ricompilato con firma ad-hoc, rimuovi Halo dall'elenco e aggiungilo di nuovo
+  (vedi *Firma stabile*). Con una Full Immersione attiva le notifiche restano zitte per scelta.
+- **Testo in anticipo o in ritardo sulla voce**: Impostazioni › Musica › Sincronia del testo.
+- **Play/pausa lenti**: se il comando diretto non funziona sul tuo sistema Halo usa l'adapter
+  (circa 0,2 s in più); nel log compare "switching to the adapter".
 - **Meteo assente**: senza rete o con entrambi i servizi irraggiungibili il badge resta vuoto;
   riprova aprendo l'isola dopo qualche minuto.
 - Le prime righe di `scripts/bundle.sh` stampano toolchain, versione di Swift e SDK in uso.
@@ -266,10 +315,23 @@ xattr -dr com.apple.quarantine /Applications/Halo.app
   dopo un riavvio (prima di aver mai fatto l'accesso, con FileVault) esiste prima di qualsiasi
   app utente: lì nessuna app di terzi può mostrare nulla.
 - **Notifiche**: sono una *copia*: il banner di sistema compare comunque (spegnilo per singola
-  app in Impostazioni › Notifiche se vuoi solo quello di Halo). Halo non sa se è attiva una
-  Full Immersion (non c'è un'API pubblica per le altre app), quindi mostra anche le notifiche
-  che la Full Immersion silenzierebbe: in quel caso disattiva "Notifiche nella notch".
-  Il formato del database è privato: se cambia, il banner mostra solo il nome dell'app.
+  app in Impostazioni › Notifiche se vuoi solo quello di Halo). Il formato del database è
+  privato: se cambia, il banner mostra solo il nome dell'app.
+- **Full Immersione**: non c'è un'API pubblica per le altre app; Halo legge il database di Non
+  disturbare (`~/Library/DoNotDisturb/DB`, formato privato) e vede **solo le Full Immersioni
+  attivate a mano**: una che parte da programma (orario, luogo, app) non lascia traccia lì, quindi
+  non viene annunciata e non silenzia le notifiche di Halo. Durante una Full Immersione Halo
+  silenzia *tutte* le notifiche, anche quelle delle app che la Full Immersione lascerebbe passare.
+- **Download e AirDrop**: solo i file che arrivano nella cartella Download e solo dalle app che
+  pubblicano l'avanzamento del file (Safari, AirDrop e la maggior parte dei browser; non i
+  download fatti da Terminale). Il nome mostrato è quello del file in corso (senza
+  `.download`/`.crdownload`); se il browser lo rinomina alla fine, "Mostra nel Finder" apre la
+  cartella.
+- **Comandi del player**: l'invio diretto a MediaRemote non è documentato; Halo lo verifica e,
+  se non funziona, torna all'adapter (più lento di circa 0,2 s).
+- **Icona**: è un `.icns` classico (squircle disegnata con la griglia delle icone macOS). macOS
+  26+ preferisce le icone di Icon Composer, compilabili solo con Xcode: se il sistema la
+  giudica fuori forma può mostrarla dentro il proprio riquadro grigio.
 - **AirPods**: batterie lette da `system_profiler` (circa un secondo, una volta per
   connessione); se il dispositivo non le pubblica si vede solo il volume. Nessun avviso quando
   cambiano *durante* l'uso (servirebbe interrogare periodicamente il Bluetooth).
@@ -282,7 +344,7 @@ xattr -dr com.apple.quarantine /Applications/Halo.app
 - **Titoli lunghi**: scorrono nel player dell'isola; nelle card (desktop, blocco) sono troncati.
 - **Microfono/fotocamera**: Halo sa *che* un dispositivo è in uso, non *quale app* lo usa.
 - **Modalità presentazione**: riconosce le app a tutto schermo (finestra grande quanto lo
-  schermo), non la condivisione dello schermo né le Full Immersion.
+  schermo), non la condivisione dello schermo.
 - **Contenuti live** (senza durata) mostrano la barra vuota e `--:--`; il seek è disattivato.
 - **Le ali coprono la menu bar**: in `compact` le ali nere stanno sopra gli elementi della menu
   bar adiacenti alla notch. I click li raggiungono comunque (il pannello è click-through), ma
@@ -319,11 +381,14 @@ Sources/Halo/
   Gestures/       interprete dello scroll, feedback aptico
   Calendar/       EventKit, link delle riunioni, orari
   Screenshots/    query Spotlight delle catture
-  Timer/          timer e Pomodoro
-  Settings/       finestra Impostazioni
+  Timer/          timer, Pomodoro e cronometro
+  Transfers/      download e AirDrop (avanzamento pubblicato dei file)
+  Focus/          Full Immersione (database di Non disturbare)
+  Settings/       finestra Impostazioni (pagine, permessi)
   UI/             forma e viste SwiftUI (Alerts/, Calendar/, HUD/, Settings/, Shelf/, Timer/, Widgets/)
 Tests/HaloTests   Swift Testing
-scripts/          bundle.sh, build-adapter.sh
+scripts/          bundle.sh, build-adapter.sh, icon/render-icon.py
+Support/          Info.plist, AppIcon.png
 Vendor/           mediaremote-adapter (submodule)
 ```
 

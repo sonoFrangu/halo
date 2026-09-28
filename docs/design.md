@@ -128,6 +128,13 @@ timestamp per riga, frazioni a 2/3 cifre, `[offset:]`. `LyricsPanel` usa un `Tim
 le date esatte dei cambi riga (`LyricsTimeline.changeDates`), ricalcolate quando cambia la
 timeline (seek, pausa): si ridisegna solo quando cambia la riga.
 
+La riga mostrata è `LyricsTimeline.displayedIndex`: posizione + anticipo (`lead`, 0,25 s,
+regolabile) + tolleranza di 20 ms. La tolleranza corregge un difetto reale: valutata
+*esattamente* alla data programmata, la posizione poteva cadere un soffio prima del confine per
+arrotondamento (le `Date` hanno una risoluzione di ~10⁻⁷ s a questa distanza dal 2001) e la riga
+precedente restava a schermo fino al cambio successivo, cioè il testo andava in ritardo di una
+riga circa una volta su due. Il test di regressione valuta ogni data programmata.
+
 ## Meteo
 
 `WeatherController` aggiorna all'avvio e quando un'isola si apre se il dato ha più di 20
@@ -197,8 +204,34 @@ miniature Quick Look già usate dallo scaffale.
 `FocusTimer` è un valore (data di fine mentre corre, tempo residuo in pausa) e `Pomodoro` la
 macchina a stati del ciclo, entrambi testati. `TimerController` dorme fino alla fine; le viste
 contano alla rovescia con `Text(timerInterval:countsDown:)` (lo aggiorna il sistema) e
-ridisegnano l'anello una volta al secondo solo se visibile. Con un timer l'isola resta
-`compact` (attività live).
+ridisegnano l'anello una volta al secondo solo se visibile e in corsa
+(`TimelineView(.animation(minimumInterval: 1, paused:))`: prima un anello nascosto continuava a
+ticchettare). `Stopwatch` è il valore gemello (data d'inizio virtuale mentre corre, tempo in
+pausa) e conta in su con `Text(timerInterval:countsDown: false)`; il quadrante gira solo se
+visibile.
+
+## Attività live
+
+`LiveActivity.current` sceglie cosa mostrare nelle ali oltre alla musica, in ordine: timer,
+cronometro, trasferimento. Con musica l'attività sostituisce l'equalizzatore a destra; senza,
+occupa anche l'ala sinistra. `IslandViewModel.liveActivityChanged` tiene l'isola `compact`.
+
+- **Download e AirDrop** (`TransferMonitor`): `Progress.addSubscriber(forFileURL:)` sulla
+  cartella Download riceve i `Progress` che browser e AirDrop pubblicano per i file che
+  scrivono (`fileOperationKind` `.downloading` / `.receiving`, o suffisso `.download`,
+  `.crdownload`, `.part`). Le chiusure girano sulle code di Foundation: sono create in funzioni
+  `nonisolated` (non ereditano il main actor) e ne escono solo valori `Sendable` tramite
+  `TransferSink`; `FractionGate` lascia passare solo i cambi di un punto percentuale. Alla
+  rimozione della pubblicazione (`UnpublishingHandler`) un trasferimento completato posta il
+  banner `.transfer`.
+- **Full Immersione** (`FocusMonitor`, `FocusStore` testato): legge
+  `~/Library/DoNotDisturb/DB/Assertions.json` (Full Immersione attivata a mano) e
+  `ModeConfigurations.json` (nome, simbolo, colore), osservati con `DatabaseChangeWatcher`
+  (kqueue sulla cartella). Un cambio posta l'avviso `.focus`; `NotificationMirror.isSuppressed`
+  tace le notifiche mentre una è attiva. Le Full Immersioni da programma non compaiono in quel
+  file.
+- **Sblocco** (`UnlockGreeter`): `com.apple.screenIsUnlocked` → avviso `.unlock`, il lucchetto
+  si apre con `contentTransition(.symbolEffect(.replace))` 0,3 s dopo la comparsa.
 
 ## Microfono, fotocamera, tastiera
 
@@ -220,10 +253,24 @@ ridisegnano l'anello una volta al secondo solo se visibile. Con un timer l'isola
 
 ## Impostazioni
 
-`SettingsWindowController` apre una finestra SwiftUI (`Form` raggruppato) costruita da
-`SettingsModel`: un catalogo di `SettingsToggle` (lettura e azione sulle funzioni vive) e un
-contatore `revision` che fa rileggere i valori non osservabili. Il menu della barra dei menu
-contiene solo stato, Timer, Impostazioni, permessi mancanti ed Esci.
+`SettingsWindowController` apre una finestra SwiftUI con `NavigationSplitView`, come
+Impostazioni di Sistema: una barra laterale di `SettingsPane` e, per ognuna, un `Form`
+raggruppato con intestazione (icona, titolo, a cosa serve la pagina). `SettingsModel` è un
+catalogo di `SettingsGroup` di `SettingsItem` (interruttori e cursori); ogni `SettingsToggle`
+ha spiegazione, permesso richiesto (`requires`) e dipendenza (`dependsOn`, che lo disattiva
+se l'opzione madre è spenta). La pagina Permessi calcola lo stato di Accessibilità
+(`AXIsProcessTrusted`), Accesso completo al disco (apertura del database delle notifiche),
+Calendari (EventKit) e Localizzazione, e apre la pagina giusta di Impostazioni di Sistema. Il
+contatore `revision` fa rileggere i valori non osservabili; tornando su Halo
+(`didBecomeActiveNotification`) la finestra si aggiorna. Il menu della barra dei menu contiene
+solo stato, Timer e cronometro, Impostazioni, una voce per i permessi mancanti ed Esci.
+
+## Icona
+
+`scripts/icon/render-icon.py` (NumPy + Pillow) disegna a 2× e riduce: squircle 824/1024
+(superellisse, esponente 4,6), fondo grafite, isola nera con alone a gradiente conico e mini
+equalizzatore, ombra nel margine. Il PNG 1024 è nel repository; `bundle.sh` genera l'iconset con
+`sips` e lo `.icns` con `iconutil` (entrambi di sistema).
 
 ## Geometria della notch
 
@@ -247,7 +294,7 @@ Sources/Halo/
   App/            HaloApp, AppDelegate (composition root), Log, Preferences
   MenuBar/        StatusItemController, MenuItems, LoginItemController (SMAppService)
   System/         DisplayBrightness, SystemVolume, MediaKeyTap, AccessibilityPermission, LockScreenSpace,
-                  PrivacyIndicators, KeyboardMonitor, PresentationDetector, EnergyMode
+                  PrivacyIndicators, KeyboardMonitor, PresentationDetector, EnergyMode, UnlockGreeter
   HUD/            HUDController, HUDModel, HUDStep
   Alerts/         IslandAlert, AlertCenter
   Power/          PowerSnapshot (+ PowerTransition), PowerMonitor
@@ -260,9 +307,12 @@ Sources/Halo/
   Gestures/       ScrollGestureInterpreter, Haptics
   Calendar/       CalendarEvent (+ MeetingLink, CalendarSchedule), CalendarText, CalendarController
   Screenshots/    ScreenshotWatcher, ScreenshotController
-  Timer/          FocusTimer (+ TimerMode, Pomodoro), TimerAlert, TimerController
-  Settings/       SettingsModel, SettingsWindowController
-  NowPlaying/     NowPlayingSnapshot, PlaybackTimeline, MediaCommand, NowPlayingModel, NowPlayingController
+  Timer/          FocusTimer (+ TimerMode, Pomodoro), Stopwatch, TimerAlert, TimerController
+  Transfers/      Transfer (+ TransferNaming), TransferMonitor (+ TransferSink, FractionGate, TrackedProgress)
+  Focus/          FocusMode (+ FocusStore), FocusMonitor
+  Settings/       SettingsModel (+ SettingsPane, SettingsPermission, SettingsToggle), SettingsWindowController
+  NowPlaying/     NowPlayingSnapshot, PlaybackTimeline, MediaCommand, DirectMediaRemote, NowPlayingModel,
+                  NowPlayingController
   NowPlaying/Adapter/  AdapterResources, AdapterStream, AdapterCommandRunner, LineSplitter,
                        NowPlayingStreamDecoder, StderrTail
   Artwork/        ArtworkDecoder, RGBColor, ArtworkPalette, PaletteExtractor, KMeans, PaletteSelector
@@ -276,15 +326,19 @@ Sources/Halo/
                   EmptyStateView, PlayerActions
   UI/HUD/         HUDGlyph, HUDLevelBar, HUDValueLabel, InlineHUDView
   UI/Alerts/      BatteryGlyph, PowerValueView, BatteryRing, AudioDeviceBanner, NotificationBanner,
-                  CalendarBanner, ScreenshotBanner, TimerBanner, KeyboardAlertView
+                  CalendarBanner, ScreenshotBanner, TimerBanner, KeyboardAlertView,
+                  ActivityAlertViews (Full Immersione, sblocco, TransferBanner)
   UI/Shelf/       ShelfView (+ ShelfTile, ShelfDropDelegate)
   UI/Widgets/     CardBackdrop, PlayerCardView, ClockCardView, DesktopWidgetView, LockScreenView
   UI/Calendar/    CalendarTabView (+ CalendarEventRow, JoinButton), NextEventBadge
-  UI/Timer/       TimerRing (+ TimerCountdownText), TimerTabView, CompactTimerView
-  UI/Settings/    SettingsView
-  UI/             … PrivacyIndicatorView, TrackInfoView (+ MarqueeText)
+  UI/Timer/       TimerRing (+ TimerCountdownText), TimerTabView (+ TimerRingView, CapsuleActionButton),
+                  StopwatchViews (quadrante, righe), CompactTimerView (LiveActivity, ali, TransferRing)
+  UI/Settings/    SettingsView (barra laterale, pagine, righe, permessi)
+  UI/             … PrivacyIndicatorView, TrackInfoView (+ MarqueeText), TransportControls (+ GlassDiscButtonStyle)
 Tests/HaloTests/  Swift Testing: parsing, timeline, geometria, layout, forma, palette, HUD, avvisi,
-                  batteria, cuffie, LRC, meteo, notifiche, gesti, calendario, timer
+                  batteria, cuffie, LRC e sincronia, meteo, notifiche, gesti, calendario, timer,
+                  cronometro, Full Immersione, download
+scripts/icon/render-icon.py           disegna Support/AppIcon.png (NumPy + Pillow; il PNG è versionato)
 ```
 
 ## Flusso dati Now Playing
@@ -298,9 +352,19 @@ Tests/HaloTests/  Swift Testing: parsing, timeline, geometria, layout, forma, pa
    palette off-main, risolve l'icona dell'app sorgente.
 4. Il tempo trascorso non viene mai "pollato": `PlaybackTimeline` = (elapsed, timestamp, rate)
    ed è valutato solo quando serve disegnare.
-5. Comandi: `send 2` (play/pausa), `send 4/5` (avanti/indietro), `seek <µs>`; eseguiti in ordine
-   da `AdapterCommandRunner`, con aggiornamento ottimistico dell'interfaccia.
-6. Uscita del processo: exit ≠ 0 → adapter "non disponibile"; altrimenti riavvio con backoff
+5. Comandi: *play* e *pausa* espliciti (0/1, mai l'inverti 2, che con due clic ravvicinati si
+   annullava), avanti/indietro (4/5), seek. Partono da `DirectMediaRemote`
+   (`MRMediaRemoteSendCommand` / `MRMediaRemoteSetElapsedTime` risolti con `dlsym`, nel processo
+   di Halo, istantanei). Ogni play/pausa diretto va confermato dallo stream entro 0,9 s; senza
+   conferma `AdapterCommandRunner` lo reinvia (`send 0/1`, idempotenti: un doppione tardivo non
+   fa danni) e da lì in poi tutti i comandi passano dall'adapter. I salti di brano vanno diretti
+   solo dopo una conferma (non si possono verificare: "indietro" può solo riavviare il brano).
+   L'interfaccia cambia subito e lo stato ottimistico vince per 2,5 s sugli aggiornamenti dello
+   stream che contraddicono il comando (arrivati prima che il player lo eseguisse).
+6. Quando un diff porta solo il cambio di play/pausa, `NowPlayingStreamDecoder` riancora la
+   posizione nota all'istante del cambio invece di riusare la coppia elapsed/timestamp vecchia
+   (una ripresa saltava avanti di tutta la pausa).
+7. Uscita del processo: exit ≠ 0 → adapter "non disponibile"; altrimenti riavvio con backoff
    (max 3 tentativi).
 
 ## Estetica
