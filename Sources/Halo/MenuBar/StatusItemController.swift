@@ -1,12 +1,13 @@
 import AppKit
 
-/// The menu bar item: status, feature toggles, "Avvia al login", "Esci".
+/// The menu bar item: what is playing, the timer, Settings, missing permissions, Quit.
+/// Feature switches live in the Settings window.
 @MainActor
 final class StatusItemController: NSObject, NSMenuDelegate {
     private let statusItem: NSStatusItem
     private let features: Features
+    private let settings: SettingsWindowController
     private let statusLine = NSMenuItem()
-    private var toggles: [ToggleMenuItem] = []
     private var hudPermissionItem: NSMenuItem?
     private var notificationsPermissionItem: NSMenuItem?
     private var timerPauseItem: NSMenuItem?
@@ -15,6 +16,7 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     init(features: Features) {
         self.statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         self.features = features
+        self.settings = SettingsWindowController(features: features)
         super.init()
 
         if let button = statusItem.button {
@@ -39,109 +41,27 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         menu.addItem(.separator())
 
         menu.addItem(timerMenuItem())
-        menu.addItem(.separator())
+        let settings = self.settings
+        menu.addItem(ActionMenuItem(title: "Impostazioni…", keyEquivalent: ",") {
+            settings.show()
+        })
 
         let hud = features.hud
-        menu.addItem(toggle("HUD luminosità e volume nella notch", isOn: { hud.isEnabled }) { on in
-            hud.setEnabled(on)
-        })
-        let permission = ActionMenuItem(title: "Concedi Accessibilità per l'HUD…") {
+        let accessibility = ActionMenuItem(title: "Concedi Accessibilità per l'HUD…") {
             hud.requestPermission()
         }
-        hudPermissionItem = permission
-        menu.addItem(permission)
-
-        let lyrics = features.lyrics
-        menu.addItem(toggle("Testi sincronizzati", isOn: { Preferences.lyricsEnabled }) { on in
-            Preferences.lyricsEnabled = on
-            if on { lyrics.start() } else { lyrics.stop() }
-        })
-
-        let weather = features.weather
-        menu.addItem(toggle("Meteo", isOn: { weather.isEnabled }) { on in
-            weather.setEnabled(on)
-        })
-
-        let shelf = features.shelf
-        menu.addItem(toggle("Scaffale file", isOn: { shelf.isEnabled }) { on in
-            shelf.setEnabled(on)
-        })
-
-        let calendar = features.calendar
-        menu.addItem(toggle("Calendario", isOn: { calendar.isEnabled }) { on in
-            calendar.setEnabled(on)
-        })
-
-        let screenshots = features.screenshots
-        menu.addItem(toggle("Anteprima screenshot", isOn: { screenshots.isEnabled }) { on in
-            screenshots.setEnabled(on)
-        })
-
-        let privacy = features.privacy
-        menu.addItem(toggle("Microfono e fotocamera in uso", isOn: { privacy.isEnabled }) { on in
-            privacy.setEnabled(on)
-        })
-
-        let keyboard = features.keyboard
-        menu.addItem(toggle("Lingua tastiera e Bloc Maiusc", isOn: { keyboard.isEnabled }) { on in
-            keyboard.setEnabled(on)
-        })
-
-        let presentation = features.presentation
-        menu.addItem(toggle("Silenzia gli avvisi con app a tutto schermo", isOn: { presentation.isEnabled }) { on in
-            presentation.setEnabled(on)
-        })
-
-        let energy = features.energy
-        menu.addItem(toggle("Alleggerisci in risparmio energetico", isOn: { energy.adapts }) { on in
-            energy.setAdapts(on)
-        })
+        hudPermissionItem = accessibility
+        menu.addItem(accessibility)
 
         let notifications = features.notifications
-        menu.addItem(toggle("Notifiche nella notch", isOn: { notifications.isEnabled }) { on in
-            notifications.setEnabled(on)
-        })
         let fullDiskAccess = ActionMenuItem(title: "Concedi Accesso completo al disco…") {
             notifications.openFullDiskAccessSettings()
         }
         notificationsPermissionItem = fullDiskAccess
         menu.addItem(fullDiskAccess)
 
-        let lockScreen = features.lockScreen
-        menu.addItem(toggle("Musica sulla schermata di blocco", isOn: { lockScreen.isEnabled }) { on in
-            lockScreen.setEnabled(on)
-        })
-
-        let desktopWidget = features.desktopWidget
-        menu.addItem(toggle("Widget sul desktop", isOn: { desktopWidget.isEnabled }) { on in
-            desktopWidget.setEnabled(on)
-        })
-
-        let power = features.power
-        menu.addItem(toggle("Avvisi di ricarica e batteria", isOn: { Preferences.chargingAlertsEnabled }) { on in
-            Preferences.chargingAlertsEnabled = on
-            if on { power.start() } else { power.stop() }
-        })
-
-        let audioDevices = features.audioDevices
-        menu.addItem(toggle("Avvisi AirPods e cuffie", isOn: { Preferences.headphoneAlertsEnabled }) { on in
-            Preferences.headphoneAlertsEnabled = on
-            if on { audioDevices.start() } else { audioDevices.stop() }
-        })
-
-        let islands = features.islands
-        menu.addItem(toggle("Su tutti i display", isOn: { Preferences.showsOnAllDisplays }) { on in
-            Preferences.showsOnAllDisplays = on
-            islands.rebuild()
-        })
-
         menu.addItem(.separator())
-        let loginItem = features.loginItem
-        menu.addItem(toggle("Avvia al login", isOn: { loginItem.isEnabled }) { [weak self] on in
-            self?.setLaunchAtLogin(on)
-        })
-        menu.addItem(.separator())
-        menu.addItem(ActionMenuItem(title: "Esci", keyEquivalent: "q") {
+        menu.addItem(ActionMenuItem(title: "Esci da Halo", keyEquivalent: "q") {
             NSApp.terminate(nil)
         })
         return menu
@@ -169,12 +89,6 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         return item
     }
 
-    private func toggle(_ title: String, isOn: @escaping () -> Bool, setOn: @escaping (Bool) -> Void) -> ToggleMenuItem {
-        let item = ToggleMenuItem(title: title, isOn: isOn, setOn: setOn)
-        toggles.append(item)
-        return item
-    }
-
     // MARK: NSMenuDelegate
 
     func menuNeedsUpdate(_ menu: NSMenu) {
@@ -187,32 +101,6 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         timerPauseItem?.isEnabled = timer != nil
         timerPauseItem?.title = timer?.isRunning == false ? "Riprendi" : "Pausa"
         timerStopItem?.isEnabled = timer != nil
-        for item in toggles {
-            item.refresh()
-        }
-    }
-
-    // MARK: Actions
-
-    private func setLaunchAtLogin(_ enable: Bool) {
-        let loginItem = features.loginItem
-        do {
-            try loginItem.setEnabled(enable)
-            if enable && loginItem.requiresApproval {
-                loginItem.openSystemSettings()
-            }
-        } catch {
-            Log.app.error("login item update failed: \(error.localizedDescription, privacy: .public)")
-            let alert = NSAlert()
-            alert.messageText = enable ? "Impossibile attivare l'avvio al login" : "Impossibile disattivare l'avvio al login"
-            alert.informativeText = error.localizedDescription
-            alert.addButton(withTitle: "OK")
-            alert.addButton(withTitle: "Apri Impostazioni")
-            NSApp.activate()
-            if alert.runModal() == .alertSecondButtonReturn {
-                loginItem.openSystemSettings()
-            }
-        }
     }
 
     // MARK: Status

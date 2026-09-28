@@ -1,3 +1,4 @@
+import AppKit
 import ServiceManagement
 
 /// "Avvia al login" backed by `SMAppService.mainApp` (registers Halo.app itself as a
@@ -19,6 +20,28 @@ struct LoginItemController {
             try service.register()
         } else {
             try service.unregister()
+        }
+    }
+
+    /// Applies the switch; opens Login Items when macOS wants approval, and explains a
+    /// failure instead of failing silently.
+    func setEnabledReportingErrors(_ enable: Bool) {
+        do {
+            try setEnabled(enable)
+            if enable && requiresApproval {
+                openSystemSettings()
+            }
+        } catch {
+            Log.app.error("login item update failed: \(error.localizedDescription, privacy: .public)")
+            let alert = NSAlert()
+            alert.messageText = enable ? "Impossibile attivare l'avvio al login" : "Impossibile disattivare l'avvio al login"
+            alert.informativeText = error.localizedDescription
+            alert.addButton(withTitle: "OK")
+            alert.addButton(withTitle: "Apri Impostazioni")
+            NSApp.activate()
+            if alert.runModal() == .alertSecondButtonReturn {
+                openSystemSettings()
+            }
         }
     }
 
