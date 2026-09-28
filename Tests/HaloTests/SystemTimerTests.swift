@@ -64,6 +64,29 @@ struct SystemTimerStateTests {
         #expect(state.current == nil)
     }
 
+    @Test func aPauseFromHaloOutlivesTheLogsClear() {
+        var state = SystemTimerState()
+        _ = state.apply(.running(id: "A", end: now.addingTimeInterval(300)), now: now)
+        state.pause(now: now.addingTimeInterval(100))
+        #expect(state.current?.pausedRemaining == 200)
+
+        _ = state.apply(.cleared, now: now.addingTimeInterval(100))
+        #expect(state.current?.pausedRemaining == 200)
+        #expect(state.current?.focusTimer == FocusTimer(mode: .countdown, duration: 300, endDate: nil, pausedRemaining: 200))
+
+        let resumed = now.addingTimeInterval(160)
+        _ = state.apply(.running(id: "A", end: resumed.addingTimeInterval(200)), now: resumed)
+        #expect(state.current == SystemTimer(id: "A", end: resumed.addingTimeInterval(200), total: 300))
+    }
+
+    @Test func clearingForgetsAPausedTimer() {
+        var state = SystemTimerState()
+        _ = state.apply(.running(id: "A", end: now.addingTimeInterval(300)), now: now)
+        state.pause(now: now)
+        state.clear()
+        #expect(state.current == nil)
+    }
+
     @Test func becomesACountdown() {
         let timer = SystemTimer(id: "A", end: now.addingTimeInterval(60), total: 300)
         #expect(timer.focusTimer == FocusTimer(mode: .countdown, duration: 300, endDate: now.addingTimeInterval(60), pausedRemaining: nil))
