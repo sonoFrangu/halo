@@ -74,6 +74,7 @@ final class IslandController {
         let shelf = services.shelf
         let store = shelf.store
         let calendar = services.calendar
+        let screenshots = services.screenshots
         return IslandActions(
             player: PlayerActions(
                 togglePlayPause: { [weak nowPlaying] in nowPlaying?.togglePlayPause() },
@@ -108,6 +109,12 @@ final class IslandController {
             calendar: CalendarActions(
                 open: { [weak calendar] event in calendar?.open(event) },
                 openSettings: { [weak calendar] in calendar?.openPrivacySettings() }
+            ),
+            screenshot: ScreenshotActions(
+                open: { [weak screenshots] url in screenshots?.open(url) },
+                copy: { [weak screenshots] url in screenshots?.copy(url) },
+                keep: { [weak screenshots] url in screenshots?.keepOnShelf(url) },
+                trash: { [weak screenshots] url in screenshots?.moveToTrash(url) }
             ),
             selectTab: { [weak viewModel] tab in
                 Haptics.perform(.step)

@@ -10,6 +10,7 @@ struct IslandServices {
     let weather: WeatherController
     let shelf: ShelfController
     let calendar: CalendarController
+    let screenshots: ScreenshotController
 
     /// What happens when an alert is clicked: a notification opens its app, a meeting
     /// reminder joins the call (or opens Calendar); any alert is then dismissed.
@@ -21,6 +22,8 @@ struct IslandServices {
             }
         case .calendar(let reminder):
             calendar.open(reminder.event)
+        case .screenshot(let capture):
+            screenshots.open(capture.url)
         case .hud, .power, .audioDevice:
             break
         }

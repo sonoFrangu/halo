@@ -20,6 +20,7 @@ enum Preferences {
         static let haptics = "hapticsEnabled"
         static let hoverDelay = "hoverDelay"
         static let calendar = "calendarEnabled"
+        static let screenshots = "screenshotsEnabled"
     }
 
     private static func flag(_ key: String, default value: Bool) -> Bool {
@@ -96,6 +97,12 @@ enum Preferences {
     static var calendarEnabled: Bool {
         get { flag(Key.calendar, default: true) }
         set { defaults.set(newValue, forKey: Key.calendar) }
+    }
+
+    /// New screenshots appear in the island.
+    static var screenshotsEnabled: Bool {
+        get { flag(Key.screenshots, default: true) }
+        set { defaults.set(newValue, forKey: Key.screenshots) }
     }
 
     /// Swipes over the island skip tracks and change the volume.

@@ -67,6 +67,11 @@ final class StatusItemController: NSObject, NSMenuDelegate {
             calendar.setEnabled(on)
         })
 
+        let screenshots = features.screenshots
+        menu.addItem(toggle("Anteprima screenshot", isOn: { screenshots.isEnabled }) { on in
+            screenshots.setEnabled(on)
+        })
+
         let notifications = features.notifications
         menu.addItem(toggle("Notifiche nella notch", isOn: { notifications.isEnabled }) { on in
             notifications.setEnabled(on)

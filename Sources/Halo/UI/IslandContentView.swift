@@ -59,10 +59,9 @@ struct IslandContentView: View {
 
             AlertContentView(
                 island: island,
-                hud: models.hud,
+                models: models,
                 tint: hasMedia ? tint : .white,
-                hudActions: actions.hud,
-                alertActions: actions.alerts,
+                actions: actions,
                 layout: layout
             )
         }
@@ -176,13 +175,15 @@ struct HeaderContentView: View {
 /// HUD, charging and banner alerts.
 struct AlertContentView: View {
     let island: IslandViewModel
-    let hud: HUDModel
+    let models: IslandModels
     let tint: Color
-    let hudActions: HUDActions
-    let alertActions: AlertActions
+    let actions: IslandActions
     let layout: IslandLayout
 
     var body: some View {
+        let hud = models.hud
+        let hudActions = actions.hud
+        let alertActions = actions.alerts
         let isAlert = island.state == .alert
         let kind = island.alert?.kind
         let shown = island.displayedAlert
@@ -234,6 +235,12 @@ struct AlertContentView: View {
                     .reveal(isAlert && kind == .calendar, order: 0)
             }
 
+            if let screenshot = shown?.screenshot {
+                ScreenshotBanner(alert: screenshot, thumbnails: models.thumbnails, actions: actions.screenshot)
+                    .place(in: layout.bannerFrame)
+                    .reveal(isAlert && kind == .screenshot, order: 0)
+            }
+
             if let notification = shown?.notification {
                 NotificationBanner(alert: notification)
                     .contentShape(Rectangle())
@@ -264,6 +271,11 @@ extension IslandAlert {
 
     var calendar: CalendarAlert? {
         if case .calendar(let alert) = self { return alert }
+        return nil
+    }
+
+    var screenshot: ScreenshotAlert? {
+        if case .screenshot(let alert) = self { return alert }
         return nil
     }
 }

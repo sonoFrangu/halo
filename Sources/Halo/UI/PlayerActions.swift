@@ -51,6 +51,7 @@ struct IslandActions {
     var alerts: AlertActions
     var shelf: ShelfActions
     var calendar: CalendarActions
+    var screenshot: ScreenshotActions
     var selectTab: (ExpandedTab) -> Void
 }
 

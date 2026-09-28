@@ -16,6 +16,7 @@ enum IslandAlert: Sendable, Equatable {
     case audioDevice(AudioDeviceAlert)
     case notification(NotificationAlert)
     case calendar(CalendarAlert)
+    case screenshot(ScreenshotAlert)
 
     enum Kind: Sendable, Hashable {
         case hud
@@ -23,6 +24,7 @@ enum IslandAlert: Sendable, Equatable {
         case audioDevice
         case notification
         case calendar
+        case screenshot
     }
 
     var kind: Kind {
@@ -32,13 +34,14 @@ enum IslandAlert: Sendable, Equatable {
         case .audioDevice: .audioDevice
         case .notification: .notification
         case .calendar: .calendar
+        case .screenshot: .screenshot
         }
     }
 
     var style: AlertStyle {
         switch self {
         case .hud, .power: .wings
-        case .audioDevice, .notification, .calendar: .banner
+        case .audioDevice, .notification, .calendar, .screenshot: .banner
         }
     }
 
@@ -50,6 +53,7 @@ enum IslandAlert: Sendable, Equatable {
         case .audioDevice: .milliseconds(4500)
         case .notification: .milliseconds(5500)
         case .calendar: .seconds(12)
+        case .screenshot: .seconds(6)
         }
     }
 }
@@ -92,4 +96,9 @@ struct NotificationAlert: Sendable, Equatable {
 /// A meeting is about to start.
 struct CalendarAlert: Sendable, Equatable {
     var event: CalendarEvent
+}
+
+/// A screenshot or screen recording was just saved.
+struct ScreenshotAlert: Sendable, Equatable {
+    var url: URL
 }
