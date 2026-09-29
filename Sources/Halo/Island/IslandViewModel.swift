@@ -53,6 +53,9 @@ final class IslandViewModel {
     @ObservationIgnored var onExpandedChange: ((Bool) -> Void)?
 
     @ObservationIgnored private var isPointerInside = false
+    /// The pointer is on the menu bar under the compact wings: the island tucks back into
+    /// the notch so the menu items there show and take the click.
+    @ObservationIgnored private var isPointerOnWings = false
     /// The pointer came in over the right wing while it showed a live activity: the island
     /// opens on the Timer tab, where the timer can be paused or stopped.
     @ObservationIgnored private var entersOverActivity = false
@@ -102,6 +105,11 @@ final class IslandViewModel {
                 entersOverActivity = hasLiveActivity && location.x > geometry.notchCenterX + geometry.notchSize.width / 2
             }
             scheduleHover(inside)
+        }
+        let onWings = !inside && wingsZone.contains(location)
+        if onWings != isPointerOnWings {
+            isPointerOnWings = onWings
+            resolveState()
         }
         publish()
     }
@@ -226,10 +234,29 @@ final class IslandViewModel {
 
     // MARK: State
 
+    /// Where hovering opens the island. Closed, that is the notch alone, plus the right wing
+    /// while it shows a live activity: the wings cover menu bar items beside the notch, and
+    /// reaching for those must not open the island over them.
     private var hotZone: CGRect {
-        let spec = layout.spec(for: state, context: context)
+        let isOpen = state == .expanded || state == .alert
+        let spec = layout.spec(for: isOpen ? state : .idle, context: context)
+        var zone = geometry.islandRect(width: spec.width, height: spec.height)
+        if !isOpen && hasLiveActivity {
+            zone = zone.union(CGRect(
+                x: geometry.notchCenterX + geometry.notchSize.width / 2,
+                y: geometry.screenFrame.maxY - geometry.notchSize.height,
+                width: layout.compactWingWidth,
+                height: geometry.notchSize.height
+            ))
+        }
+        return zone.insetBy(dx: -(spec.earRadius + Self.hoverTolerance), dy: -Self.hoverTolerance)
+    }
+
+    /// The menu bar strip the compact island covers.
+    private var wingsZone: CGRect {
+        let spec = layout.spec(for: .compact, context: context)
         let body = geometry.islandRect(width: spec.width, height: spec.height)
-        return body.insetBy(dx: -(spec.earRadius + Self.hoverTolerance), dy: -Self.hoverTolerance)
+        return body.insetBy(dx: -spec.earRadius, dy: -Self.hoverTolerance)
     }
 
     private var reduceMotion: Bool {
@@ -269,7 +296,7 @@ final class IslandViewModel {
             target = .alert
         } else if isHovering {
             target = .expanded
-        } else if showsActivity || hasLiveActivity || isDeviceInUse {
+        } else if (showsActivity || hasLiveActivity || isDeviceInUse) && !isPointerOnWings {
             target = .compact
         } else {
             target = .idle

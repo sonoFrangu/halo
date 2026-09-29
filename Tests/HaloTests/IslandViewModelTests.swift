@@ -31,4 +31,19 @@ struct IslandViewModelTests {
         island.liveActivityChanged(active: true)
         #expect(island.context.tab == .player)
     }
+
+    @Test func compactTucksIntoNotchWhilePointerIsOnAWing() {
+        let island = island()
+        island.playbackChanged(isPlaying: true, hasMedia: true)
+        #expect(island.state == .compact)
+
+        // The menu item right before the notch, under the artwork wing.
+        let geometry = island.geometry
+        let menuItem = CGPoint(x: geometry.notchCenterX - geometry.notchSize.width / 2 - 20, y: 950)
+        island.pointerMoved(to: menuItem)
+        #expect(island.state == .idle)
+
+        island.pointerMoved(to: CGPoint(x: menuItem.x, y: 700))
+        #expect(island.state == .compact)
+    }
 }

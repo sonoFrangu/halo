@@ -89,6 +89,10 @@ nell'intestazione) > file trascinati sulla notch > avviso > hover > riproduzione
 - L'hover è geometrico (rettangolo dell'isola in coordinate schermo) da monitor globale/locale
   `mouseMoved`/`leftMouseDragged` e da una tracking area `.activeAlways`. I monitor di eventi
   mouse non richiedono permessi.
+- Da chiusa l'isola si apre solo dalla notch (più l'ala destra con un'attività live): le ali
+  `compact` coprono le voci della barra dei menu accanto alla notch (es. "Aiuto"). Con il
+  puntatore sopra un'ala l'isola rientra nella notch finché non esce, così la voce sotto si
+  vede e riceve il clic.
 - `acceptsFirstMouse = true`: i pulsanti funzionano al primo click senza attivare l'app.
 
 ## Più display
