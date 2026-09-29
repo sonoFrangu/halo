@@ -17,7 +17,7 @@ Architettura e scelte in [`docs/design.md`](docs/design.md).
 | **HUD luminosità e volume** | ali dell'isola; in linea nell'intestazione se il player è aperto | barra trascinabile, passi fini con ⌥⇧ |
 | **Ricarica e batteria** | ali dell'isola | collegato/scollegato, avvisi al 20/10/5 % |
 | **AirPods e cuffie** | banner sotto la notch | batteria di auricolari e custodia, volume |
-| **Notifiche** | banner sotto la notch | stile Dynamic Island con miniatura delle foto; clic = apre l'app; niente notifiche dei siti |
+| **Notifiche** | banner sotto la notch | stile Dynamic Island con miniatura delle foto; clic = apre l'app; niente notifiche dei siti; per ogni app: mostra, solo nome, nascondi, passa la Full Immersione |
 | **Meteo** | intestazione dell'isola espansa, widget | [Open-Meteo](https://open-meteo.com) |
 | **Scaffale file** | scheda dell'isola espansa | trascina file sulla notch; trascinali fuori per usarli |
 | **Appunti** | scheda dell'isola espansa | ultimi 20 testi e immagini copiati; clic per ricopiarli, trascinali fuori; solo in memoria, senza password |
@@ -198,6 +198,10 @@ Sistema; lo stato si aggiorna da solo quando torni su Halo.
   Dynamic Island: icona, mittente (con il gruppo accanto), testo su 2 righe e la miniatura se è
   una foto. Clic sul banner = apre l'app. Più di 3 notifiche insieme (es. al risveglio) mostrano
   solo l'ultima. Le notifiche dei siti web non compaiono mai.
+- **Notifiche per app** (Impostazioni › Avvisi): ogni app installata che può mandare notifiche
+  ha un menu *Mostra* / *Solo app* (icona e nome, senza testo né foto) / *Non mostrare*; con
+  "Silenzia durante una Full Immersione" acceso, la luna accanto fa passare quell'app anche
+  durante una Full Immersione. Le app nuove partono da *Mostra*.
 - Gli avvisi si mettono in coda; l'HUD ha la precedenza; un banner resta finché il puntatore ci
   è sopra o il player è aperto.
 

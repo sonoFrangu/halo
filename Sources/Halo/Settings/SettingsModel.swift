@@ -1,3 +1,4 @@
+import AppKit
 import ApplicationServices
 import CoreLocation
 import Observation
@@ -180,6 +181,7 @@ struct SettingsItem: Identifiable {
         case hoverDelay
         case lyricsLead
         case timerApp
+        case notificationApps
     }
 
     let id: String
@@ -192,6 +194,14 @@ struct SettingsItem: Identifiable {
     static let hoverDelay = SettingsItem(id: "hoverDelay", kind: .hoverDelay)
     static let lyricsLead = SettingsItem(id: "lyricsLead", kind: .lyricsLead)
     static let timerApp = SettingsItem(id: "timerApp", kind: .timerApp)
+    static let notificationApps = SettingsItem(id: "notificationApps", kind: .notificationApps)
+}
+
+/// An app in the per-app notification list.
+struct NotificationAppEntry: Identifiable {
+    let id: String
+    let name: String
+    let icon: NSImage
 }
 
 @MainActor
@@ -210,6 +220,8 @@ struct SettingsGroup: Identifiable {
 final class SettingsModel {
     var pane: SettingsPane = .general
     private(set) var revision = 0
+    /// Installed apps registered with Notification Center, by name; read on refresh.
+    private(set) var notificationApps: [NotificationAppEntry] = []
 
     @ObservationIgnored let groups: [SettingsPane: [SettingsGroup]]
     @ObservationIgnored private let features: Features
@@ -229,6 +241,7 @@ final class SettingsModel {
             }
         }
         togglesByID = toggles
+        loadNotificationApps()
     }
 
     // MARK: Switches
@@ -276,6 +289,38 @@ final class SettingsModel {
         revision += 1
     }
 
+    func notificationMode(for bundleIdentifier: String) -> NotificationAppMode {
+        _ = revision
+        return Preferences.notificationMode(for: bundleIdentifier)
+    }
+
+    func setNotificationMode(_ mode: NotificationAppMode, for bundleIdentifier: String) {
+        Preferences.setNotificationMode(mode, for: bundleIdentifier)
+        revision += 1
+    }
+
+    func bypassesFocus(_ bundleIdentifier: String) -> Bool {
+        _ = revision
+        return Preferences.bypassesFocus(bundleIdentifier)
+    }
+
+    func setBypassesFocus(_ bypasses: Bool, for bundleIdentifier: String) {
+        Preferences.setBypassesFocus(bypasses, for: bundleIdentifier)
+        revision += 1
+    }
+
+    /// Only identifiers of installed apps: the table also lists system services.
+    private func loadNotificationApps() {
+        let own = Bundle.main.bundleIdentifier
+        notificationApps = features.notifications.appIdentifiers()
+            .filter { $0 != own && !NotificationMirror.isFromWebsite($0) }
+            .compactMap { identifier in
+                guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: identifier) else { return nil }
+                return NotificationAppEntry(id: identifier, name: AppName.of(identifier), icon: NSWorkspace.shared.icon(forFile: url.path))
+            }
+            .sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+    }
+
     /// Seconds lyrics are shown ahead of their timestamps.
     var lyricsLead: Double {
         _ = revision
@@ -291,6 +336,7 @@ final class SettingsModel {
     func refresh() {
         features.notifications.refreshAccess()
         features.focus.refreshAccess()
+        loadNotificationApps()
         revision += 1
     }
 
@@ -569,6 +615,12 @@ final class SettingsModel {
                     setOn: { focus.setEnabled($0) }
                 )),
             ]),
+            SettingsGroup(
+                id: "notificationApps",
+                title: "Notifiche per app",
+                footer: "Solo app: nella notch compaiono icona e nome, senza il testo. La luna fa passare l'app anche mentre una Full Immersione silenzia le notifiche.",
+                items: [.notificationApps]
+            ),
             SettingsGroup(id: "system", title: "Sistema", items: [
                 .toggle(SettingsToggle(
                     id: "power", title: "Ricarica e batteria",

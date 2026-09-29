@@ -126,6 +126,8 @@ struct SettingsItemRow: View {
             LyricsLeadRow(model: model)
         case .timerApp:
             TimerAppRow(model: model)
+        case .notificationApps:
+            NotificationAppsRow(model: model)
         }
     }
 }
@@ -464,5 +466,57 @@ struct SettingsIcon: View {
             .frame(width: size, height: size)
             .background(RoundedRectangle(cornerRadius: size * 0.25, style: .continuous).fill(tint.gradient))
             .accessibilityHidden(true)
+    }
+}
+
+/// Every app that can send notifications: how its notifications show in the notch and
+/// whether they pass a Focus.
+struct NotificationAppsRow: View {
+    let model: SettingsModel
+
+    var body: some View {
+        let isAvailable = model.isOn(id: "notifications")
+        let showsFocus = model.isOn(id: "notificationsFollowFocus")
+        VStack(alignment: .leading, spacing: 10) {
+            if model.state(of: .fullDiskAccess) == .missing {
+                MissingPermissionNote(permission: .fullDiskAccess) { model.grant(.fullDiskAccess) }
+            } else if model.notificationApps.isEmpty {
+                Text("Nessuna app ha ancora mandato notifiche.")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+            }
+            ForEach(model.notificationApps) { app in
+                HStack(spacing: 10) {
+                    Image(nsImage: app.icon)
+                        .resizable()
+                        .frame(width: 22, height: 22)
+                    Text(app.name)
+                    Spacer(minLength: 8)
+                    if showsFocus {
+                        Toggle(isOn: Binding(
+                            get: { model.bypassesFocus(app.id) },
+                            set: { model.setBypassesFocus($0, for: app.id) }
+                        )) {
+                            Image(systemName: "moon.fill")
+                        }
+                        .toggleStyle(.button)
+                        .help("Anche con Full Immersione")
+                    }
+                    Picker(app.name, selection: Binding(
+                        get: { model.notificationMode(for: app.id) },
+                        set: { model.setNotificationMode($0, for: app.id) }
+                    )) {
+                        Text("Mostra").tag(NotificationAppMode.show)
+                        Text("Solo app").tag(NotificationAppMode.appOnly)
+                        Text("Non mostrare").tag(NotificationAppMode.hidden)
+                    }
+                    .labelsHidden()
+                    .pickerStyle(.menu)
+                    .fixedSize()
+                }
+            }
+        }
+        .disabled(!isAvailable)
+        .opacity(isAvailable ? 1 : 0.5)
     }
 }
