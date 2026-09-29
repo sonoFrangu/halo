@@ -5,23 +5,21 @@ import AppKit
 @MainActor
 final class DesktopWidgetController {
     private let player: NowPlayingModel
-    private let lyrics: LyricsModel
     private let weather: WeatherModel
     private let actions: PlayerActions
     private let card = CardState()
     private var panel: CardPanel?
     private(set) var isEnabled = Preferences.desktopWidgetEnabled
 
-    /// Card plus the transparent margin for its shadow; tall enough for the lyrics.
+    /// Widget plus the transparent margin for its shadow.
     static let size = CGSize(
-        width: PlayerCardView.Metrics.desktop.width + 2 * DesktopWidgetView.shadowMargin,
-        height: 380
+        width: PlayerWidgetView.Metrics.desktop.width + 2 * DesktopWidgetView.shadowMargin,
+        height: PlayerWidgetView.Metrics.desktop.height + 2 * DesktopWidgetView.shadowMargin
     )
     private static let autosaveName = "HaloDesktopWidget"
 
-    init(player: NowPlayingModel, lyrics: LyricsModel, weather: WeatherModel, actions: PlayerActions) {
+    init(player: NowPlayingModel, weather: WeatherModel, actions: PlayerActions) {
         self.player = player
-        self.lyrics = lyrics
         self.weather = weather
         self.actions = actions
     }
@@ -61,7 +59,7 @@ final class DesktopWidgetController {
             behavior: [.canJoinAllSpaces, .stationary, .ignoresCycle]
         )
         panel.contentView = CardHostingView(
-            rootView: DesktopWidgetView(player: player, lyrics: lyrics, weather: weather, card: card, actions: actions)
+            rootView: DesktopWidgetView(player: player, weather: weather, card: card, actions: actions)
         )
         if panel.setFrameUsingName(Self.autosaveName) {
             // Keep the saved position (top edge) but this version's size.

@@ -22,7 +22,7 @@ final class LockScreenController {
     private(set) var isEnabled = Preferences.lockScreenEnabled
 
     static let size = CGSize(
-        width: PlayerCardView.Metrics.lockScreen.width + 2 * LockScreenView.shadowMargin,
+        width: PlayerWidgetView.Metrics.lockScreen.width + 2 * LockScreenView.shadowMargin,
         height: 460
     )
     /// Vertical position of the card's top, as a fraction of the screen height from the

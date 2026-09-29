@@ -13,7 +13,7 @@ struct LockScreenView: View {
     var body: some View {
         let isShown = card.isVisible && player.hasMedia
 
-        PlayerCardView(player: player, lyrics: lyrics, card: card, actions: actions, metrics: .lockScreen)
+        PlayerWidgetView(player: player, lyrics: lyrics, card: card, actions: actions, metrics: .lockScreen)
             .shadow(color: .black.opacity(0.35), radius: 30, x: 0, y: 16)
             .opacity(isShown ? 1 : 0)
             .scaleEffect(isShown || reduceMotion ? 1 : 0.94, anchor: .top)

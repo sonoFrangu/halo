@@ -35,10 +35,10 @@ struct ClockCardView: View {
             }
             .animation(.easeInOut(duration: 0.4), value: context.date)
         }
-        .padding(22)
+        .padding(16)
         .frame(width: width)
         .background {
-            CardBackdrop(image: nil, palette: .neutral, cornerRadius: 30)
+            WidgetBackdrop(cornerRadius: 22)
         }
     }
 }

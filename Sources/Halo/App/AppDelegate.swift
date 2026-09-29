@@ -74,7 +74,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             notifications: notifications,
             desktopWidget: DesktopWidgetController(
                 player: nowPlaying.model,
-                lyrics: lyrics.model,
                 weather: weather.model,
                 actions: cardActions
             ),

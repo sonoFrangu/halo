@@ -4,17 +4,16 @@ import SwiftUI
 /// Drag it anywhere by its background; the controller remembers where.
 struct DesktopWidgetView: View {
     let player: NowPlayingModel
-    let lyrics: LyricsModel
     let weather: WeatherModel
     let card: CardState
     let actions: PlayerActions
 
     var body: some View {
-        let metrics = PlayerCardView.Metrics.desktop
+        let metrics = PlayerWidgetView.Metrics.desktop
 
         ZStack(alignment: .topLeading) {
             if player.hasMedia {
-                PlayerCardView(player: player, lyrics: lyrics, card: card, actions: actions, metrics: metrics)
+                PlayerWidgetView(player: player, lyrics: nil, card: card, actions: actions, metrics: metrics)
                     .transition(.opacity.combined(with: .scale(scale: 0.96, anchor: .top)))
             } else {
                 ClockCardView(weather: weather.report, width: metrics.width)
