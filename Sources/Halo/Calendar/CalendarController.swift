@@ -45,7 +45,9 @@ final class CalendarController {
     private(set) var isEnabled = Preferences.calendarEnabled
 
     @ObservationIgnored private let alerts: AlertCenter
-    @ObservationIgnored private let store = EKEventStore()
+    @ObservationIgnored private let store: EKEventStore
+    @ObservationIgnored private let reader: EventReader
+    @ObservationIgnored private var fetchTask: Task<Void, Never>?
     @ObservationIgnored private var observers: [(center: NotificationCenter, token: NSObjectProtocol)] = []
     @ObservationIgnored private var wakeTask: Task<Void, Never>?
     @ObservationIgnored private var events: [CalendarEvent] = []
@@ -56,6 +58,9 @@ final class CalendarController {
 
     init(alerts: AlertCenter) {
         self.alerts = alerts
+        let store = EKEventStore()
+        self.store = store
+        reader = EventReader(store: store)
     }
 
     func start() {
@@ -86,6 +91,8 @@ final class CalendarController {
         observers.removeAll()
         wakeTask?.cancel()
         wakeTask = nil
+        fetchTask?.cancel()
+        fetchTask = nil
         events = []
         model.update([], headline: nil)
         alerts.withdraw(.calendar)
@@ -132,17 +139,22 @@ final class CalendarController {
         refresh()
     }
 
+    /// Fetches off the main thread (EventKit's fetch is synchronous and can take seconds
+    /// right after wake), then applies the result; a newer refresh supersedes an older one.
     private func refresh() {
         guard isEnabled else { return }
+        fetchTask?.cancel()
+        let reader = reader
+        fetchTask = Task { [weak self] in
+            let events = await reader.events(around: Date())
+            guard !Task.isCancelled, let self, self.isEnabled, !self.observers.isEmpty else { return }
+            self.apply(events)
+        }
+    }
+
+    private func apply(_ events: [CalendarEvent]) {
         let now = Date()
-        let predicate = store.predicateForEvents(
-            withStart: now.addingTimeInterval(-12 * 3600),
-            end: now.addingTimeInterval(36 * 3600),
-            calendars: nil
-        )
-        events = store.events(matching: predicate)
-            .filter { !$0.isAllDay && $0.status != .canceled && !Self.isDeclined($0) }
-            .map { Self.event(from: $0) }
+        self.events = events
         model.update(
             CalendarSchedule.upcoming(events, now: now, limit: Self.listLimit),
             headline: CalendarSchedule.headline(events, now: now)
@@ -171,11 +183,11 @@ final class CalendarController {
 
     // MARK: EventKit
 
-    private static func isDeclined(_ event: EKEvent) -> Bool {
+    nonisolated fileprivate static func isDeclined(_ event: EKEvent) -> Bool {
         event.attendees?.first(where: \.isCurrentUser)?.participantStatus == .declined
     }
 
-    private static func event(from event: EKEvent) -> CalendarEvent {
+    nonisolated fileprivate static func event(from event: EKEvent) -> CalendarEvent {
         let title: String = event.title ?? ""
         return CalendarEvent(
             id: event.eventIdentifier ?? event.calendarItemIdentifier,
@@ -188,7 +200,7 @@ final class CalendarController {
         )
     }
 
-    private static func color(of calendar: EKCalendar?) -> RGBColor {
+    nonisolated private static func color(of calendar: EKCalendar?) -> RGBColor {
         guard
             let cgColor = calendar?.cgColor,
             let color = NSColor(cgColor: cgColor)?.usingColorSpace(.sRGB)
@@ -196,5 +208,34 @@ final class CalendarController {
             return RGBColor(red: 0.35, green: 0.6, blue: 1)
         }
         return RGBColor(red: color.redComponent, green: color.greenComponent, blue: color.blueComponent)
+    }
+}
+
+/// Runs EventKit fetches one at a time on a private queue.
+///
+/// `@unchecked Sendable`: the store is only used on `queue` once handed over here.
+private final class EventReader: @unchecked Sendable {
+    private let store: EKEventStore
+    private let queue = DispatchQueue(label: "io.github.sonofrangu.halo.calendar", qos: .utility)
+
+    init(store: EKEventStore) {
+        self.store = store
+    }
+
+    /// Timed events from 12 hours ago to 36 hours ahead, not cancelled nor declined.
+    func events(around now: Date) async -> [CalendarEvent] {
+        await withCheckedContinuation { continuation in
+            queue.async {
+                let predicate = self.store.predicateForEvents(
+                    withStart: now.addingTimeInterval(-12 * 3600),
+                    end: now.addingTimeInterval(36 * 3600),
+                    calendars: nil
+                )
+                let events = self.store.events(matching: predicate)
+                    .filter { !$0.isAllDay && $0.status != .canceled && !CalendarController.isDeclined($0) }
+                    .map { CalendarController.event(from: $0) }
+                continuation.resume(returning: events)
+            }
+        }
     }
 }

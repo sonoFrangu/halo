@@ -27,19 +27,26 @@ final class PrivacyIndicators {
         return nil
     }
 
-    @ObservationIgnored private var audioListeners: [AudioListener] = []
-    @ObservationIgnored private var cameraListeners: [CameraListener] = []
+    @ObservationIgnored private var watcher: DeviceUsageWatcher?
+    /// Tells a stopped watcher's late report from the current one's.
+    @ObservationIgnored private var generation = 0
 
     func start() {
-        guard isEnabled, audioListeners.isEmpty, cameraListeners.isEmpty else { return }
-        rewatch()
+        guard isEnabled, watcher == nil else { return }
+        generation += 1
+        let generation = generation
+        let watcher = DeviceUsageWatcher { [weak self] microphone, camera in
+            Task { @MainActor in
+                self?.apply(microphone: microphone, camera: camera, generation: generation)
+            }
+        }
+        watcher.start()
+        self.watcher = watcher
     }
 
     func stop() {
-        audioListeners.forEach { $0.remove() }
-        cameraListeners.forEach { $0.remove() }
-        audioListeners.removeAll()
-        cameraListeners.removeAll()
+        watcher?.stop()
+        watcher = nil
         isMicrophoneInUse = false
         isCameraInUse = false
     }
@@ -50,23 +57,63 @@ final class PrivacyIndicators {
         if enabled { start() } else { stop() }
     }
 
-    // MARK: Watching
+    private func apply(microphone: Bool, camera: Bool, generation: Int) {
+        guard watcher != nil, generation == self.generation else { return }
+        if microphone != isMicrophoneInUse { isMicrophoneInUse = microphone }
+        if camera != isCameraInUse { isCameraInUse = camera }
+    }
+}
+
+/// Watches the devices on a private serial queue. CoreAudio and above all CoreMediaIO
+/// calls can block for seconds (Continuity Camera devices appearing after wake, a DAL
+/// plug-in loading), so none of them runs on the main thread: a stalled main thread leaves
+/// the lock screen card on screen after unlocking and times out the media key tap.
+///
+/// `@unchecked Sendable`: every mutable property is touched only on `queue`.
+private final class DeviceUsageWatcher: @unchecked Sendable {
+    private let queue = DispatchQueue(label: "io.github.sonofrangu.halo.privacy", qos: .utility)
+    private let report: @Sendable (_ microphone: Bool, _ camera: Bool) -> Void
+    private var audioListeners: [AudioListener] = []
+    private var cameraListeners: [CameraListener] = []
+    private var last: (microphone: Bool, camera: Bool)?
+    private var isStopped = false
+
+    init(report: @escaping @Sendable (_ microphone: Bool, _ camera: Bool) -> Void) {
+        self.report = report
+    }
+
+    func start() {
+        queue.async { self.rewatch() }
+    }
+
+    func stop() {
+        queue.async {
+            self.isStopped = true
+            self.removeListeners()
+        }
+    }
+
+    private func removeListeners() {
+        audioListeners.forEach { $0.remove() }
+        cameraListeners.forEach { $0.remove() }
+        audioListeners.removeAll()
+        cameraListeners.removeAll()
+    }
 
     /// (Re)registers on the device lists and on every input device and camera.
     private func rewatch() {
-        audioListeners.forEach { $0.remove() }
-        cameraListeners.forEach { $0.remove() }
+        guard !isStopped else { return }
+        removeListeners()
+        let changed: @Sendable () -> Void = { [weak self] in self?.refresh() }
+        let devicesChanged: @Sendable () -> Void = { [weak self] in self?.rewatch() }
 
-        let changed: @MainActor @Sendable () -> Void = { [weak self] in self?.refresh() }
-        let devicesChanged: @MainActor @Sendable () -> Void = { [weak self] in self?.rewatch() }
-
-        var audio = [AudioListener(object: AudioObjectID(kAudioObjectSystemObject), selector: kAudioHardwarePropertyDevices, action: devicesChanged)]
+        var audio = [AudioListener(object: AudioObjectID(kAudioObjectSystemObject), selector: kAudioHardwarePropertyDevices, queue: queue, action: devicesChanged)]
         audio += Self.audioInputDevices().map {
-            AudioListener(object: $0, selector: kAudioDevicePropertyDeviceIsRunningSomewhere, action: changed)
+            AudioListener(object: $0, selector: kAudioDevicePropertyDeviceIsRunningSomewhere, queue: queue, action: changed)
         }
-        var cameras = [CameraListener(object: CMIOObjectID(kCMIOObjectSystemObject), selector: CMIOObjectPropertySelector(kCMIOHardwarePropertyDevices), action: devicesChanged)]
+        var cameras = [CameraListener(object: CMIOObjectID(kCMIOObjectSystemObject), selector: CMIOObjectPropertySelector(kCMIOHardwarePropertyDevices), queue: queue, action: devicesChanged)]
         cameras += Self.cameras().map {
-            CameraListener(object: $0, selector: CMIOObjectPropertySelector(kCMIODevicePropertyDeviceIsRunningSomewhere), action: changed)
+            CameraListener(object: $0, selector: CMIOObjectPropertySelector(kCMIODevicePropertyDeviceIsRunningSomewhere), queue: queue, action: changed)
         }
         audioListeners = audio.compactMap { $0 }
         cameraListeners = cameras.compactMap { $0 }
@@ -74,10 +121,12 @@ final class PrivacyIndicators {
     }
 
     private func refresh() {
+        guard !isStopped else { return }
         let microphone = Self.audioInputDevices().contains { Self.isRunning(audioDevice: $0) }
         let camera = Self.cameras().contains { Self.isRunning(camera: $0) }
-        if microphone != isMicrophoneInUse { isMicrophoneInUse = microphone }
-        if camera != isCameraInUse { isCameraInUse = camera }
+        guard last?.microphone != microphone || last?.camera != camera else { return }
+        last = (microphone, camera)
+        report(microphone, camera)
     }
 
     // MARK: CoreAudio
@@ -138,52 +187,48 @@ final class PrivacyIndicators {
     }
 }
 
-/// A CoreAudio property listener that calls `action` on the main actor.
-@MainActor
+/// A CoreAudio property listener that calls `action` on `queue`.
 private struct AudioListener {
     let object: AudioObjectID
     let selector: AudioObjectPropertySelector
     let block: AudioObjectPropertyListenerBlock
 
-    init?(object: AudioObjectID, selector: AudioObjectPropertySelector, action: @escaping @MainActor @Sendable () -> Void) {
-        let block: AudioObjectPropertyListenerBlock = { _, _ in
-            MainActor.assumeIsolated {
-                action()
-            }
-        }
+    let queue: DispatchQueue
+
+    init?(object: AudioObjectID, selector: AudioObjectPropertySelector, queue: DispatchQueue, action: @escaping @Sendable () -> Void) {
+        let block: AudioObjectPropertyListenerBlock = { _, _ in action() }
         var address = AudioObjectPropertyAddress(mSelector: selector, mScope: kAudioObjectPropertyScopeGlobal, mElement: kAudioObjectPropertyElementMain)
-        guard AudioObjectAddPropertyListenerBlock(object, &address, DispatchQueue.main, block) == noErr else { return nil }
+        guard AudioObjectAddPropertyListenerBlock(object, &address, queue, block) == noErr else { return nil }
         self.object = object
+        self.queue = queue
         self.selector = selector
         self.block = block
     }
 
     func remove() {
         var address = AudioObjectPropertyAddress(mSelector: selector, mScope: kAudioObjectPropertyScopeGlobal, mElement: kAudioObjectPropertyElementMain)
-        AudioObjectRemovePropertyListenerBlock(object, &address, DispatchQueue.main, block)
+        AudioObjectRemovePropertyListenerBlock(object, &address, queue, block)
     }
 }
 
-/// A CoreMediaIO property listener that calls `action` on the main actor.
-@MainActor
+/// A CoreMediaIO property listener that calls `action` on `queue`.
 private struct CameraListener {
     let object: CMIOObjectID
     let selector: CMIOObjectPropertySelector
     let block: CMIOObjectPropertyListenerBlock
 
-    init?(object: CMIOObjectID, selector: CMIOObjectPropertySelector, action: @escaping @MainActor @Sendable () -> Void) {
-        let block: CMIOObjectPropertyListenerBlock = { _, _ in
-            MainActor.assumeIsolated {
-                action()
-            }
-        }
+    let queue: DispatchQueue
+
+    init?(object: CMIOObjectID, selector: CMIOObjectPropertySelector, queue: DispatchQueue, action: @escaping @Sendable () -> Void) {
+        let block: CMIOObjectPropertyListenerBlock = { _, _ in action() }
         var address = CMIOObjectPropertyAddress(
             mSelector: selector,
             mScope: CMIOObjectPropertyScope(kCMIOObjectPropertyScopeGlobal),
             mElement: CMIOObjectPropertyElement(kCMIOObjectPropertyElementMain)
         )
-        guard CMIOObjectAddPropertyListenerBlock(object, &address, DispatchQueue.main, block) == noErr else { return nil }
+        guard CMIOObjectAddPropertyListenerBlock(object, &address, queue, block) == noErr else { return nil }
         self.object = object
+        self.queue = queue
         self.selector = selector
         self.block = block
     }
@@ -194,6 +239,6 @@ private struct CameraListener {
             mScope: CMIOObjectPropertyScope(kCMIOObjectPropertyScopeGlobal),
             mElement: CMIOObjectPropertyElement(kCMIOObjectPropertyElementMain)
         )
-        CMIOObjectRemovePropertyListenerBlock(object, &address, DispatchQueue.main, block)
+        CMIOObjectRemovePropertyListenerBlock(object, &address, queue, block)
     }
 }
