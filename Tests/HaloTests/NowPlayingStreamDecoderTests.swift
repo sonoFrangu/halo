@@ -190,6 +190,23 @@ struct NowPlayingStreamDecoderTests {
         #expect(seeked.elapsed == 90)
     }
 
+    /// Recorded from Spotify: resuming publishes the position without a rate, and a few
+    /// seconds later the rate comes back with a new timestamp but no position.
+    @Test func rateComingBackWithOnlyATimestampKeepsThePosition() throws {
+        let clock = ManualClock(now: now)
+        var decoder = NowPlayingStreamDecoder(clock: { clock.now })
+        _ = try decode(&decoder, diff: false, fullPayload)
+        _ = try decode(&decoder, diff: true, ["playbackRate": NSNull()])
+
+        clock.now = now.addingTimeInterval(4.4)
+        let output = try decode(&decoder, diff: true, [
+            "playbackRate": 1,
+            "timestampEpochMicros": clock.now.timeIntervalSince1970 * 1_000_000,
+        ])
+        let timeline = try #require(output?.timeline)
+        #expect(abs(timeline.elapsed(at: clock.now) - 54.4) < 0.001)
+    }
+
     /// Live content reports either no duration or, like Twitch in Safari, Int64.max.
     @Test(arguments: [0, 9.223372036854776e18])
     func liveContentHasNoTimeline(durationMicros: Double) throws {

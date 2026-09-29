@@ -468,7 +468,11 @@ scripts/icon/render-icon.py           disegna Support/AppIcon.png (NumPy + Pillo
    (Spotify in pausa resta "playing" e porta solo la velocità a 0: prima il tempo continuava a
    scorrere fino a 0:00). Quando un diff porta solo il cambio di stato, riancora la posizione
    nota all'istante del cambio invece di riusare la coppia elapsed/timestamp vecchia (una
-   ripresa saltava avanti di tutta la pausa).
+   ripresa saltava avanti di tutta la pausa). Spotify, quando riattiva la velocità qualche
+   secondo dopo una ripresa o un seek, ripubblica solo il timestamp (la posizione non è
+   cambiata e il diff la omette): un timestamp che arriva con un cambio di velocità e senza
+   posizione non riancora, altrimenti la posizione tornava indietro fino a decine di secondi
+   e i testi restavano indietro.
 7. Uscita del processo: exit ≠ 0 → adapter "non disponibile"; altrimenti riavvio con backoff
    (max 3 tentativi).
 

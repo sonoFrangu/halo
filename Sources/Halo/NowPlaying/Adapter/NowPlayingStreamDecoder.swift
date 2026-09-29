@@ -27,9 +27,7 @@ struct NowPlayingStreamDecoder {
         static let elapsedTimeMicros = "elapsedTimeMicros"
         static let timestampEpochMicros = "timestampEpochMicros"
         static let playbackRate = "playbackRate"
-        static let artworkData = "artworkData"
-        static let timing = [durationMicros, elapsedTimeMicros, timestampEpochMicros]
-    }
+        static let artworkData = "artworkData"    }
 
     private static let longestDurationMicros: Double = 7 * 24 * 3600 * 1_000_000
 
@@ -70,7 +68,15 @@ struct NowPlayingStreamDecoder {
                 fields[key] = value
             }
         }
-        let hasFreshTiming = !isDiff || Key.timing.contains { payload[$0] != nil }
+        // Spotify, turning its playback rate back on, republishes the timestamp alone: the
+        // elapsed time is unchanged, so the diff leaves it out. Read literally, the position
+        // jumped back to where playback last resumed or was sought (up to tens of seconds)
+        // and the lyrics fell behind. A timestamp that comes with a rate change and no
+        // position is therefore not fresh timing.
+        let hasFreshTiming = !isDiff
+            || payload[Key.elapsedTimeMicros] != nil
+            || payload[Key.durationMicros] != nil
+            || (payload[Key.timestampEpochMicros] != nil && payload[Key.playbackRate] == nil)
         let snapshot = makeSnapshot(hasFreshTiming: hasFreshTiming)
         timeline = snapshot?.timeline
         return .update(snapshot)
