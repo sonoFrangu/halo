@@ -6,8 +6,10 @@ import AppKit
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var features: Features?
     private var statusItem: StatusItemController?
+    private var signalSources: [DispatchSourceSignal] = []
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        quitOnSignals()
         let alerts = AlertCenter()
         let volume = SystemVolume()
         let nowPlaying = NowPlayingController(model: NowPlayingModel())
@@ -128,6 +130,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         features.focus.stop()
         features.unlock.stop()
         features.siri.stop()
+    }
+
+    /// SIGTERM and SIGINT would end the process without `applicationWillTerminate`,
+    /// leaving the adapter and `log stream` children running. Route them through a
+    /// normal quit instead. A crash still orphans them.
+    private func quitOnSignals() {
+        for number in [SIGTERM, SIGINT] {
+            signal(number, SIG_IGN)
+            let source = DispatchSource.makeSignalSource(signal: number, queue: .main)
+            source.setEventHandler {
+                MainActor.assumeIsolated { NSApp.terminate(nil) }
+            }
+            source.resume()
+            signalSources.append(source)
+        }
     }
 }
 
