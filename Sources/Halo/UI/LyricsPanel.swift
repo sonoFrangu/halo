@@ -2,7 +2,8 @@ import SwiftUI
 
 /// Synced lyrics under the player, Apple Music style: the sung line centered, bright and
 /// tinted with the artwork's colors, neighbours fading out; the column glides to the next
-/// line with a spring. Tapping a line seeks there.
+/// line with a spring. Tapping a line seeks there. While `focus` is set (the lyrics were
+/// scrolled by hand) the column centers that line instead of the sung one.
 ///
 /// The view redraws only when the line changes: the `TimelineView` gets an explicit list
 /// of the wall-clock moments the next lines start (recomputed whenever the playback
@@ -14,6 +15,7 @@ struct LyricsPanel: View {
     let lead: TimeInterval
     let palette: ArtworkPalette
     let isVisible: Bool
+    var focus: Double?
     let onSeek: (TimeInterval) -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -53,9 +55,10 @@ struct LyricsPanel: View {
             // clicks, and the past ones sit over the play/pause button and the progress
             // bar: only lines inside the panel can be tapped.
             let reach = Int((proxy.size.height / 2 - lineHeight / 2) / lineHeight)
+            let center = focus ?? Double(current ?? -1)
             VStack(alignment: .leading, spacing: 0) {
                 ForEach(Array(lines.enumerated()), id: \.offset) { index, line in
-                    let distance = abs(index - (current ?? -1))
+                    let distance = Int(abs(Double(index) - center).rounded())
                     lineView(line, isCurrent: index == current, distance: distance)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .frame(height: lineHeight)
@@ -64,7 +67,7 @@ struct LyricsPanel: View {
                         .allowsHitTesting(distance <= reach)
                 }
             }
-            .offset(y: proxy.size.height / 2 - lineHeight / 2 - CGFloat(current ?? -1) * lineHeight)
+            .offset(y: proxy.size.height / 2 - lineHeight / 2 - CGFloat(center) * lineHeight)
         }
         .animation(reduceMotion ? .easeInOut(duration: 0.2) : .spring(duration: 0.55, bounce: 0.12), value: current)
     }
@@ -89,6 +92,8 @@ struct LyricsPanel: View {
 
     private func opacity(forDistance distance: Int) -> Double {
         switch distance {
+        // The centered line while scrolling by hand (the sung one has its gradient).
+        case 0: 0.85
         case 1: 0.42
         case 2: 0.22
         default: 0.1

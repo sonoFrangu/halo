@@ -161,9 +161,14 @@ struct PlayerContentView: View {
                 lead: lyrics.lead,
                 palette: player.palette,
                 isVisible: isVisible && island.context.showsLyrics,
-                onSeek: actions.seek
+                focus: island.lyricsFocus,
+                onSeek: { position in
+                    actions.seek(position)
+                    island.followLyrics()
+                }
             )
             .place(in: layout.lyricsFrame)
+            .onHover { hovering in island.setLyricsHovered(hovering) }
             .reveal(isVisible && island.context.showsLyrics, order: 4)
         }
         .frame(width: layout.canvasSize.width, height: layout.canvasSize.height, alignment: .topLeading)

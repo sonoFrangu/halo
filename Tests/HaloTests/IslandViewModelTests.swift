@@ -32,6 +32,18 @@ struct IslandViewModelTests {
         #expect(island.context.tab == .player)
     }
 
+    @Test func scrolledLyricsStayWithinTheSongAndFollowAgain() {
+        let island = island()
+        island.scrollLyrics(by: 2.5, current: 10, count: 40)
+        #expect(island.lyricsFocus == 12.5)
+        island.scrollLyrics(by: -100, current: 30, count: 40)
+        #expect(island.lyricsFocus == 0)
+        island.scrollLyrics(by: 100, current: 30, count: 40)
+        #expect(island.lyricsFocus == 39)
+        island.followLyrics()
+        #expect(island.lyricsFocus == nil)
+    }
+
     @Test func compactTucksIntoNotchWhilePointerIsOnAWing() {
         let island = island()
         island.playbackChanged(isPlaying: true, hasMedia: true)

@@ -13,7 +13,7 @@ Architettura e scelte in [`docs/design.md`](docs/design.md).
 | Funzione | Dove | Note |
 | --- | --- | --- |
 | **Now Playing** | isola `compact` (copertina + EQ) ed espansa (player completo) | qualsiasi app che pubblica Now Playing |
-| **Testi sincronizzati** | pannello sotto il player, widget, schermata di blocco | da [LRCLIB](https://lrclib.net); tocca una riga per saltare lì |
+| **Testi sincronizzati** | pannello sotto il player, widget, schermata di blocco | da [LRCLIB](https://lrclib.net); scorri con due dita per sfogliarli, tocca una riga per saltare lì |
 | **HUD luminosità e volume** | ali dell'isola; in linea nell'intestazione se il player è aperto | barra trascinabile, passi fini con ⌥⇧ |
 | **Ricarica e batteria** | ali dell'isola | collegato/scollegato, avvisi al 20/10/5 % |
 | **AirPods e cuffie** | banner sotto la notch | batteria di auricolari e custodia, volume |
@@ -25,7 +25,7 @@ Architettura e scelte in [`docs/design.md`](docs/design.md).
 | **Tutti i display** | un'isola per schermo | monitor esterni e Mac senza notch: pillola finta |
 | **Widget sul desktop** | sopra lo sfondo, sotto le finestre | widget medio in vetro come quelli di macOS 26, oppure orologio e meteo |
 | **Schermata di blocco** | sopra il lock screen | player e testi mentre il Mac è bloccato; sparisce subito allo sblocco |
-| **Gesti** | sull'isola aperta | scorri ← → per cambiare brano, ↑ ↓ per il volume; clic sulla copertina apre l'app |
+| **Gesti** | sull'isola aperta | scorri ← → per cambiare brano, ↑ ↓ per il volume (sopra i testi li sfoglia); clic sulla copertina apre l'app |
 | **Calendario** | scheda dell'isola, intestazione, banner | prossimi impegni, riunione entro l'ora al posto del meteo, promemoria 5 min prima con "Partecipa" |
 | **Anteprima screenshot** | banner sotto la notch | trascina la miniatura dove vuoi, copia, scaffale, cestino |
 | **Timer e Pomodoro** | scheda dell'isola, ali (attività live), menu | countdown nelle ali, anello, ciclo 4 × 25 + 5 min |

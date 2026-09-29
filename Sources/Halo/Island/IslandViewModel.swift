@@ -26,6 +26,9 @@ final class IslandViewModel {
     private(set) var availableTabs: [ExpandedTab] = [.player]
     /// A file drag is over the shelf.
     private(set) var isDropTargeted = false
+    /// Line (fractional) the lyrics panel was scrolled to by hand; `nil` while it follows
+    /// the song.
+    private(set) var lyricsFocus: Double?
 
     var layout: IslandLayout {
         IslandLayout(geometry: geometry)
@@ -73,6 +76,10 @@ final class IslandViewModel {
     @ObservationIgnored private var lastHoldsAlerts = false
     @ObservationIgnored private var hoverTask: Task<Void, Never>?
     @ObservationIgnored private var lingerTask: Task<Void, Never>?
+    @ObservationIgnored private var lyricsFollowTask: Task<Void, Never>?
+    /// Pointer over the lyrics: scrolled lyrics stay put, or the line about to be tapped
+    /// would slide away under it.
+    @ObservationIgnored private var isLyricsHovered = false
 
     /// Short dwell so sweeping the cursor across the menu bar does not open the island
     /// (adjustable in Settings).
@@ -84,6 +91,13 @@ final class IslandViewModel {
     /// Keeps the compact island through a quick pause/play.
     static let pauseLinger: Duration = .milliseconds(1500)
     static let hoverTolerance: CGFloat = 6
+    /// The scrolled lyrics go back to the sung line this long after the pointer leaves them.
+    static let lyricsFollowDelay: Duration = .seconds(3)
+
+    /// Scrolling over the lyrics browses them instead of changing the volume.
+    var acceptsLyricsScroll: Bool {
+        state == .expanded && context.tab == .player && context.showsLyrics
+    }
 
     init(geometry: NotchGeometry) {
         self.geometry = geometry
@@ -227,6 +241,41 @@ final class IslandViewModel {
         publish()
     }
 
+    /// Moves the lyrics `lines` lines later (negative: earlier), starting from the sung line
+    /// `current` when they were following the song.
+    func scrollLyrics(by lines: Double, current: Int, count: Int) {
+        let start = lyricsFocus ?? Double(current)
+        lyricsFocus = min(max(start + lines, 0), Double(max(count - 1, 0)))
+        scheduleLyricsFollow()
+    }
+
+    func setLyricsHovered(_ hovered: Bool) {
+        guard hovered != isLyricsHovered else { return }
+        isLyricsHovered = hovered
+        scheduleLyricsFollow()
+    }
+
+    /// Scrolled lyrics go back to the sung line a moment after the pointer leaves them.
+    private func scheduleLyricsFollow() {
+        lyricsFollowTask?.cancel()
+        guard lyricsFocus != nil, !isLyricsHovered else { return }
+        lyricsFollowTask = Task { [weak self] in
+            try? await Task.sleep(for: Self.lyricsFollowDelay)
+            guard !Task.isCancelled else { return }
+            self?.followLyrics()
+        }
+    }
+
+    /// The lyrics glide back to the sung line.
+    func followLyrics() {
+        lyricsFollowTask?.cancel()
+        lyricsFollowTask = nil
+        guard lyricsFocus != nil else { return }
+        withAnimation(Motion.context(reduceMotion: reduceMotion)) {
+            lyricsFocus = nil
+        }
+    }
+
     func setScrubberHovered(_ hovered: Bool) {
         guard hovered != isScrubberHovered else { return }
         isScrubberHovered = hovered
@@ -332,6 +381,9 @@ final class IslandViewModel {
         if target != .expanded {
             // The panel turns click-through when collapsing, so no hover-exit may arrive.
             isScrubberHovered = false
+            isLyricsHovered = false
+            lyricsFollowTask?.cancel()
+            lyricsFocus = nil
         }
         publish()
     }

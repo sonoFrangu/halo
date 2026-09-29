@@ -174,8 +174,17 @@ final class IslandController {
 
     // MARK: Gestures
 
-    /// Swipes over the open player: horizontal skips a track, vertical changes the volume.
+    /// Swipes over the open player: horizontal skips a track, vertical changes the volume;
+    /// over the lyrics, scrolling browses them.
     private func scrolled(_ event: NSEvent) -> Bool {
+        if viewModel.acceptsLyricsScroll, let window = event.window {
+            // Canvas coordinates: origin at the top-left of the panel.
+            let point = CGPoint(x: event.locationInWindow.x, y: window.frame.height - event.locationInWindow.y)
+            if viewModel.layout.lyricsFrame.contains(point) {
+                scrollLyrics(event)
+                return true
+            }
+        }
         guard Preferences.gesturesEnabled, viewModel.acceptsVolumeGestures else { return false }
         let sample = ScrollSample(
             deltaX: Double(event.scrollingDeltaX),
@@ -200,6 +209,18 @@ final class IslandController {
             break
         }
         return true
+    }
+
+    /// Scrolling over the lyrics moves them like a list, momentum included; a wheel notch is
+    /// one line.
+    private func scrollLyrics(_ event: NSEvent) {
+        let lyrics = services.lyrics.model
+        let delta = Double(event.scrollingDeltaY)
+        let lines = event.hasPreciseScrollingDeltas ? delta / Double(LyricsPanel.lineHeight) : delta
+        let current = services.nowPlaying.model.timeline.flatMap {
+            LyricsTimeline.displayedIndex(at: Date(), in: lyrics.lines, timeline: $0, lead: lyrics.lead)
+        }
+        viewModel.scrollLyrics(by: -lines, current: current ?? 0, count: lyrics.lines.count)
     }
 
     private static func phase(of event: NSEvent) -> ScrollSample.Phase {

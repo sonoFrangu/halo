@@ -229,7 +229,11 @@ pubblicare il banner, e tiene le ultime 10.
 6 pt, un salto di brano per gesto oltre 60 pt, volume continuo (1/220 per punto, 1/16 per
 scatto di rotella), inerzia ignorata, scorrimento naturale gestito. Attivo solo sull'isola
 aperta sulla scheda Musica o sopra l'HUD del volume; altrove l'evento prosegue (es. lo
-scaffale scorre). `Haptics` usa `NSHapticFeedbackManager`.
+scaffale scorre). Sopra i testi lo scorrimento sposta invece le righe
+(`IslandViewModel.lyricsFocus`, una riga per scatto di rotella, inerzia compresa): ogni riga
+visibile si può toccare per saltare lì. Finché il puntatore resta sopra, le righe stanno
+ferme (tornando da sole scivolavano sotto il clic, che prendeva la riga dopo); 3 s dopo che
+il puntatore esce, o subito dopo il tocco, tornano alla riga cantata. Nulla gira mentre non si scorre, a parte un task dormiente. `Haptics` usa `NSHapticFeedbackManager`.
 
 ## Calendario
 
