@@ -47,7 +47,8 @@ cronometro, le Impostazioni, una voce per i permessi mancanti (solo se ce ne son
 
 ## Requisiti
 
-- Mac Apple Silicon con macOS 26 o successivo (sviluppata per MacBook Air M2 con macOS 27).
+- Mac con macOS 26 o successivo (sviluppata per MacBook Air M2 con macOS 27). L'app è Universal
+  (arm64 + x86_64), ma sui Mac Intel non è mai stata provata.
 - Per compilare: Xcode 26+ oppure i soli Command Line Tools (Swift 6.2+). Niente CMake,
   niente progetto Xcode: solo Swift Package Manager e `clang`.
   - Con i Command Line Tools e l'SDK di macOS 27 le macro di SwiftUI (`@State`, `@Entry`,
@@ -297,6 +298,19 @@ Sistema; lo stato si aggiorna da solo quando torni su Halo.
 - **Titoli lunghi** nel player aperto scorrono in loop con i bordi sfumati (solo mentre il
   player è visibile).
 
+## Consumi
+
+Misurati con `top` (campioni ogni 3 s per 30 s) su MacBook Air M2 con macOS 27, build Universal
+di release, isola chiusa:
+
+| Situazione | CPU Halo | CPU adapter (perl) | Memoria Halo |
+| --- | --- | --- | --- |
+| Niente in riproduzione | 0,05 % (picco 0,3 %) | 0 % | 53 MB |
+| Spotify in riproduzione | 0,04 % (picco 0,2 %) | 0 % | 53 MB |
+| Diretta Twitch in Safari | 0,01 % | 0,01 % | 37 MB |
+
+Il disegno delle animazioni (EQ, forma dell'isola) lo fa WindowServer e non è contato qui.
+
 ## Risoluzione problemi
 
 - **`Undefined symbols … PackageDescription.Package.__allocating_init(… SwiftVersion …)`**
@@ -376,8 +390,8 @@ Sistema; lo stato si aggiorna da solo quando torni su Halo.
   del display integrato; niente tasti retroilluminazione tastiera (l'Air M2 non li ha).
 - **Testi**: dipendono da LRCLIB (database comunitario): per brani rari o molto recenti possono
   mancare o essere sfasati.
-- **Solo arm64**: `scripts/build-adapter.sh` compila l'adapter per l'architettura della
-  macchina che builda.
+- **Intel non provato**: `scripts/bundle.sh` produce un'app Universal (Halo e l'adapter per
+  arm64 e x86_64), ma la parte x86_64 non è mai stata eseguita su un Mac Intel.
 - **Build verificata solo in CI.** Lo sviluppo è avvenuto senza un Mac: tutto ciò che è visivo o
   legato all'hardware (forme, animazioni, vetro, hover, drag and drop, AirPods, schermata di
   blocco, notifiche reali) va verificato a mano — l'elenco è nella descrizione della PR.

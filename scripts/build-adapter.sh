@@ -29,13 +29,13 @@ done
 rm -rf "$FRAMEWORK"
 mkdir -p "$FRAMEWORK/Versions/A/Resources" "$FRAMEWORK/Versions/A/Headers"
 
-echo "==> Compiling $NAME.framework (${#sources[@]} sources, $(uname -m))"
+echo "==> Compiling $NAME.framework (${#sources[@]} sources, arm64 + x86_64)"
 xcrun clang \
     -dynamiclib \
     -fobjc-arc \
     -fvisibility=default \
     -O2 \
-    -arch "$(uname -m)" \
+    -arch arm64 -arch x86_64 \
     -mmacosx-version-min="$DEPLOYMENT_TARGET" \
     -I "$SRC/include" \
     -I "$SRC/src" \

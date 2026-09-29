@@ -36,8 +36,8 @@ swift --version 2>&1 | sed -n 1p
 echo "    macOS SDK $(xcrun --show-sdk-version)"
 
 echo "==> Building Halo (release)"
-swift build -c release --product Halo
-BIN_DIR="$(swift build -c release --show-bin-path)"
+swift build -c release --product Halo --arch arm64 --arch x86_64
+BIN_DIR="$(swift build -c release --arch arm64 --arch x86_64 --show-bin-path)"
 
 "$ROOT/scripts/build-adapter.sh" "$ADAPTER_OUT"
 
