@@ -16,7 +16,7 @@ struct NotificationPayloadTests {
         #expect(payload.title == "Anna")
         #expect(payload.subtitle == "Gruppo")
         #expect(payload.body == "Ci vediamo alle 8?")
-        #expect(payload.message == "Gruppo · Ci vediamo alle 8?")
+        #expect(payload.imageURL == nil)
     }
 
     @Test func blankAndMissingFieldsAreNil() throws {
@@ -24,7 +24,7 @@ struct NotificationPayloadTests {
         let payload = try #require(NotificationPayload.parse(data))
         #expect(payload.title == nil)
         #expect(payload.subtitle == nil)
-        #expect(payload.message == "Solo testo")
+        #expect(payload.body == "Solo testo")
     }
 
     @Test func rejectsDataWithoutRequest() throws {
@@ -32,10 +32,25 @@ struct NotificationPayloadTests {
         #expect(NotificationPayload.parse(Data("not a plist".utf8)) == nil)
     }
 
-    @Test func emptyPayloadHasNoMessage() {
-        let payload = NotificationPayload()
-        #expect(payload.isEmpty)
-        #expect(payload.message == nil)
+    @Test func emptyPayloadIsEmpty() {
+        #expect(NotificationPayload().isEmpty)
+    }
+
+    @Test func findsAnImageAttachmentAnywhereInTheRequest() throws {
+        let data = try encode([
+            "req": [
+                "titl": "Giulia",
+                "atta": [["uniq": "A1", "url": "file:///Users/x/Library/Group%20Containers/att/photo.JPG"]],
+            ],
+        ])
+        let payload = try #require(NotificationPayload.parse(data))
+        #expect(payload.imageURL == URL(fileURLWithPath: "/Users/x/Library/Group Containers/att/photo.JPG"))
+    }
+
+    @Test func ignoresFilesThatAreNotImagesAndPlainText() throws {
+        let data = try encode(["req": ["body": "/tmp/notes.txt is ready", "path": "/tmp/notes.txt", "link": "https://example.com/a.png"]])
+        let payload = try #require(NotificationPayload.parse(data))
+        #expect(payload.imageURL == nil)
     }
 
     @Test func websiteNotificationsAreNotMirrored() {

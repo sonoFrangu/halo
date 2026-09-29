@@ -111,7 +111,7 @@ final class NotificationMirror {
             bundleIdentifier: record.bundleIdentifier,
             appName: appName,
             title: payload.title ?? appName,
-            body: payload.message
+            body: payload.body
         )
     }
 
