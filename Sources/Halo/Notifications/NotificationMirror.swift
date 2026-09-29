@@ -105,7 +105,7 @@ final class NotificationMirror {
             !isFromWebsite(record.bundleIdentifier)
         else { return nil }
         let payload = NotificationPayload.parse(record.data) ?? NotificationPayload()
-        let appName = applicationName(for: record.bundleIdentifier)
+        let appName = AppName.of(record.bundleIdentifier)
         return NotificationAlert(
             id: record.id,
             bundleIdentifier: record.bundleIdentifier,
@@ -120,14 +120,6 @@ final class NotificationMirror {
     /// come from. Notifications of real apps are.
     nonisolated static func isFromWebsite(_ bundleIdentifier: String) -> Bool {
         bundleIdentifier.hasPrefix("_WEB_CENTER_")
-    }
-
-    private static func applicationName(for bundleIdentifier: String) -> String {
-        guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleIdentifier) else {
-            return bundleIdentifier
-        }
-        let name = FileManager.default.displayName(atPath: url.path)
-        return name.hasSuffix(".app") ? String(name.dropLast(4)) : name
     }
 
     // MARK: Access
