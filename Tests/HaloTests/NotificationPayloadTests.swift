@@ -37,4 +37,10 @@ struct NotificationPayloadTests {
         #expect(payload.isEmpty)
         #expect(payload.message == nil)
     }
+
+    @Test func websiteNotificationsAreNotMirrored() {
+        #expect(NotificationMirror.isFromWebsite("_WEB_CENTER_:web.com.macos-updates.root"))
+        #expect(!NotificationMirror.isFromWebsite("net.whatsapp.WhatsApp"))
+        #expect(!NotificationMirror.isFromWebsite("com.apple.Safari"))
+    }
 }

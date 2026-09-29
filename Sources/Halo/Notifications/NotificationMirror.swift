@@ -100,7 +100,10 @@ final class NotificationMirror {
     }
 
     private static func alert(for record: NotificationRecord) -> NotificationAlert? {
-        guard record.bundleIdentifier != Bundle.main.bundleIdentifier else { return nil }
+        guard
+            record.bundleIdentifier != Bundle.main.bundleIdentifier,
+            !isFromWebsite(record.bundleIdentifier)
+        else { return nil }
         let payload = NotificationPayload.parse(record.data) ?? NotificationPayload()
         let appName = applicationName(for: record.bundleIdentifier)
         return NotificationAlert(
@@ -110,6 +113,13 @@ final class NotificationMirror {
             title: payload.title ?? appName,
             body: payload.message
         )
+    }
+
+    /// Web push from a website (Safari lists each site as `_WEB_CENTER_:web.<reversed
+    /// domain>`): never mirrored, since that is where fake "your Mac is infected" alerts
+    /// come from. Notifications of real apps are.
+    nonisolated static func isFromWebsite(_ bundleIdentifier: String) -> Bool {
+        bundleIdentifier.hasPrefix("_WEB_CENTER_")
     }
 
     private static func applicationName(for bundleIdentifier: String) -> String {
