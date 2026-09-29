@@ -5,7 +5,7 @@ import Testing
 @MainActor
 struct AlertCenterTests {
     private func notification(_ id: Int64) -> IslandAlert {
-        .notification(NotificationAlert(id: id, bundleIdentifier: "com.example", appName: "App", title: "T\(id)", body: nil))
+        .notification(NotificationAlert(id: id, bundleIdentifier: "com.example", text: NotificationText(headline: "T\(id)")))
     }
 
     private let charging = IslandAlert.power(PowerAlert(event: .connected, level: 0.5, isCharging: true, minutesToFull: 60))

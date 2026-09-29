@@ -1,34 +1,57 @@
 import AppKit
 import SwiftUI
 
-/// Banner of a mirrored system notification: app icon, app name, title and body. Clicking
-/// opens the app.
+/// Banner of a mirrored system notification, Dynamic Island style: app icon, sender with the
+/// group or subtitle dimmed beside it, up to two lines of message, and on the right the
+/// attached photo or "ora". Clicking opens the app.
 struct NotificationBanner: View {
     let alert: NotificationAlert
 
     var body: some View {
+        let text = alert.text
+        let corner = RoundedRectangle(cornerRadius: 10, style: .continuous)
+
         HStack(spacing: 12) {
             AppIcon(bundleIdentifier: alert.bundleIdentifier)
-                .frame(width: 34, height: 34)
+                .frame(width: 44, height: 44)
+                .clipShape(corner)
 
-            VStack(alignment: .leading, spacing: 1) {
-                Text(alert.appName)
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.5))
-                    .textCase(.uppercase)
-                    .lineLimit(1)
-                Text(alert.title)
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .lineLimit(1)
-                if let message = alert.body, !message.isEmpty {
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 0) {
+                    Text(text.headline)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .layoutPriority(1)
+                    if let detail = text.detail {
+                        Text(" · \(detail)")
+                            .font(.system(size: 14))
+                            .foregroundStyle(.white.opacity(0.55))
+                    }
+                }
+                .lineLimit(1)
+
+                if let message = text.message {
                     Text(message)
-                        .font(.system(size: 12))
-                        .foregroundStyle(.white.opacity(0.72))
-                        .lineLimit(1)
+                        .font(.system(size: 13))
+                        .foregroundStyle(.white.opacity(0.75))
+                        .lineLimit(2)
+                        .truncationMode(.tail)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
+
+            if let thumbnail = NotificationThumbnail.cached(alert.id) {
+                Image(nsImage: thumbnail)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .frame(width: 44, height: 44)
+                    .clipShape(corner)
+                    .accessibilityLabel("Foto")
+            } else {
+                Text("ora")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.white.opacity(0.45))
+            }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .accessibilityElement(children: .combine)

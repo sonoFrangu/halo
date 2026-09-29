@@ -93,8 +93,15 @@ final class NotificationMirror {
 
         let shown = records.count > Self.burstLimit ? [newest] : records
         for record in shown {
-            if let alert = Self.alert(for: record) {
+            guard let alert = Self.alert(for: record) else { continue }
+            guard let imageURL = alert.imageURL else {
                 alerts.post(.notification(alert))
+                continue
+            }
+            // The banner reads the thumbnail synchronously, so it is made before posting.
+            Task { [weak self] in
+                _ = await NotificationThumbnail.load(alert.id, from: imageURL)
+                self?.alerts.post(.notification(alert))
             }
         }
     }
@@ -105,13 +112,16 @@ final class NotificationMirror {
             !isFromWebsite(record.bundleIdentifier)
         else { return nil }
         let payload = NotificationPayload.parse(record.data) ?? NotificationPayload()
-        let appName = AppName.of(record.bundleIdentifier)
         return NotificationAlert(
             id: record.id,
             bundleIdentifier: record.bundleIdentifier,
-            appName: appName,
-            title: payload.title ?? appName,
-            body: payload.body
+            text: NotificationText.make(
+                title: payload.title,
+                subtitle: payload.subtitle,
+                body: payload.body,
+                appName: AppName.of(record.bundleIdentifier)
+            ),
+            imageURL: payload.imageURL
         )
     }
 

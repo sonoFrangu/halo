@@ -124,9 +124,9 @@ struct AudioDeviceAlert: Sendable, Equatable {
 struct NotificationAlert: Sendable, Equatable {
     var id: Int64
     var bundleIdentifier: String
-    var appName: String
-    var title: String
-    var body: String?
+    var text: NotificationText
+    /// Photo attached to the notification; its thumbnail is loaded before the banner is posted.
+    var imageURL: URL?
 }
 
 /// A meeting is about to start.
