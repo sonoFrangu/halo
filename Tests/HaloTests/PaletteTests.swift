@@ -82,4 +82,18 @@ struct PaletteTests {
             }
         }
     }
+
+    /// The baked Core Animation track loops without a jump only if the wave repeats.
+    @Test func equalizerWaveRepeatsEveryPeriod() {
+        for bar in 0..<EqualizerWave.barCount {
+            for step in 0..<50 {
+                let time = Double(step) * 0.137
+                let later = EqualizerWave.level(bar: bar, time: time + EqualizerWave.period)
+                #expect(abs(EqualizerWave.level(bar: bar, time: time) - later) < 1e-9)
+            }
+            let frames = EqualizerWave.keyframes(bar: bar)
+            #expect(frames.count == Int(EqualizerWave.period) * EqualizerWave.keyframeRate + 1)
+            #expect(abs(frames[0] - frames[frames.count - 1]) < 1e-9)
+        }
+    }
 }

@@ -11,6 +11,13 @@ enum EqualizerWave {
     /// Heights while paused: small dots.
     static let pausedLevel: CGFloat = 0.2
 
+    /// Every frequency below makes a whole number of cycles in this time, so the wave
+    /// repeats exactly and can be baked once into a looping Core Animation keyframe track.
+    static let period: TimeInterval = 10
+    /// Keyframes per second of the baked track; Core Animation interpolates between them
+    /// at the display's refresh rate.
+    static let keyframeRate = 30
+
     private static let slowFrequencies: [Double] = [1.7, 2.3, 1.9, 2.6]
     private static let fastFrequencies: [Double] = [4.1, 3.3, 4.7, 3.7]
 
@@ -23,5 +30,11 @@ enum EqualizerWave {
         let value = 0.5 + 0.3 * slow + 0.2 * fast
         let level = pausedLevel + (1 - pausedLevel) * value
         return CGFloat(min(max(level, pausedLevel), 1))
+    }
+
+    /// One period of `bar`'s levels, `keyframeRate` samples a second, last equal to first.
+    static func keyframes(bar: Int) -> [CGFloat] {
+        let count = Int(period) * keyframeRate
+        return (0...count).map { level(bar: bar, time: period * Double($0) / Double(count)) }
     }
 }

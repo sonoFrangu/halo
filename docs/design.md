@@ -38,10 +38,18 @@ più curata.
 
 Tutto è guidato da eventi: notifiche MediaRemote (nel processo perl), `readabilityHandler`,
 eventi mouse, notifiche di sistema e distribuite, callback IOKit/CoreAudio, eventi kqueue sul
-database delle notifiche, Observation. Nessun timer di polling. Gli unici "tick" sono
-`TimelineView` per EQ e barra di avanzamento (in pausa quando non visibili o in pausa di
-riproduzione; 1 fps sulle card sempre visibili), l'orologio del widget (1 al minuto) e i testi
-(date esplicite dei cambi riga).
+database delle notifiche, Observation. Nessun timer di polling. L'EQ gira in Core Animation:
+una traccia di keyframe in loop per barra (l'onda è periodica, 10 s), riprodotta dal render
+server al refresh del display, zero lavoro per frame in Halo. Gli unici "tick" sono il
+`TimelineView` della barra di avanzamento (un ridisegno per pixel di avanzamento, tra 60 fps e
+1 al secondo; in pausa quando non visibile o in pausa di riproduzione; 1 fps sulle card sempre
+visibili), l'orologio del widget (1 al minuto) e i testi (date esplicite dei cambi riga).
+
+Il main thread non fa chiamate che possono bloccarsi: le query CoreAudio/CoreMediaIO degli
+indicatori microfono e fotocamera e il fetch di EventKit girano su code private. Dopo il
+risveglio le fotocamere Continuity compaiono e CMIO può rispondere in secondi: sul main thread
+questo lasciava la card del lock screen sopra il desktop dopo lo sblocco e mandava in timeout
+il tap dei tasti multimediali.
 
 ## Stati dell'isola
 

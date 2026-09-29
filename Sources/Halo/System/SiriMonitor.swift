@@ -33,6 +33,7 @@ final class SiriMonitor {
         ) { [weak self] _ in
             MainActor.assumeIsolated {
                 self?.attach()
+                self?.check()
             }
         }
         attach()
@@ -67,8 +68,9 @@ final class SiriMonitor {
         let interval: Duration?
         if visible {
             interval = .milliseconds(500)
-        } else if observers.isEmpty {
-            // ponytail: polling without Accessibility; event driven once it is granted.
+        } else if observers.isEmpty && !AXIsProcessTrusted() {
+            // ponytail: polling without Accessibility; event driven once it is granted
+            // (a Siri launch attaches an observer through the launch notification).
             interval = .seconds(1)
         } else {
             interval = nil

@@ -17,16 +17,28 @@ struct ScrubberView: View {
     let onHoverChanged: (Bool) -> Void
     let onScrubbingChanged: (Bool) -> Void
     let onSeek: (TimeInterval) -> Void
-    /// Redraw rate while playing: smooth in the island, which is open only briefly; once a
-    /// second on always-visible cards, where the bar moves a point or two per second.
-    var minimumInterval: TimeInterval = 1.0 / 30
+    /// Fastest redraw while playing: 60 fps in the island, once a second on always-visible
+    /// cards. The actual rate is lower when the fill moves less than a pixel per frame.
+    var minimumInterval: TimeInterval = 1.0 / 60
+
+    /// Pixels across the widest bar (a 440-point card on a 2x display), rounded up: ticking
+    /// once per pixel of fill is as smooth as ticking every frame.
+    private static let pixelsAcross: Double = 900
+
+    /// How often the fill moves by about a pixel (every ~0.2 s for a 3-minute song), within
+    /// `minimumInterval...1`: at least once a second for the time labels.
+    private var tickInterval: TimeInterval {
+        guard let timeline, timeline.duration > 0 else { return 1 }
+        let perPixel = timeline.duration / max(timeline.rate, 1) / Self.pixelsAcross
+        return min(max(minimumInterval, perPixel), 1)
+    }
 
     @GestureState private var dragProgress: Double? = nil
 
     var body: some View {
         let ticks = isActive && dragProgress == nil && (timeline?.isAdvancing ?? false)
 
-        TimelineView(.animation(minimumInterval: minimumInterval, paused: !ticks)) { context in
+        TimelineView(.animation(minimumInterval: tickInterval, paused: !ticks)) { context in
             content(at: context.date)
         }
         .onHover { hovering in

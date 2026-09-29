@@ -35,7 +35,7 @@ struct IslandContentView: View {
             .place(in: layout.artworkFrame(for: state))
             .opacity(hasMedia && (state == .compact || showsPlayer) ? 1 : 0)
 
-            EqualizerView(isPlaying: player.isPlaying && hasMedia && isCompact && activity == nil, tint: tint)
+            EqualizerView(isPlaying: player.isPlaying && hasMedia && isCompact && activity == nil, track: player.title, tint: tint)
                 .place(in: layout.equalizerFrame(for: state))
                 .opacity(hasMedia && isCompact && activity == nil ? 1 : 0)
 
@@ -150,7 +150,7 @@ struct PlayerContentView: View {
                 onHoverChanged: { hovering in island.setScrubberHovered(hovering) },
                 onScrubbingChanged: actions.setInteracting,
                 onSeek: actions.seek,
-                minimumInterval: reducesEffects ? 0.25 : 1.0 / 30
+                minimumInterval: reducesEffects ? 0.25 : 1.0 / 60
             )
             .place(in: layout.scrubberFrame)
             .reveal(isVisible, order: 3)
