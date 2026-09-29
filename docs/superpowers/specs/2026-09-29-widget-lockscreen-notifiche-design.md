@@ -126,6 +126,10 @@ va rimosso: l'unione passa a `NotificationText`.
   identificatore).
 - `NotificationPayload` impara a leggere quella chiave; un test con una plist costruita sulla
   forma vera.
+- **Verificato il 2026-09-29:** la ricerca generica (primo URL `file://` o percorso assoluto
+  di un'immagine dentro `req`) trova l'allegato di un vero `UNNotificationAttachment` (HEIC,
+  app di prova firmata): la miniatura compare nel banner. Non serve conoscere la chiave
+  esatta.
 - **`NotificationThumbnail`** carica l'immagine su una coda privata con
   `CGImageSourceCreateThumbnailAtIndex` (lato massimo 88 px, `kCGImageSourceCreateThumbnailFromImageAlways`)
   e la tiene in una piccola cache per id della notifica (ultime 10). Il banner mostra "ora"

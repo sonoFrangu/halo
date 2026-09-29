@@ -17,14 +17,14 @@ Architettura e scelte in [`docs/design.md`](docs/design.md).
 | **HUD luminosità e volume** | ali dell'isola; in linea nell'intestazione se il player è aperto | barra trascinabile, passi fini con ⌥⇧ |
 | **Ricarica e batteria** | ali dell'isola | collegato/scollegato, avvisi al 20/10/5 % |
 | **AirPods e cuffie** | banner sotto la notch | batteria di auricolari e custodia, volume |
-| **Notifiche** | banner sotto la notch | copia delle notifiche di sistema; clic = apre l'app |
+| **Notifiche** | banner sotto la notch | stile Dynamic Island con miniatura delle foto; clic = apre l'app; niente notifiche dei siti |
 | **Meteo** | intestazione dell'isola espansa, widget | [Open-Meteo](https://open-meteo.com) |
 | **Scaffale file** | scheda dell'isola espansa | trascina file sulla notch; trascinali fuori per usarli |
 | **Appunti** | scheda dell'isola espansa | ultimi 20 testi e immagini copiati; clic per ricopiarli, trascinali fuori; solo in memoria, senza password |
 | **Uscita audio** | pulsante AirPlay nel player | scegli altoparlanti, cuffie o monitor senza aprire Impostazioni |
 | **Tutti i display** | un'isola per schermo | monitor esterni e Mac senza notch: pillola finta |
-| **Widget sul desktop** | sopra lo sfondo, sotto le finestre | player in vetro, oppure orologio e meteo |
-| **Schermata di blocco** | sopra il lock screen | player e testi mentre il Mac è bloccato |
+| **Widget sul desktop** | sopra lo sfondo, sotto le finestre | widget medio in vetro come quelli di macOS 26, oppure orologio e meteo |
+| **Schermata di blocco** | sopra il lock screen | player e testi mentre il Mac è bloccato; sparisce subito allo sblocco |
 | **Gesti** | sull'isola aperta | scorri ← → per cambiare brano, ↑ ↓ per il volume; clic sulla copertina apre l'app |
 | **Calendario** | scheda dell'isola, intestazione, banner | prossimi impegni, riunione entro l'ora al posto del meteo, promemoria 5 min prima con "Partecipa" |
 | **Anteprima screenshot** | banner sotto la notch | trascina la miniatura dove vuoi, copia, scaffale, cestino |
@@ -193,9 +193,10 @@ Sistema; lo stato si aggiorna da solo quando torni su Halo.
 - **AirPods e cuffie**: quando diventano l'uscita audio compare un banner con anelli per
   auricolare sinistro/destro, custodia e volume. Le batterie arrivano da `system_profiler` circa
   un secondo dopo (le AirPods a volte le pubblicano in ritardo: Halo riprova una volta dopo 4 s).
-- **Notifiche**: ogni notifica consegnata da macOS appare anche nella notch (icona, app, titolo,
-  testo). Clic sul banner = apre l'app. Più di 3 notifiche insieme (es. al risveglio) mostrano
-  solo l'ultima.
+- **Notifiche**: ogni notifica delle app consegnata da macOS appare anche nella notch, in stile
+  Dynamic Island: icona, mittente (con il gruppo accanto), testo su 2 righe e la miniatura se è
+  una foto. Clic sul banner = apre l'app. Più di 3 notifiche insieme (es. al risveglio) mostrano
+  solo l'ultima. Le notifiche dei siti web non compaiono mai.
 - Gli avvisi si mettono in coda; l'HUD ha la precedenza; un banner resta finché il puntatore ci
   è sopra o il player è aperto.
 
@@ -218,13 +219,15 @@ Sistema; lo stato si aggiorna da solo quando torni su Halo.
   adegua a collegamenti, scollegamenti e cambi di risoluzione.
 
 ### Widget sul desktop
-- Spento per default (Impostazioni › Musica › Widget sulla scrivania). Una card in vetro con la copertina sfocata
-  come sfondo, controlli, avanzamento e testi; quando non suona nulla mostra ora, data e meteo.
+- Spento per default (Impostazioni › Musica › Widget sulla scrivania). Un widget medio in vetro
+  come quelli di macOS 26: copertina, app, titolo, artista e album, avanzamento e controlli;
+  quando non suona nulla mostra ora, data e meteo.
   Si trascina dove vuoi (la posizione viene ricordata) e sta sotto tutte le finestre.
 
 ### Schermata di blocco
-- Quando blocchi il Mac con musica in riproduzione, la card del player (con i testi) compare
-  sopra la schermata di blocco, sotto l'orologio. Sparisce allo sblocco.
+- Quando blocchi il Mac con musica in riproduzione, il widget del player con sotto i testi
+  compare sopra la schermata di blocco, sotto l'orologio. Sparisce subito allo sblocco, anche se
+  Halo fosse momentaneamente bloccato.
 
 ### Gesti
 - Sull'isola aperta (scheda Musica): scorri con due dita a sinistra per il brano successivo, a

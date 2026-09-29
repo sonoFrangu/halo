@@ -185,23 +185,38 @@ apre in sola lettura il database SQLite di Centro Notifiche
 disco), memorizza l'ultimo `rec_id` e, a ogni scrittura segnalata da `DatabaseChangeWatcher`
 (kqueue su db, db-wal e cartella; raffiche raggruppate in 120 ms), legge i record nuovi e
 pubblica i banner. `NotificationPayload` (testato) decodifica la plist binaria (`req.titl`,
-`req.subt`, `req.body`). Senza permesso il menu mostra la voce per concederlo e Halo riprova a
-ogni cambio di app attiva.
+`req.subt`, `req.body`) e trova la foto allegata (`imageURL`: il primo URL `file://` o percorso
+assoluto di un'immagine dentro `req`, perché il formato è privato). Senza permesso il menu
+mostra la voce per concederlo e Halo riprova a ogni cambio di app attiva. Le notifiche dei siti
+(`_WEB_CENTER_…`) non vengono mai copiate: sono quelle degli avvisi finti "il tuo Mac è infetto".
+
+Il banner è in stile Dynamic Island: icona dell'app, mittente in grassetto con il sottotitolo
+(es. la chat di gruppo) attenuato accanto, testo su 2 righe, a destra la miniatura della foto o
+"ora". `NotificationText` (testato) pulisce il testo: toglie il titolo uguale al nome dell'app,
+usa la prima riga del corpo come mittente quando manca il titolo, riduce spazi e a capo.
+`NotificationThumbnail` crea la miniatura (88 px) con ImageIO fuori dal main thread prima di
+pubblicare il banner, e tiene le ultime 10.
 
 ## Widget sul desktop e schermata di blocco
 
-- `CardPanel`: `NSPanel` borderless trasparente non attivante; `PlayerCardView` riusa copertina,
-  controlli, barra e testi dell'isola su uno sfondo `CardBackdrop` (Liquid Glass + copertina
-  sfocata + sfumatura scura; pieno con *Riduci trasparenza*).
+- `CardPanel`: `NSPanel` borderless trasparente non attivante; `PlayerWidgetView` è un widget
+  medio in stile macOS 26 (copertina 142 pt a sinistra; app sorgente, titolo, artista — album,
+  barra e controlli a destra) su `WidgetBackdrop` (Liquid Glass appena scurito e bordo da
+  0,5 pt, niente copertina sfocata; pieno con *Riduci trasparenza*).
 - Desktop: livello `desktopIconWindow + 1` (sopra le icone, sotto ogni finestra), su tutti gli
   Spazi, trascinabile con `WindowDragGesture`, posizione salvata (`setFrameAutosaveName`).
   Senza musica mostra ora, data e meteo.
 - Schermata di blocco: `LockScreenController` ascolta `com.apple.screenIsLocked/Unlocked`; con
   musica in riproduzione mostra la card e la sposta, con `LockScreenSpace`, in uno spazio
   SkyLight creato dall'app con livello assoluto sopra quello del lock screen
-  (`SLSSpaceCreate`, `SLSSpaceSetAbsoluteLevel`, `SLSShowSpaces`,
-  `SLSSpaceAddWindowsAndRemoveFromSpaces`, risolti a runtime). La finestra di login dopo un
-  riavvio precede ogni app utente: lì non si può mostrare nulla.
+  (`SLSSpaceCreate`, `SLSSpaceSetAbsoluteLevel`, `SLSShowSpaces`/`SLSHideSpaces`,
+  `SLSSpaceAddWindowsAndRemoveFromSpaces`, risolti a runtime). Sul lock screen il widget ha
+  sotto, in un separatore, le 3 righe dei testi (`LyricsStrip`). Allo sblocco `UnlockWatch`
+  (notifica Darwin `com.apple.sessionagent.screenIsUnlocked` su una coda privata) nasconde subito
+  lo spazio, anche con il main thread bloccato. La finestra di login dopo un riavvio precede ogni
+  app utente: lì non si può mostrare nulla. Un video del brano *dietro* orologio e password non
+  si può fare: sfondo e interfaccia del lock screen sono un blocco unico di `loginwindow`, e ogni
+  spazio di livello ≤ 300 resta invisibile (provato il 2026-09-29).
 
 ## Gesti
 
@@ -354,10 +369,10 @@ Vendor/mediaremote-adapter            submodule git (ungive/mediaremote-adapter,
                                       con Xcode e Command Line Tools; blocco macro SwiftUI
 
 Sources/Halo/
-  App/            HaloApp, AppDelegate (composition root), Log, Preferences
+  App/            HaloApp, AppDelegate (composition root), Log, Preferences, AppName
   MenuBar/        StatusItemController, MenuItems, LoginItemController (SMAppService)
   System/         DisplayBrightness, SystemVolume, MediaKeyTap, AccessibilityPermission, LockScreenSpace,
-                  PrivacyIndicators, KeyboardMonitor, PresentationDetector, EnergyMode, UnlockGreeter
+                  PrivacyIndicators, KeyboardMonitor, PresentationDetector, EnergyMode, UnlockGreeter, UnlockWatch
   HUD/            HUDController, HUDModel, HUDStep
   Alerts/         IslandAlert, AlertCenter
   Power/          PowerSnapshot (+ PowerTransition), PowerMonitor
@@ -366,7 +381,8 @@ Sources/Halo/
   Weather/        WeatherCode, WeatherService, LocationProvider, WeatherController
   Shelf/          ShelfStore, FileDragMonitor, ShelfThumbnails, ShelfController
   Clipboard/      ClipboardHistory (+ ClipboardItem, ClipboardContent)
-  Notifications/  NotificationPayload, NotificationDatabase, DatabaseChangeWatcher, NotificationMirror
+  Notifications/  NotificationPayload, NotificationText, NotificationThumbnail, NotificationDatabase,
+                  DatabaseChangeWatcher, NotificationMirror
   Widgets/        CardState, CardPanel, DesktopWidgetController, LockScreenController
   Gestures/       ScrollGestureInterpreter, Haptics
   Calendar/       CalendarEvent (+ MeetingLink, CalendarSchedule), CalendarText, CalendarController
@@ -395,7 +411,7 @@ Sources/Halo/
                   ActivityAlertViews (Full Immersione, sblocco, TransferBanner)
   UI/Shelf/       ShelfView (+ ShelfTile, ShelfDropDelegate)
   UI/Clipboard/   ClipboardTabView (+ ClipboardTile, ClipboardActions)
-  UI/Widgets/     CardBackdrop, PlayerCardView, ClockCardView, DesktopWidgetView, LockScreenView
+  UI/Widgets/     WidgetBackdrop, PlayerWidgetView, LyricsStrip, ClockCardView, DesktopWidgetView, LockScreenView
   UI/Calendar/    CalendarTabView (+ CalendarEventRow, JoinButton), NextEventBadge
   UI/Timer/       TimerRing (+ TimerCountdownText), TimerTabView (+ TimerRingView, CapsuleActionButton),
                   StopwatchViews (quadrante, righe), CompactTimerView (LiveActivity, ali, TransferRing)
@@ -458,7 +474,9 @@ scripts/icon/render-icon.py           disegna Support/AppIcon.png (NumPy + Pillo
   alone esterno, barra che si ingrossa all'hover, Liquid Glass solo sui controlli.
 - Avvisi disegnati a mano: batteria che si riempie a molla con fulmine, anelli per auricolari e
   custodia, cifre che scorrono; testi con la riga corrente sfumata nei colori della copertina.
-- Card desktop/lock screen: vetro + copertina sfocata come campo di colore, bordo sottile.
+- Widget desktop e card del lock screen in stile widget di macOS 26: Liquid Glass appena
+  scurito, bordo da 0,5 pt, niente copertina sfocata; sul lock screen i testi sotto un
+  separatore.
 - Accessibilità: *Riduci movimento* → niente rimbalzi/blur/scale; *Riduci trasparenza* →
   fondi pieni al posto del vetro, niente alone esterno.
 
