@@ -16,6 +16,8 @@ final class LockScreenController {
     private var panel: CardPanel?
     private var space: LockScreenSpace?
     private var spaceUnavailable = false
+    /// Hides the space on unlock without waiting for the main thread.
+    private var unlockWatch: UnlockWatch?
     private var observers: [NSObjectProtocol] = []
     private var isLocked = false
     private var isRunning = false
@@ -105,6 +107,9 @@ final class LockScreenController {
         if space == nil && !spaceUnavailable {
             space = LockScreenSpace()
             spaceUnavailable = space == nil
+            if let space {
+                unlockWatch = UnlockWatch { space.hide() }
+            }
         }
         guard let space else { return }
 
@@ -115,6 +120,7 @@ final class LockScreenController {
             x: frame.midX - Self.size.width / 2,
             y: frame.maxY - frame.height * Self.topFraction - Self.size.height + LockScreenView.shadowMargin
         ))
+        space.show()
         panel.orderFrontRegardless()
         space.add(panel)
         // One frame hidden first, so the card animates in.
@@ -126,6 +132,7 @@ final class LockScreenController {
     private func hide() {
         card.setVisible(false)
         panel?.orderOut(nil)
+        space?.hide()
     }
 
     private func makePanel() -> CardPanel {
