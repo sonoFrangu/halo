@@ -30,6 +30,8 @@ enum Preferences {
         static let lowPowerAdaptive = "lowPowerAdaptive"
         static let focus = "focusEnabled"
         static let notificationsFollowFocus = "notificationsFollowFocus"
+        static let notificationAppModes = "notificationAppModes"
+        static let notificationFocusBypass = "notificationFocusBypass"
         static let transfers = "transfersEnabled"
         static let unlockAnimation = "unlockAnimationEnabled"
         static let systemTimers = "systemTimersEnabled"
@@ -165,6 +167,34 @@ enum Preferences {
     static var notificationsFollowFocus: Bool {
         get { flag(Key.notificationsFollowFocus, default: true) }
         set { defaults.set(newValue, forKey: Key.notificationsFollowFocus) }
+    }
+
+    /// How an app's notifications show in the notch. Only non-default modes are stored,
+    /// so apps never seen before show their notifications.
+    static func notificationMode(for bundleIdentifier: String) -> NotificationAppMode {
+        (defaults.dictionary(forKey: Key.notificationAppModes)?[bundleIdentifier] as? String)
+            .flatMap(NotificationAppMode.init(rawValue:)) ?? .show
+    }
+
+    static func setNotificationMode(_ mode: NotificationAppMode, for bundleIdentifier: String) {
+        var modes = defaults.dictionary(forKey: Key.notificationAppModes) ?? [:]
+        modes[bundleIdentifier] = mode == .show ? nil : mode.rawValue
+        defaults.set(modes, forKey: Key.notificationAppModes)
+    }
+
+    /// Apps whose notifications still show while a Focus silences the others.
+    static func bypassesFocus(_ bundleIdentifier: String) -> Bool {
+        defaults.stringArray(forKey: Key.notificationFocusBypass)?.contains(bundleIdentifier) ?? false
+    }
+
+    static func setBypassesFocus(_ bypasses: Bool, for bundleIdentifier: String) {
+        var identifiers = Set(defaults.stringArray(forKey: Key.notificationFocusBypass) ?? [])
+        if bypasses {
+            identifiers.insert(bundleIdentifier)
+        } else {
+            identifiers.remove(bundleIdentifier)
+        }
+        defaults.set(identifiers.sorted(), forKey: Key.notificationFocusBypass)
     }
 
     /// Downloads and AirDrops as a live activity.
