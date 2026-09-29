@@ -25,8 +25,8 @@ final class NotificationMirror {
     @ObservationIgnored private var watcher: DatabaseChangeWatcher?
     @ObservationIgnored private var lastID: Int64 = 0
     @ObservationIgnored private var activationObserver: NSObjectProtocol?
-    /// New notifications are skipped while this says so (a Focus is on).
-    @ObservationIgnored var isSuppressed: () -> Bool = { false }
+    /// Whether a Focus is silencing notifications now; apps allowed through still show.
+    @ObservationIgnored var isFocusSilencing: () -> Bool = { false }
 
     /// More new records than this at once (e.g. after waking) shows only the newest.
     static let burstLimit = 3
@@ -76,6 +76,18 @@ final class NotificationMirror {
         start()
     }
 
+    /// Apps registered with Notification Center, for the per-app list in Settings.
+    /// Empty while mirroring is off or Full Disk Access is missing.
+    func appIdentifiers() -> [String] {
+        guard let database else { return [] }
+        do {
+            return try database.appIdentifiers()
+        } catch {
+            Log.app.error("notification apps read failed: \(String(describing: error), privacy: .public)")
+            return []
+        }
+    }
+
     // MARK: Records
 
     private func databaseChanged() {
@@ -89,11 +101,17 @@ final class NotificationMirror {
         }
         guard let newest = records.last else { return }
         lastID = newest.id
-        guard !isSuppressed() else { return }
-
+        let focusSilencing = isFocusSilencing()
         let shown = records.count > Self.burstLimit ? [newest] : records
         for record in shown {
-            guard let alert = Self.alert(for: record) else { continue }
+            let decision = NotificationRules.decide(
+                bundleIdentifier: record.bundleIdentifier,
+                ownBundleIdentifier: Bundle.main.bundleIdentifier,
+                mode: Preferences.notificationMode(for: record.bundleIdentifier),
+                focusSilencing: focusSilencing,
+                bypassesFocus: Preferences.bypassesFocus(record.bundleIdentifier)
+            )
+            guard let alert = Self.alert(for: record, decision: decision) else { continue }
             guard let imageURL = alert.imageURL else {
                 alerts.post(.notification(alert))
                 continue
@@ -106,23 +124,33 @@ final class NotificationMirror {
         }
     }
 
-    private static func alert(for record: NotificationRecord) -> NotificationAlert? {
-        guard
-            record.bundleIdentifier != Bundle.main.bundleIdentifier,
-            !isFromWebsite(record.bundleIdentifier)
-        else { return nil }
-        let payload = NotificationPayload.parse(record.data) ?? NotificationPayload()
-        return NotificationAlert(
-            id: record.id,
-            bundleIdentifier: record.bundleIdentifier,
-            text: NotificationText.make(
-                title: payload.title,
-                subtitle: payload.subtitle,
-                body: payload.body,
-                appName: AppName.of(record.bundleIdentifier)
-            ),
-            imageURL: payload.imageURL
-        )
+    private static func alert(for record: NotificationRecord, decision: NotificationDecision) -> NotificationAlert? {
+        let appName = AppName.of(record.bundleIdentifier)
+        switch decision {
+        case .drop:
+            return nil
+        case .appOnly:
+            // No title or body: the banner shows the app's name only, and no photo.
+            return NotificationAlert(
+                id: record.id,
+                bundleIdentifier: record.bundleIdentifier,
+                text: NotificationText.make(title: nil, subtitle: nil, body: nil, appName: appName),
+                imageURL: nil
+            )
+        case .full:
+            let payload = NotificationPayload.parse(record.data) ?? NotificationPayload()
+            return NotificationAlert(
+                id: record.id,
+                bundleIdentifier: record.bundleIdentifier,
+                text: NotificationText.make(
+                    title: payload.title,
+                    subtitle: payload.subtitle,
+                    body: payload.body,
+                    appName: appName
+                ),
+                imageURL: payload.imageURL
+            )
+        }
     }
 
     /// Web push from a website (Safari lists each site as `_WEB_CENTER_:web.<reversed

@@ -97,6 +97,16 @@ final class NotificationDatabase {
         return records
     }
 
+    /// Every app registered with Notification Center (system services included).
+    func appIdentifiers() throws(OpenError) -> [String] {
+        var identifiers: [String] = []
+        try query("SELECT identifier FROM app", row: { statement in
+            guard let identifier = sqlite3_column_text(statement, 0) else { return }
+            identifiers.append(String(cString: identifier))
+        })
+        return identifiers
+    }
+
     private func query(
         _ sql: String,
         bind: (OpaquePointer) -> Void = { _ in },

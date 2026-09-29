@@ -25,7 +25,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let energy = EnergyMode()
         let focus = FocusMonitor(alerts: alerts)
         let notifications = NotificationMirror(alerts: alerts)
-        notifications.isSuppressed = { [weak focus] in
+        notifications.isFocusSilencing = { [weak focus] in
             Preferences.notificationsFollowFocus && focus?.active != nil
         }
         let islands = IslandsCoordinator(
