@@ -433,6 +433,13 @@ Support/          Info.plist, AppIcon.png
 Vendor/           mediaremote-adapter (submodule)
 ```
 
+## Licenza
+
+Copyright © 2026 sonoFrangu. Halo è software libero: puoi ridistribuirlo e modificarlo secondo
+i termini della [GNU General Public License versione 3](LICENSE). Chi distribuisce una versione
+modificata deve pubblicarne il codice sorgente con la stessa licenza. Halo è distribuito senza
+alcuna garanzia.
+
 ## Licenze di terze parti
 
 [mediaremote-adapter](https://github.com/ungive/mediaremote-adapter) © 2025 Jonas van den
