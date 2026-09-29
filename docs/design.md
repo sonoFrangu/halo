@@ -324,6 +324,13 @@ ridotti); `SiriGlyph` un'onda nell'ala sinistra. Il pannello di Siri resta dove 
 - `PrivacyIndicators`: listener CoreAudio su `kAudioDevicePropertyDeviceIsRunningSomewhere` di
   ogni dispositivo d'ingresso e CoreMediaIO su `kCMIODevicePropertyDeviceIsRunningSomewhere` di
   ogni fotocamera, più i listener sugli elenchi dei dispositivi per ri-registrarsi.
+  I listener usano le API a puntatore di funzione (`PropertyListeners`: `AudioPropertyListener`,
+  `CameraPropertyListener`, rimossi quando vengono rilasciati). Le varianti a block non si
+  possono togliere da Swift: ogni chiamata crea un block nuovo, e
+  `AudioObjectRemovePropertyListenerBlock` risponde noErr senza togliere niente. I listener si
+  accumulavano e ogni cambio dell'elenco dispositivi li ri-registrava tutti: 5 cambi costavano
+  10–14 s di CPU, sempre di più; ora 0,02–0,04 s. Lo stesso difetto teneva vivi gli avvisi
+  delle cuffie anche dopo averli spenti.
 - `KeyboardMonitor`: notifica distribuita `TISNotifySelectedKeyboardInputSourceChanged` e
   monitor `flagsChanged` (serve Accessibilità) per Bloc Maiusc; avvisi "ali" brevi.
 
@@ -380,7 +387,8 @@ Sources/Halo/
   App/            HaloApp, AppDelegate (composition root), Log, Preferences, AppName
   MenuBar/        StatusItemController, MenuItems, LoginItemController (SMAppService)
   System/         DisplayBrightness, SystemVolume, MediaKeyTap, AccessibilityPermission, LockScreenSpace,
-                  PrivacyIndicators, KeyboardMonitor, PresentationDetector, EnergyMode, UnlockGreeter, UnlockWatch
+                  PrivacyIndicators, PropertyListeners, KeyboardMonitor, PresentationDetector, EnergyMode,
+                  UnlockGreeter, UnlockWatch
   HUD/            HUDController, HUDModel, HUDStep
   Alerts/         IslandAlert, AlertCenter
   Power/          PowerSnapshot (+ PowerTransition), PowerMonitor

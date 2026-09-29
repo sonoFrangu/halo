@@ -9,7 +9,7 @@ import Foundation
 final class AudioDeviceMonitor {
     private let alerts: AlertCenter
     private let volume: SystemVolume
-    private var listener: AudioObjectPropertyListenerBlock?
+    private var listener: AudioPropertyListener?
     private var currentDevice: AudioObjectID?
     private var batteryTask: Task<Void, Never>?
 
@@ -24,40 +24,24 @@ final class AudioDeviceMonitor {
     func start() {
         guard listener == nil else { return }
         currentDevice = volume.defaultOutputDevice
-        var address = Self.defaultOutputAddress
-        let block: AudioObjectPropertyListenerBlock = { [weak self] _, _ in
+        listener = AudioPropertyListener(
+            object: AudioObjectID(kAudioObjectSystemObject),
+            selector: kAudioHardwarePropertyDefaultOutputDevice,
+            queue: .main
+        ) { [weak self] in
             MainActor.assumeIsolated {
                 self?.defaultOutputChanged()
             }
         }
-        let status = AudioObjectAddPropertyListenerBlock(
-            AudioObjectID(kAudioObjectSystemObject), &address, DispatchQueue.main, block
-        )
-        if status == noErr {
-            listener = block
-        } else {
-            Log.app.error("could not observe the default output device (\(status))")
+        if listener == nil {
+            Log.app.error("could not observe the default output device")
         }
     }
 
     func stop() {
-        if let listener {
-            var address = Self.defaultOutputAddress
-            AudioObjectRemovePropertyListenerBlock(
-                AudioObjectID(kAudioObjectSystemObject), &address, DispatchQueue.main, listener
-            )
-        }
         listener = nil
         batteryTask?.cancel()
         alerts.withdraw(.audioDevice)
-    }
-
-    private static var defaultOutputAddress: AudioObjectPropertyAddress {
-        AudioObjectPropertyAddress(
-            mSelector: kAudioHardwarePropertyDefaultOutputDevice,
-            mScope: kAudioObjectPropertyScopeGlobal,
-            mElement: kAudioObjectPropertyElementMain
-        )
     }
 
     private func defaultOutputChanged() {
