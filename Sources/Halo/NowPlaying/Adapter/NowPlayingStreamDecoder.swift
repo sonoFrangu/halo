@@ -31,6 +31,8 @@ struct NowPlayingStreamDecoder {
         static let timing = [durationMicros, elapsedTimeMicros, timestampEpochMicros]
     }
 
+    private static let longestDurationMicros: Double = 7 * 24 * 3600 * 1_000_000
+
     private var fields: [String: Any] = [:]
     private var artwork: ArtworkPayload?
     /// The last timeline decoded, re-anchored when only the play state changes.
@@ -113,7 +115,10 @@ struct NowPlayingStreamDecoder {
     }
 
     private func makeTimeline(isPlaying: Bool, hasFreshTiming: Bool) -> PlaybackTimeline? {
-        guard let durationMicros = number(Key.durationMicros), durationMicros > 0 else {
+        // Live streams report no duration or a sentinel (Twitch in Safari: Int64.max µs,
+        // about 292,000 years); anything past a week is treated as live.
+        guard let durationMicros = number(Key.durationMicros),
+              durationMicros > 0, durationMicros <= Self.longestDurationMicros else {
             return nil
         }
         let duration = durationMicros / 1_000_000

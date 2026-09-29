@@ -190,10 +190,12 @@ struct NowPlayingStreamDecoderTests {
         #expect(seeked.elapsed == 90)
     }
 
-    @Test func liveContentHasNoTimeline() throws {
+    /// Live content reports either no duration or, like Twitch in Safari, Int64.max.
+    @Test(arguments: [0, 9.223372036854776e18])
+    func liveContentHasNoTimeline(durationMicros: Double) throws {
         var decoder = makeDecoder()
         var payload = fullPayload
-        payload["durationMicros"] = 0
+        payload["durationMicros"] = durationMicros
         let resultOutput = try decode(&decoder, diff: false, payload)
 
         let result = try #require(resultOutput)
