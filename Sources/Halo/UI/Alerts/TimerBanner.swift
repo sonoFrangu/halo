@@ -26,7 +26,7 @@ struct TimerBanner: View {
                     .foregroundStyle(.white)
                 Text(alert.message)
                     .font(.system(size: 11))
-                    .foregroundStyle(.white.opacity(0.65))
+                    .foregroundStyle(Ink.secondary)
             }
             .lineLimit(1)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -38,7 +38,7 @@ struct TimerBanner: View {
                         .foregroundStyle(.white)
                         .padding(.horizontal, 12)
                         .frame(height: 24)
-                        .background(Capsule().fill(Color.white.opacity(0.14)))
+                        .background(Capsule().fill(Fill.primary))
                         .contentShape(Capsule())
                 }
                 .buttonStyle(PressableButtonStyle())

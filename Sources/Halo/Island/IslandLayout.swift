@@ -48,10 +48,18 @@ struct IslandLayout: Sendable, Equatable {
     static let lyricsPanelHeight: CGFloat = 88
     static let emptyBodyHeight: CGFloat = 64
     /// Body of the non-player tabs (shelf, calendar).
-    static let tabBodyHeight: CGFloat = 122
+    static let tabBodyHeight: CGFloat = 128
     static let bannerMinimumWidth: CGFloat = 400
-    static let bannerBodyHeight: CGFloat = 66
+    static let bannerBodyHeight: CGFloat = 70
     static let contentInset: CGFloat = 24
+    static let expandedCornerRadius: CGFloat = 28
+    static let bannerCornerRadius: CGFloat = 24
+    /// Margin around the shelf, clipboard, calendar and timer tabs, sides and bottom alike.
+    static let tabInset: CGFloat = 16
+    /// Margin around a banner's content, sides and bottom alike.
+    static let bannerInset: CGFloat = 16
+    /// The shelf's and clipboard's areas, concentric with the island's bottom corners.
+    static let tabCornerRadius = Corner.concentric(expandedCornerRadius, inset: tabInset)
     /// Tall enough for title and artist above the transport controls with a clear gap,
     /// both aligned to the artwork's edges.
     static let expandedArtworkSide: CGFloat = 84
@@ -145,14 +153,14 @@ struct IslandLayout: Sendable, Equatable {
             return IslandShapeSpec(
                 width: bannerWidth,
                 height: notch.height + Self.bannerBodyHeight,
-                bottomRadius: 24,
+                bottomRadius: Self.bannerCornerRadius,
                 earRadius: 12
             )
         case .expanded:
             return IslandShapeSpec(
                 width: expandedWidth,
                 height: notch.height + expandedBodyHeight(context),
-                bottomRadius: 28,
+                bottomRadius: Self.expandedCornerRadius,
                 earRadius: 14
             )
         }
@@ -294,10 +302,10 @@ struct IslandLayout: Sendable, Equatable {
     /// Content of the shelf and calendar tabs.
     var tabBodyFrame: CGRect {
         CGRect(
-            x: centerX - expandedWidth / 2 + 16,
+            x: centerX - expandedWidth / 2 + Self.tabInset,
             y: notchSize.height + 6,
-            width: expandedWidth - 32,
-            height: Self.tabBodyHeight - 16
+            width: expandedWidth - 2 * Self.tabInset,
+            height: Self.tabBodyHeight - 6 - Self.tabInset
         )
     }
 
@@ -328,10 +336,10 @@ struct IslandLayout: Sendable, Equatable {
     /// Content of a banner alert, below the notch.
     var bannerFrame: CGRect {
         CGRect(
-            x: centerX - bannerWidth / 2 + 20,
+            x: centerX - bannerWidth / 2 + Self.bannerInset,
             y: notchSize.height + 4,
-            width: bannerWidth - 40,
-            height: Self.bannerBodyHeight - 12
+            width: bannerWidth - 2 * Self.bannerInset,
+            height: Self.bannerBodyHeight - 4 - Self.bannerInset
         )
     }
 

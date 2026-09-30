@@ -12,14 +12,14 @@ struct ShelfView: View {
 
     var body: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
+            RoundedRectangle(cornerRadius: IslandLayout.tabCornerRadius, style: .continuous)
                 .strokeBorder(
-                    Color.white.opacity(isDropTargeted ? 0.55 : 0.12),
+                    isDropTargeted ? Ink.secondary : Fill.primary,
                     style: StrokeStyle(lineWidth: 1.2, dash: [5, 4])
                 )
                 .background {
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .fill(Color.white.opacity(isDropTargeted ? 0.08 : 0.02))
+                    RoundedRectangle(cornerRadius: IslandLayout.tabCornerRadius, style: .continuous)
+                        .fill(isDropTargeted ? Fill.secondary : Fill.tertiary)
                 }
 
             if store.isEmpty {
@@ -30,7 +30,7 @@ struct ShelfView: View {
                     Text(isDropTargeted ? "Rilascia per aggiungere" : "Trascina qui i file")
                         .font(.system(size: 12, weight: .semibold))
                 }
-                .foregroundStyle(.white.opacity(0.6))
+                .foregroundStyle(Ink.secondary)
             } else {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 10) {
@@ -54,11 +54,11 @@ struct ShelfView: View {
                 Image(systemName: "trash")
                     .font(.system(size: 14, weight: .semibold))
                     .frame(width: 44, height: 44)
-                    .background(Circle().fill(Color.white.opacity(0.08)))
+                    .background(Circle().fill(Fill.primary))
                 Text("Svuota")
                     .font(.system(size: 10, weight: .medium))
             }
-            .foregroundStyle(.white.opacity(0.6))
+            .foregroundStyle(Ink.secondary)
         }
         .buttonStyle(PressableButtonStyle())
         .accessibilityLabel("Svuota lo scaffale")
@@ -81,7 +81,7 @@ struct ShelfTile: View {
                 .shadow(color: .black.opacity(0.4), radius: 4, x: 0, y: 2)
             Text(item.name)
                 .font(.system(size: 10, weight: .medium))
-                .foregroundStyle(.white.opacity(0.8))
+                .foregroundStyle(Ink.primary)
                 .lineLimit(1)
                 .truncationMode(.middle)
                 .frame(width: 64)

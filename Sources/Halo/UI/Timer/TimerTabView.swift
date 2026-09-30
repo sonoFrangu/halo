@@ -193,7 +193,7 @@ struct TimerPresetButton: View {
                     .font(.system(size: 15, weight: .semibold, design: .rounded))
                 Text("min")
                     .font(.system(size: 8.5, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.6))
+                    .foregroundStyle(Ink.secondary)
             }
             .foregroundStyle(.white)
         }

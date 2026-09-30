@@ -9,7 +9,7 @@ struct NotificationBanner: View {
 
     var body: some View {
         let text = alert.text
-        let corner = RoundedRectangle(cornerRadius: 10, style: .continuous)
+        let corner = RoundedRectangle(cornerRadius: Corner.tile, style: .continuous)
 
         HStack(spacing: 12) {
             AppIcon(bundleIdentifier: alert.bundleIdentifier)
@@ -25,7 +25,7 @@ struct NotificationBanner: View {
                     if let detail = text.detail {
                         Text(" · \(detail)")
                             .font(.system(size: 14))
-                            .foregroundStyle(.white.opacity(0.55))
+                            .foregroundStyle(Ink.secondary)
                     }
                 }
                 .lineLimit(1)
@@ -33,7 +33,7 @@ struct NotificationBanner: View {
                 if let message = text.message {
                     Text(message)
                         .font(.system(size: 13))
-                        .foregroundStyle(.white.opacity(0.75))
+                        .foregroundStyle(Ink.primary)
                         .lineLimit(2)
                         .truncationMode(.tail)
                 }
@@ -50,7 +50,7 @@ struct NotificationBanner: View {
             } else {
                 Text("ora")
                     .font(.system(size: 11))
-                    .foregroundStyle(.white.opacity(0.45))
+                    .foregroundStyle(Ink.tertiary)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -69,11 +69,11 @@ struct AppIcon: View {
                 .interpolation(.high)
                 .aspectRatio(contentMode: .fit)
         } else {
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .fill(Color.white.opacity(0.12))
+            RoundedRectangle(cornerRadius: Corner.tile, style: .continuous)
+                .fill(Fill.primary)
                 .overlay {
                     Image(systemName: "bell.fill")
-                        .foregroundStyle(.white.opacity(0.6))
+                        .foregroundStyle(Ink.secondary)
                 }
         }
     }

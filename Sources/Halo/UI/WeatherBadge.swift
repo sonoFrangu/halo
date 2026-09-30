@@ -13,7 +13,7 @@ struct WeatherBadge: View {
                     .font(.system(size: 13, weight: .medium))
                 Text(report.temperatureText)
                     .font(.system(size: 13, weight: .semibold).monospacedDigit())
-                    .foregroundStyle(.white.opacity(0.9))
+                    .foregroundStyle(Ink.primary)
                     .contentTransition(.numericText(value: report.temperature))
             }
         }

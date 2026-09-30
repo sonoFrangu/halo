@@ -8,15 +8,15 @@ struct EmptyStateView: View {
         HStack(spacing: 10) {
             Image(systemName: symbol)
                 .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(.white.opacity(0.5))
+                .foregroundStyle(Ink.secondary)
             VStack(alignment: .leading, spacing: 1) {
                 Text(title)
                     .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.85))
+                    .foregroundStyle(Ink.primary)
                 if let detail {
                     Text(detail)
                         .font(.system(size: 11))
-                        .foregroundStyle(.white.opacity(0.45))
+                        .foregroundStyle(Ink.tertiary)
                         .lineLimit(1)
                         .truncationMode(.middle)
                 }

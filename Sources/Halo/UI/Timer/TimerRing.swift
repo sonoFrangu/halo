@@ -25,7 +25,7 @@ struct TimerRing: View {
         let colors = TimerPalette.colors(for: mode)
         ZStack {
             Circle()
-                .stroke(Color.white.opacity(0.12), lineWidth: lineWidth)
+                .stroke(Fill.primary, lineWidth: lineWidth)
             Circle()
                 .trim(from: 0, to: CGFloat(max(0.001, 1 - progress)))
                 .stroke(

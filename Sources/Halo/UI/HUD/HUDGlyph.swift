@@ -12,7 +12,7 @@ struct HUDGlyph: View {
         Image(systemName: symbol, variableValue: variableValue)
             .font(.system(size: 15, weight: .semibold))
             .symbolRenderingMode(.hierarchical)
-            .foregroundStyle(isMuted ? Color.white.opacity(0.55) : Color.white)
+            .foregroundStyle(isMuted ? Ink.secondary : Ink.primary)
             .contentTransition(.symbolEffect(.replace))
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .animation(.smooth(duration: 0.25), value: level)

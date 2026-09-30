@@ -13,7 +13,7 @@ struct PowerValueView: View {
                 .contentTransition(.numericText(value: Double(percent)))
             Text(caption)
                 .font(.system(size: 10, weight: .medium))
-                .foregroundStyle(.white.opacity(0.5))
+                .foregroundStyle(Ink.secondary)
                 .lineLimit(1)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)

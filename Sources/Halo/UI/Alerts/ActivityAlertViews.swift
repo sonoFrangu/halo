@@ -7,7 +7,7 @@ struct FocusAlertGlyph: View {
     var body: some View {
         Image(systemName: alert.mode.symbol)
             .font(.system(size: 14, weight: .semibold))
-            .foregroundStyle(alert.isOn ? alert.mode.tint.color : .white.opacity(0.55))
+            .foregroundStyle(alert.isOn ? alert.mode.tint.color : Ink.secondary)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .accessibilityHidden(true)
     }
@@ -21,10 +21,10 @@ struct FocusAlertValue: View {
         VStack(alignment: .leading, spacing: -1) {
             Text(alert.mode.name)
                 .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(alert.isOn ? .white : .white.opacity(0.7))
+                .foregroundStyle(alert.isOn ? Ink.primary : Ink.secondary)
             Text(alert.isOn ? "Attiva" : "Disattivata")
                 .font(.system(size: 9.5, weight: .medium))
-                .foregroundStyle(alert.isOn ? alert.mode.tint.color : .white.opacity(0.5))
+                .foregroundStyle(alert.isOn ? alert.mode.tint.color : Ink.secondary)
         }
         .lineLimit(1)
         .minimumScaleFactor(0.75)
@@ -114,9 +114,9 @@ struct BannerIconButton: View {
         Button(action: action) {
             Image(systemName: symbol)
                 .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(.white.opacity(0.85))
+                .foregroundStyle(Ink.primary)
                 .frame(width: 28, height: 28)
-                .background(Circle().fill(Color.white.opacity(0.1)))
+                .background(Circle().fill(Fill.primary))
                 .contentShape(Circle())
         }
         .buttonStyle(PressableButtonStyle())

@@ -19,7 +19,7 @@ struct HUDLevelBar: View {
 
             ZStack(alignment: .leading) {
                 Capsule()
-                    .fill(Color.white.opacity(0.14))
+                    .fill(Fill.primary)
                 Capsule()
                     .fill(Color.white)
                     .frame(width: max(thickness, width * CGFloat(shown)))

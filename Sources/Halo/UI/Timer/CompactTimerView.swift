@@ -96,7 +96,7 @@ struct TransferRing: View {
         let tint = TransferPalette.tint(for: transfer.kind)
         ZStack {
             Circle()
-                .stroke(Color.white.opacity(0.14), lineWidth: lineWidth)
+                .stroke(Fill.primary, lineWidth: lineWidth)
             Circle()
                 .trim(from: 0, to: CGFloat(max(0.02, min(transfer.fraction, 1))))
                 .stroke(tint, style: StrokeStyle(lineWidth: lineWidth, lineCap: .round))

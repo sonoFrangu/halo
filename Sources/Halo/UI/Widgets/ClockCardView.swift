@@ -17,7 +17,7 @@ struct ClockCardView: View {
                         .contentTransition(.numericText())
                     Text(context.date, format: .dateTime.weekday(.wide).day().month(.wide))
                         .font(.system(size: 14, weight: .medium))
-                        .foregroundStyle(.white.opacity(0.65))
+                        .foregroundStyle(Ink.secondary)
                 }
                 Spacer(minLength: 12)
                 if let weather {
@@ -27,7 +27,7 @@ struct ClockCardView: View {
                             .font(.system(size: 26, weight: .medium))
                         Text(weather.temperatureText)
                             .font(.system(size: 20, weight: .semibold, design: .rounded).monospacedDigit())
-                            .foregroundStyle(.white.opacity(0.9))
+                            .foregroundStyle(Ink.primary)
                     }
                     .accessibilityElement(children: .ignore)
                     .accessibilityLabel("\(weather.summary), \(weather.temperatureText)")
@@ -35,10 +35,10 @@ struct ClockCardView: View {
             }
             .animation(.easeInOut(duration: 0.4), value: context.date)
         }
-        .padding(16)
+        .padding(Corner.widgetPadding)
         .frame(width: width)
         .background {
-            WidgetBackdrop(cornerRadius: 22)
+            WidgetBackdrop(cornerRadius: Corner.widget)
         }
     }
 }

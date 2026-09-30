@@ -8,15 +8,17 @@ struct PlayerWidgetView: View {
     struct Metrics: Equatable {
         var width: CGFloat
         var artworkSide: CGFloat
-        var cornerRadius: CGFloat
-        var padding: CGFloat
 
-        static let desktop = Metrics(width: 360, artworkSide: 142, cornerRadius: 22, padding: 14)
-        static let lockScreen = Metrics(width: 380, artworkSide: 150, cornerRadius: 26, padding: 16)
+        static let desktop = Metrics(width: 360, artworkSide: 142)
+        static let lockScreen = Metrics(width: 380, artworkSide: 150)
 
         /// Height of the widget without lyrics.
-        var height: CGFloat { artworkSide + 2 * padding }
+        var height: CGFloat { artworkSide + 2 * Corner.widgetPadding }
     }
+
+    /// Concentric with the widget's corners, the artwork sitting `widgetPadding` from both
+    /// edges.
+    static let artworkCornerRadius = Corner.concentric(Corner.widget, inset: Corner.widgetPadding)
 
     let player: NowPlayingModel
     let lyrics: LyricsModel?
@@ -29,7 +31,7 @@ struct PlayerWidgetView: View {
 
         VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .top, spacing: 14) {
-                ArtworkView(image: player.artworkImage, palette: player.palette, cornerRadius: 12, isProminent: false)
+                ArtworkView(image: player.artworkImage, palette: player.palette, cornerRadius: Self.artworkCornerRadius, isProminent: false)
                     .frame(width: metrics.artworkSide, height: metrics.artworkSide)
                     .onTapGesture { actions.openSource() }
                     .accessibilityAddTraits(.isButton)
@@ -44,10 +46,10 @@ struct PlayerWidgetView: View {
                     .transition(.opacity)
             }
         }
-        .padding(metrics.padding)
+        .padding(Corner.widgetPadding)
         .frame(width: metrics.width)
         .background {
-            WidgetBackdrop(cornerRadius: metrics.cornerRadius)
+            WidgetBackdrop(cornerRadius: Corner.widget)
         }
         .animation(.spring(duration: 0.45, bounce: 0.15), value: showsLyrics)
     }
@@ -60,7 +62,7 @@ struct PlayerWidgetView: View {
                         .frame(width: 12, height: 12)
                     Text(AppName.of(source))
                         .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(.white.opacity(0.55))
+                        .foregroundStyle(Ink.secondary)
                         .lineLimit(1)
                 }
                 .padding(.bottom, 6)
@@ -72,7 +74,7 @@ struct PlayerWidgetView: View {
             if let subtitle {
                 Text(subtitle)
                     .font(.system(size: 12))
-                    .foregroundStyle(.white.opacity(0.6))
+                    .foregroundStyle(Ink.secondary)
                     .lineLimit(1)
             }
 

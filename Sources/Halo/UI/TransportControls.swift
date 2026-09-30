@@ -102,7 +102,7 @@ struct GlassDiscButtonStyle: ButtonStyle {
             }
             .glassEffect(glass, in: Circle())
             .overlay {
-                Circle().fill(.white.opacity(pressed ? 0.12 : 0))
+                Circle().fill(pressed ? Fill.primary : .clear)
             }
             .contentShape(Circle())
             .scaleEffect(pressed && !reduceMotion ? 0.88 : 1)

@@ -52,10 +52,10 @@ struct CalendarTabView: View {
                     .font(.system(size: 11, weight: .semibold))
                     .padding(.horizontal, 10)
                     .padding(.vertical, 4)
-                    .background(Capsule().fill(Color.white.opacity(0.14)))
+                    .background(Capsule().fill(Fill.primary))
             }
         }
-        .foregroundStyle(.white.opacity(0.6))
+        .foregroundStyle(Ink.secondary)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
@@ -82,7 +82,7 @@ struct CalendarEventRow: View {
                     .foregroundStyle(.white)
                 Text(CalendarText.subtitle(for: event, now: now))
                     .font(.system(size: 10.5, weight: .medium).monospacedDigit())
-                    .foregroundStyle(isOngoing ? tint : Color.white.opacity(0.55))
+                    .foregroundStyle(isOngoing ? tint : Ink.secondary)
             }
             .lineLimit(1)
             .frame(maxWidth: .infinity, alignment: .leading)

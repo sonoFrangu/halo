@@ -9,8 +9,8 @@ struct ClipboardTabView: View {
 
     var body: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(Color.white.opacity(0.02))
+            RoundedRectangle(cornerRadius: IslandLayout.tabCornerRadius, style: .continuous)
+                .fill(Fill.tertiary)
 
             if history.items.isEmpty {
                 VStack(spacing: 4) {
@@ -19,7 +19,7 @@ struct ClipboardTabView: View {
                     Text("Quello che copi compare qui")
                         .font(.system(size: 12, weight: .semibold))
                 }
-                .foregroundStyle(.white.opacity(0.6))
+                .foregroundStyle(Ink.secondary)
             } else {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 10) {
@@ -42,11 +42,11 @@ struct ClipboardTabView: View {
                 Image(systemName: "trash")
                     .font(.system(size: 14, weight: .semibold))
                     .frame(width: 44, height: 44)
-                    .background(Circle().fill(Color.white.opacity(0.08)))
+                    .background(Circle().fill(Fill.primary))
                 Text("Svuota")
                     .font(.system(size: 10, weight: .medium))
             }
-            .foregroundStyle(.white.opacity(0.6))
+            .foregroundStyle(Ink.secondary)
         }
         .buttonStyle(PressableButtonStyle())
         .accessibilityLabel("Svuota gli appunti")
@@ -65,12 +65,12 @@ struct ClipboardTile: View {
         VStack(spacing: 6) {
             preview
                 .frame(width: Self.size.width, height: Self.size.height)
-                .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Color.white.opacity(0.08)))
-                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .background(RoundedRectangle(cornerRadius: Corner.tile, style: .continuous).fill(Fill.secondary))
+                .clipShape(RoundedRectangle(cornerRadius: Corner.tile, style: .continuous))
                 .overlay {
                     if isCopied {
                         ZStack {
-                            RoundedRectangle(cornerRadius: 10, style: .continuous).fill(.black.opacity(0.55))
+                            RoundedRectangle(cornerRadius: Corner.tile, style: .continuous).fill(.black.opacity(0.55))
                             Label("Copiato", systemImage: "checkmark.circle.fill")
                                 .font(.system(size: 11, weight: .semibold))
                                 .foregroundStyle(.white)
@@ -99,7 +99,7 @@ struct ClipboardTile: View {
         case .text(let text):
             Text(text.trimmingCharacters(in: .whitespacesAndNewlines))
                 .font(.system(size: 10.5, weight: .medium))
-                .foregroundStyle(.white.opacity(0.85))
+                .foregroundStyle(Ink.primary)
                 .lineLimit(4)
                 .multilineTextAlignment(.leading)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)

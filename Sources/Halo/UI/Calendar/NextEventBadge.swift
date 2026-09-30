@@ -14,7 +14,7 @@ struct NextEventBadge: View {
                     .frame(width: 6, height: 6)
                 Text(event.title)
                     .font(.system(size: 11.5, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.9))
+                    .foregroundStyle(Ink.primary)
                     .lineLimit(1)
                     .truncationMode(.tail)
                 Text(CalendarText.short(for: event, now: context.date))

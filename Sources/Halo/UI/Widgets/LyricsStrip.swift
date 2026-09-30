@@ -11,7 +11,7 @@ struct LyricsStrip: View {
     var body: some View {
         VStack(spacing: 12) {
             Rectangle()
-                .fill(Color.white.opacity(0.15))
+                .fill(Fill.primary)
                 .frame(height: 0.5)
             LyricsPanel(
                 lines: lyrics.lines,

@@ -22,7 +22,7 @@ struct AudioDeviceBanner: View {
                     .lineLimit(1)
                 Text("Connesse")
                     .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.5))
+                    .foregroundStyle(Ink.secondary)
             }
             .reveal(isVisible, order: 1)
 

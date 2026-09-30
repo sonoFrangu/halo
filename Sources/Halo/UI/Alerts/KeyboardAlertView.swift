@@ -23,7 +23,7 @@ struct KeyboardAlertGlyph: View {
     private var tint: Color {
         switch alert {
         case .layout: .white
-        case .capsLock(let on): on ? Color(red: 0.4, green: 0.9, blue: 0.5) : .white.opacity(0.7)
+        case .capsLock(let on): on ? Color(red: 0.4, green: 0.9, blue: 0.5) : Ink.secondary
         }
     }
 }
@@ -49,7 +49,7 @@ struct KeyboardAlertValue: View {
             case .capsLock(let on):
                 Text(on ? "Maiusc attivo" : "Maiusc spento")
                     .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(on ? Color(red: 0.4, green: 0.9, blue: 0.5) : .white.opacity(0.7))
+                    .foregroundStyle(on ? Color(red: 0.4, green: 0.9, blue: 0.5) : Ink.secondary)
             }
         }
         .lineLimit(1)

@@ -62,9 +62,9 @@ struct ScrubberView: View {
                 let width = proxy.size.width
                 ZStack(alignment: .leading) {
                     Capsule()
-                        .fill(.white.opacity(0.16))
+                        .fill(Fill.primary)
                     Capsule()
-                        .fill(isEmphasized ? tint : Color.white.opacity(0.9))
+                        .fill(isEmphasized ? tint : Ink.primary)
                         .frame(width: max(0, min(width, width * CGFloat(progress))))
                 }
                 .frame(height: isEmphasized ? 8 : 4)
@@ -93,7 +93,7 @@ struct ScrubberView: View {
     private func timeLabel(_ text: String, alignment: Alignment) -> some View {
         Text(text)
             .font(.system(size: 11, weight: .medium).monospacedDigit())
-            .foregroundStyle(.white.opacity(0.5))
+            .foregroundStyle(Ink.secondary)
             .frame(width: 44, alignment: alignment)
     }
 }

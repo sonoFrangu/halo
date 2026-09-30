@@ -30,7 +30,7 @@ struct TrackInfoView: View {
 
             Text(artist ?? "")
                 .font(.system(size: 13, weight: .medium))
-                .foregroundStyle(.white.opacity(0.58))
+                .foregroundStyle(Ink.secondary)
         }
         .lineLimit(1)
         .truncationMode(.tail)

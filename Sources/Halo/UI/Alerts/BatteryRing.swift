@@ -12,20 +12,20 @@ struct BatteryRing: View {
         VStack(spacing: 3) {
             ZStack {
                 Circle()
-                    .stroke(Color.white.opacity(0.14), lineWidth: 2.5)
+                    .stroke(Fill.primary, lineWidth: 2.5)
                 Circle()
                     .trim(from: 0, to: CGFloat(value ?? 0))
                     .stroke(ringColor, style: StrokeStyle(lineWidth: 2.5, lineCap: .round))
                     .rotationEffect(.degrees(-90))
                 Image(systemName: symbol)
                     .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(.white.opacity(value == nil ? 0.35 : 0.9))
+                    .foregroundStyle(value == nil ? Ink.tertiary : Ink.primary)
             }
             .frame(width: 28, height: 28)
 
             Text(value.map { "\(Int(($0 * 100).rounded()))%" } ?? caption)
                 .font(.system(size: 9, weight: .semibold).monospacedDigit())
-                .foregroundStyle(.white.opacity(0.6))
+                .foregroundStyle(Ink.secondary)
                 .lineLimit(1)
         }
         .animation(.spring(duration: 0.7, bounce: 0.15), value: value)

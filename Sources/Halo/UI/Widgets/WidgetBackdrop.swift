@@ -19,7 +19,7 @@ struct WidgetBackdrop: View {
             }
         }
         .overlay {
-            shape.strokeBorder(Color.white.opacity(0.14), lineWidth: 0.5)
+            shape.strokeBorder(Fill.primary, lineWidth: 0.5)
         }
         .allowsHitTesting(false)
     }

@@ -40,7 +40,7 @@ struct ArtworkView: View {
         .animation(.easeInOut(duration: 0.3), value: image.map { ObjectIdentifier($0) })
         .clipShape(shape)
         .overlay {
-            shape.strokeBorder(.white.opacity(0.08), lineWidth: 0.5)
+            shape.strokeBorder(Fill.secondary, lineWidth: 0.5)
         }
         // The colored shadow follows its own delayed animation: it only appears once the
         // artwork has reached its expanded frame, so it is not re-rendered while it moves.

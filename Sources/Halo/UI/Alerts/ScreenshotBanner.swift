@@ -26,10 +26,10 @@ struct ScreenshotBanner: View {
                 .interpolation(.high)
                 .aspectRatio(contentMode: .fill)
                 .frame(width: 78, height: 48)
-                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: Corner.tile, style: .continuous))
                 .overlay {
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .strokeBorder(Color.white.opacity(0.18), lineWidth: 0.5)
+                    RoundedRectangle(cornerRadius: Corner.tile, style: .continuous)
+                        .strokeBorder(Fill.primary, lineWidth: 0.5)
                 }
                 .shadow(color: .black.opacity(0.5), radius: 5, x: 0, y: 2)
                 .onDrag { NSItemProvider(contentsOf: url) ?? NSItemProvider() }
@@ -42,7 +42,7 @@ struct ScreenshotBanner: View {
                     .foregroundStyle(.white)
                 Text("Trascinalo dove vuoi")
                     .font(.system(size: 11))
-                    .foregroundStyle(.white.opacity(0.55))
+                    .foregroundStyle(Ink.secondary)
             }
             .lineLimit(1)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -60,9 +60,9 @@ struct ScreenshotBanner: View {
         Button(action: action) {
             Image(systemName: symbol)
                 .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(.white.opacity(0.85))
+                .foregroundStyle(Ink.primary)
                 .frame(width: 28, height: 28)
-                .background(Circle().fill(Color.white.opacity(0.1)))
+                .background(Circle().fill(Fill.primary))
                 .contentShape(Circle())
         }
         .buttonStyle(PressableButtonStyle())

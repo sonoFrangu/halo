@@ -40,10 +40,10 @@ struct ExpandedTabsView: View {
         } label: {
             Image(systemName: tab.symbol)
                 .font(.system(size: 10.5, weight: .semibold))
-                .foregroundStyle(isSelected ? Color.black : Color.white.opacity(0.6))
+                .foregroundStyle(isSelected ? Color.black : Ink.secondary)
                 .frame(width: pillWidth, height: Self.pillSize.height)
                 .background {
-                    Capsule().fill(isSelected ? Color.white : Color.white.opacity(0.08))
+                    Capsule().fill(isSelected ? Color.white : Fill.secondary)
                 }
                 .contentShape(Capsule())
         }

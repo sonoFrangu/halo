@@ -12,7 +12,7 @@ struct CalendarBanner: View {
 
         HStack(spacing: 12) {
             ZStack {
-                RoundedRectangle(cornerRadius: 9, style: .continuous)
+                RoundedRectangle(cornerRadius: Corner.tile, style: .continuous)
                     .fill(tint.opacity(0.22))
                 Image(systemName: event.meetingURL == nil ? "calendar" : "video.fill")
                     .font(.system(size: 15, weight: .semibold))
@@ -32,7 +32,7 @@ struct CalendarBanner: View {
                     if let location = event.location, !location.isEmpty, event.meetingURL == nil {
                         Text(location)
                             .font(.system(size: 11))
-                            .foregroundStyle(.white.opacity(0.6))
+                            .foregroundStyle(Ink.secondary)
                     }
                 }
                 .lineLimit(1)
