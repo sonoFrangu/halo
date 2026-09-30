@@ -86,7 +86,6 @@ struct HUDLayoutTests {
         #expect(layout.hudGlyphFrame.maxX < notchMinX)
         #expect(layout.hudBarFrame.minX > notchMaxX)
         #expect(layout.hudBarFrame.width >= 30)
-        #expect(layout.hudValueFrame.minX >= layout.hudBarFrame.maxX)
-        #expect(layout.hudValueFrame.maxX < bodyMaxX)
+        #expect(layout.hudBarFrame.maxX < bodyMaxX)
     }
 }

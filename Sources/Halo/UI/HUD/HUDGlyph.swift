@@ -1,15 +1,12 @@
 import SwiftUI
 
-/// Left-wing glyph of the HUD. Brightness is a sun whose rays turn as it brightens; volume
-/// shows the output device (AirPods, headphones) or a speaker whose waves fill with the
-/// level.
+/// Left-wing glyph of the HUD. Brightness is a small or full sun, as in macOS; volume shows
+/// the output device (AirPods, headphones) or a speaker whose waves fill with the level.
 struct HUDGlyph: View {
     let kind: HUDKind
     let level: Double
     let isMuted: Bool
     let route: SystemVolume.Route
-
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         Image(systemName: symbol, variableValue: variableValue)
@@ -17,9 +14,8 @@ struct HUDGlyph: View {
             .symbolRenderingMode(.hierarchical)
             .foregroundStyle(isMuted ? Color.white.opacity(0.55) : Color.white)
             .contentTransition(.symbolEffect(.replace))
-            .rotationEffect(.degrees(kind == .brightness && !reduceMotion ? level * 90 : 0))
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .animation(.spring(duration: 0.35, bounce: 0.2), value: level)
+            .animation(.smooth(duration: 0.25), value: level)
             .accessibilityLabel(kind == .brightness ? "Luminosità" : "Volume")
     }
 

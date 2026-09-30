@@ -212,7 +212,7 @@ struct HeaderContentView: View {
                     .reveal(isExpanded && !showsInlineHUD, order: 0)
             }
 
-            InlineHUDView(hud: models.hud, tint: tint, hudActions: actions.hud)
+            InlineHUDView(hud: models.hud, hudActions: actions.hud)
                 .place(in: layout.headerAccessoryFrame)
                 .reveal(showsInlineHUD, order: 0)
         }
@@ -244,19 +244,13 @@ struct AlertContentView: View {
                 .reveal(showsHUD, order: 0)
 
             HUDLevelBar(
-                kind: hud.kind,
                 level: hud.level,
                 isMuted: hud.isMuted,
-                tint: tint,
                 onChange: hudActions.setLevel,
                 onInteractionChanged: hudActions.setInteracting
             )
             .place(in: layout.hudBarFrame)
             .reveal(showsHUD, order: 0)
-
-            HUDValueLabel(level: hud.level, isMuted: hud.isMuted)
-                .place(in: layout.hudValueFrame)
-                .reveal(showsHUD, order: 1)
 
             if let power = shown?.power {
                 BatteryGlyph(level: power.level, isCharging: power.isCharging, isLow: power.event == .low)

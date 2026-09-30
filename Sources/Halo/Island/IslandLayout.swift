@@ -310,16 +310,11 @@ struct IslandLayout: Sendable, Equatable {
         )
     }
 
-    /// Level bar (the frame is the full-height hit area; the bar is drawn centered in it).
+    /// Level bar across the right wing (the frame is the full-height hit area; the bar is
+    /// drawn centered in it). No number beside it, as in macOS's own HUD.
     var hudBarFrame: CGRect {
         let x = centerX + notchSize.width / 2 + 14
-        return CGRect(x: x, y: 0, width: hudWingWidth - 14 - 16 - 32, height: notchSize.height)
-    }
-
-    /// Numeric value after the bar.
-    var hudValueFrame: CGRect {
-        let bar = hudBarFrame
-        return CGRect(x: bar.maxX + 6, y: 0, width: 26, height: notchSize.height)
+        return CGRect(x: x, y: 0, width: hudWingWidth - 14 - 16, height: notchSize.height)
     }
 
     /// Whole right wing of a wings alert.
