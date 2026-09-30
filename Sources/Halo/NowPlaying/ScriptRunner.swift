@@ -10,16 +10,25 @@ final class ScriptRunner: Sendable {
 
     /// The AppleScript error number, `nil` on success.
     func run(_ source: String) async -> Int? {
+        await execute(source).error
+    }
+
+    /// The script's result as text, `nil` on failure.
+    func value(_ source: String) async -> String? {
+        await execute(source).value
+    }
+
+    private func execute(_ source: String) async -> (value: String?, error: Int?) {
         await withCheckedContinuation { continuation in
             queue.async {
                 guard let script = NSAppleScript(source: source) else {
-                    continuation.resume(returning: -2700)
+                    continuation.resume(returning: (nil, -2700))
                     return
                 }
                 var error: NSDictionary?
-                _ = script.executeAndReturnError(&error)
+                let result = script.executeAndReturnError(&error)
                 let code = error.map { ($0[NSAppleScript.errorNumber] as? NSNumber)?.intValue ?? -2700 }
-                continuation.resume(returning: code)
+                continuation.resume(returning: (code == nil ? result.stringValue : nil, code))
             }
         }
     }

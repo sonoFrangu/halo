@@ -482,9 +482,14 @@ final class NowPlayingController {
             return
         }
 
-        let data = artwork.data
         let id = artwork.id
+        let spotify = ScriptablePlayer.spotify.rawValue
+        let asksSpotify = currentApp == spotify && !automationDenied.contains(spotify)
+        let scripts = self.scripts
         artworkTask = Task { [weak self] in
+            let episodeCover = asksSpotify ? await SpotifyEpisodeArtwork.fetch(using: scripts) : nil
+            guard !Task.isCancelled else { return }
+            let data = episodeCover ?? artwork.data
             let decoded = await Task.detached(priority: .userInitiated) {
                 ArtworkDecoder.decode(data)
             }.value
