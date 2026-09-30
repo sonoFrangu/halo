@@ -86,14 +86,8 @@ struct IslandLayout: Sendable, Equatable {
         max(96, (notchSize.height * 3.5).rounded())
     }
 
-    /// Wider by the extra width of a wide cover, so the title keeps the room it has
-    /// beside a square one.
     var expandedWidth: CGFloat {
-        max(Self.expandedMinimumWidth, notchSize.width + 2 * 132) + expandedArtworkWidth - Self.expandedArtworkSide
-    }
-
-    private var expandedArtworkWidth: CGFloat {
-        (Self.expandedArtworkSide * artworkAspect).rounded()
+        max(Self.expandedMinimumWidth, notchSize.width + 2 * 132)
     }
 
     var bannerWidth: CGFloat {
@@ -162,12 +156,10 @@ struct IslandLayout: Sendable, Equatable {
         }
     }
 
-    /// Room for the largest shape; the same for every cover, so the panel never resizes.
     var canvasSize: CGSize {
         let tallest = IslandContext(hasMedia: true, tab: .player, showsLyrics: true)
-        let widest = IslandLayout(notchSize: notchSize, hasPhysicalNotch: hasPhysicalNotch, artworkAspect: Self.widestArtworkAspect)
         let specs = [
-            widest.spec(for: .expanded, context: tallest),
+            spec(for: .expanded, context: tallest),
             spec(for: .expanded, context: IslandContext(tab: .shelf)),
             spec(for: .alert, context: IslandContext(alertStyle: .banner)),
             spec(for: .alert, context: IslandContext(alertStyle: .wings)),
@@ -201,7 +193,7 @@ struct IslandLayout: Sendable, Equatable {
             )
         case .expanded:
             let side = Self.expandedArtworkSide
-            return CGRect(x: expandedMinX, y: notchSize.height + 10, width: expandedArtworkWidth, height: side)
+            return CGRect(x: expandedMinX, y: notchSize.height + 10, width: (side * artworkAspect).rounded(), height: side)
         }
     }
 
