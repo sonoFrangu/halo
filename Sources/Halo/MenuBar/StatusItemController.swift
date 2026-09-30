@@ -15,6 +15,8 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     private var timerStopItem: NSMenuItem?
     private var stopwatchItem: NSMenuItem?
     private var stopwatchResetItem: NSMenuItem?
+    private var updateItem: NSMenuItem?
+    private let updates = UpdateChecker()
 
     init(features: Features) {
         self.statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
@@ -32,6 +34,7 @@ final class StatusItemController: NSObject, NSMenuDelegate {
             button.toolTip = "Halo"
         }
         statusItem.menu = makeMenu()
+        updates.checkIfDue()
     }
 
     private func makeMenu() -> NSMenu {
@@ -68,6 +71,17 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         permissions.image = NSImage(systemSymbolName: "exclamationmark.triangle.fill", accessibilityDescription: nil)
         permissionsItem = permissions
         menu.addItem(permissions)
+
+        let updates = self.updates
+        let update = ActionMenuItem(title: "Scarica l'aggiornamento…") {
+            if let page = updates.available?.page {
+                NSWorkspace.shared.open(page)
+            }
+        }
+        update.image = NSImage(systemSymbolName: "arrow.down.circle.fill", accessibilityDescription: nil)
+        update.isHidden = true
+        updateItem = update
+        menu.addItem(update)
 
         menu.addItem(ActionMenuItem(title: "Copia diagnostica") {
             Diagnostics.shared.copyReport()
@@ -124,6 +138,11 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         nextItem?.isEnabled = snapshot != nil
         features.notifications.refreshAccess()
         features.focus.refreshAccess()
+        updates.checkIfDue()
+        updateItem?.isHidden = updates.available == nil
+        if let release = updates.available {
+            updateItem?.title = "Scarica Halo \(release.version)…"
+        }
         let missing = settings.missingPermissions
         permissionsItem?.isHidden = missing.isEmpty
         permissionsItem?.title = missing.count == 1
