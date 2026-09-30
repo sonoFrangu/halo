@@ -18,6 +18,9 @@ struct ArtworkView: View {
                     .resizable()
                     .interpolation(.high)
                     .aspectRatio(contentMode: .fill)
+                    // Takes the proposed size, so a non-square (16:9) cover is cropped by
+                    // the clip below instead of widening the view past its frame.
+                    .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
                     .id(ObjectIdentifier(image))
                     .transition(.opacity)
             } else {
