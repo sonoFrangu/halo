@@ -38,17 +38,9 @@ final class NowPlayingController {
     private var optimistic: (title: String, timeline: PlaybackTimeline?)?
     /// A position asked for with the progress bar or a lyrics line, not yet reported back.
     private var pendingSeek: PendingSeek?
-
-    private struct PendingSeek {
-        var title: String
-        var timeline: PlaybackTimeline
-        var until: Date
-    }
-
-    /// How long a seek wins over stream positions that disagree with it.
-    static let seekHold: TimeInterval = 3
-    /// Positions closer than this count as the same.
-    static let positionTolerance: TimeInterval = 1.5
+    /// Re-checks a pending seek when its load allowance and its hold end, as the stream
+    /// may stay silent until then.
+    private var seekTask: Task<Void, Never>?
     private var routeMemory: [String: RouteMemory] = [:]
     private let direct = DirectMediaRemote()
     private let scripts = ScriptRunner()
@@ -81,6 +73,7 @@ final class NowPlayingController {
         restartTask?.cancel()
         artworkTask?.cancel()
         attemptTask?.cancel()
+        seekTask?.cancel()
         stream?.stop()
         stream = nil
         commands?.shutdown()
@@ -121,15 +114,32 @@ final class NowPlayingController {
 
     /// Moves the position at once and keeps showing it until the player reports it: a
     /// stream update without timing (Spotify's rate comes and goes) used to bring back the
-    /// position from before the seek.
+    /// position from before the seek, and Spotify's first report comes before it has loaded
+    /// the audio there (see `PendingSeek`).
     func seek(to position: TimeInterval) {
         let now = Date()
-        if let shown = model.snapshot, let timeline = shown.timeline?.seeking(to: position, at: now) {
-            pendingSeek = PendingSeek(title: shown.title, timeline: timeline, until: now.addingTimeInterval(Self.seekHold))
+        if let shown = model.snapshot, let timeline = shown.timeline {
+            let seek = PendingSeek(title: shown.title, from: timeline, to: position, player: currentApp, at: now)
+            pendingSeek = seek
+            scheduleSeekChecks(for: seek)
         }
         Diagnostics.shared.record("seek a \(TimeFormatting.string(position)) su \(currentApp ?? "?")")
         refreshDisplay()
         send(.seek(position))
+    }
+
+    private func scheduleSeekChecks(for seek: PendingSeek) {
+        seekTask?.cancel()
+        let checks = [seek.waitsForLoad ? PendingSeek.loadAllowance : nil, PendingSeek.hold].compactMap { $0 }
+        seekTask = Task { [weak self] in
+            var waited: TimeInterval = 0
+            for check in checks {
+                try? await Task.sleep(for: .seconds(check - waited))
+                waited = check
+                guard !Task.isCancelled, let self, self.pendingSeek?.requestedAt == seek.requestedAt else { return }
+                self.refreshDisplay()
+            }
+        }
     }
 
     /// Brings the playing app to the front (Safari for a YouTube tab).
@@ -422,18 +432,20 @@ final class NowPlayingController {
         if let seek = pendingSeek {
             if seek.title != shown.title {
                 pendingSeek = nil
-            } else if let reported = shown.timeline,
-                      abs(reported.elapsed(at: now) - seek.timeline.elapsed(at: now)) < Self.positionTolerance {
+            } else if let reported = shown.timeline, seek.isConfirmed(by: reported, at: now) {
                 pendingSeek = nil
+                if seek.waitsForLoad {
+                    let delay = now.timeIntervalSince(seek.requestedAt).formatted(.number.precision(.fractionLength(1)))
+                    Diagnostics.shared.record("seek confermato dopo \(delay) s: il player riporta \(TimeFormatting.string(reported.elapsed(at: now)))")
+                }
             } else if now >= seek.until {
                 pendingSeek = nil
                 let reported = shown.timeline.map { TimeFormatting.string($0.elapsed(at: now)) } ?? "--:--"
                 Diagnostics.shared.record("seek non confermato: il player dice \(reported), chiesto \(TimeFormatting.string(seek.timeline.elapsed(at: now)))")
             } else {
-                // Keep the sought position, advancing only if the player is playing.
-                let position = seek.timeline.elapsed(at: now)
-                let rate = shown.isPlaying ? max(seek.timeline.rate, 1) : 0
-                let held = PlaybackTimeline(duration: seek.timeline.duration, elapsed: position, timestamp: now, rate: rate)
+                // Keep the sought position, advancing only if the player is playing (and,
+                // for a player loading the audio there, only once its allowance is over).
+                let held = seek.held(at: now, isPlaying: shown.isPlaying)
                 pendingSeek?.timeline = held
                 shown.timeline = held
             }
