@@ -44,7 +44,7 @@ struct IslandLayout: Sendable, Equatable {
     // MARK: Tunables
 
     static let expandedMinimumWidth: CGFloat = 468
-    static let playerBodyHeight: CGFloat = 136
+    static let playerBodyHeight: CGFloat = 144
     static let lyricsPanelHeight: CGFloat = 88
     static let emptyBodyHeight: CGFloat = 64
     /// Body of the non-player tabs (shelf, calendar).
@@ -52,7 +52,9 @@ struct IslandLayout: Sendable, Equatable {
     static let bannerMinimumWidth: CGFloat = 400
     static let bannerBodyHeight: CGFloat = 66
     static let contentInset: CGFloat = 24
-    static let expandedArtworkSide: CGFloat = 76
+    /// Tall enough for title and artist above the transport controls with a clear gap,
+    /// both aligned to the artwork's edges.
+    static let expandedArtworkSide: CGFloat = 84
     static let widestArtworkAspect: CGFloat = 16 / 9
     /// Room around the largest shape for its shadow and glow, so they never hit the
     /// panel edge. The margin is click-through (see `IslandViewModel`).
@@ -253,7 +255,7 @@ struct IslandLayout: Sendable, Equatable {
     var trackInfoFrame: CGRect {
         let artwork = artworkFrame(for: .expanded)
         let x = artwork.maxX + 16
-        return CGRect(x: x, y: artwork.minY + 4, width: expandedMaxX - x, height: 40)
+        return CGRect(x: x, y: artwork.minY + 2, width: expandedMaxX - x, height: 40)
     }
 
     var controlsFrame: CGRect {

@@ -15,7 +15,7 @@ struct DecodedArtwork: @unchecked Sendable {
 /// Players hand over images up to a few thousand pixels wide. `NSImage(data:)` would defer
 /// decoding to the first draw on the main thread (a hitch right when the island opens) and
 /// keep the full-size bitmap around. A 320 px thumbnail, decoded eagerly here, is sharp at
-/// the largest size Halo draws (76 pt @2x) and costs a fraction of the memory.
+/// the largest size Halo draws (84 pt @2x, about 300 px for a wide cover) and costs a fraction of the memory.
 enum ArtworkDecoder {
     static let maximumPixelSize = 320
 
