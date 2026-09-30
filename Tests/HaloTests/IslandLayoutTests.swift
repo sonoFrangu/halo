@@ -69,7 +69,13 @@ struct IslandLayoutTests {
         #expect(widened.height == square.height)
         #expect(abs(widened.width / widened.height - 16 / 9) < 0.02)
         #expect(wide.trackInfoFrame.minX > widened.maxX)
-        #expect(wide.trackInfoFrame.width >= 200)
+        // The island grows instead: the title keeps its width and the panel its size.
+        #expect(wide.trackInfoFrame.width == layout.trackInfoFrame.width)
+        #expect(wide.expandedWidth > layout.expandedWidth)
+        #expect(wide.canvasSize == layout.canvasSize)
+        let spec = wide.spec(for: .expanded, context: IslandContext(hasMedia: true, showsLyrics: true))
+        let body = CGRect(x: wide.centerX - spec.width / 2, y: 0, width: spec.width, height: spec.height)
+        #expect(body.contains(widened) && body.contains(wide.controlsFrame) && body.contains(wide.scrubberFrame))
         #expect(wide.artworkFrame(for: .compact) == layout.artworkFrame(for: .compact))
     }
 
