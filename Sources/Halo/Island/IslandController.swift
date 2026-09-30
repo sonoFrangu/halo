@@ -65,6 +65,7 @@ final class IslandController {
         observePlayback()
         observeAlerts()
         observeLyrics()
+        observeArtwork()
         observeTabs()
         observeLiveActivities()
         observePrivacy()
@@ -278,6 +279,18 @@ final class IslandController {
             }
         }
         viewModel.alertChanged(current)
+    }
+
+    private func observeArtwork() {
+        let player = services.nowPlaying.model
+        let size = withObservationTracking {
+            player.artworkImage?.size
+        } onChange: { [weak self] in
+            Task { @MainActor [weak self] in
+                self?.observeArtwork()
+            }
+        }
+        viewModel.artworkChanged(size: size)
     }
 
     private func observeLyrics() {

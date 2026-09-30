@@ -26,6 +26,8 @@ struct IslandContext: Sendable, Equatable {
     var alertStyle: AlertStyle = .wings
     var tab: ExpandedTab = .player
     var showsLyrics = false
+    /// Width over height of the expanded artwork, see `IslandLayout.artworkAspect(for:)`.
+    var artworkAspect: CGFloat = 1
 }
 
 /// Every island dimension and content frame, derived from the notch size.
@@ -36,6 +38,8 @@ struct IslandContext: Sendable, Equatable {
 struct IslandLayout: Sendable, Equatable {
     let notchSize: CGSize
     let hasPhysicalNotch: Bool
+    /// Width over height of the expanded artwork, 1 (square) to 16:9.
+    let artworkAspect: CGFloat
 
     // MARK: Tunables
 
@@ -49,17 +53,26 @@ struct IslandLayout: Sendable, Equatable {
     static let bannerBodyHeight: CGFloat = 66
     static let contentInset: CGFloat = 24
     static let expandedArtworkSide: CGFloat = 76
+    static let widestArtworkAspect: CGFloat = 16 / 9
     /// Room around the largest shape for its shadow and glow, so they never hit the
     /// panel edge. The margin is click-through (see `IslandViewModel`).
     static let canvasMargin = CGSize(width: 72, height: 64)
 
-    init(notchSize: CGSize, hasPhysicalNotch: Bool) {
+    init(notchSize: CGSize, hasPhysicalNotch: Bool, artworkAspect: CGFloat = 1) {
         self.notchSize = notchSize
         self.hasPhysicalNotch = hasPhysicalNotch
+        self.artworkAspect = min(max(artworkAspect, 1), Self.widestArtworkAspect)
     }
 
-    init(geometry: NotchGeometry) {
-        self.init(notchSize: geometry.notchSize, hasPhysicalNotch: geometry.hasPhysicalNotch)
+    init(geometry: NotchGeometry, artworkAspect: CGFloat = 1) {
+        self.init(notchSize: geometry.notchSize, hasPhysicalNotch: geometry.hasPhysicalNotch, artworkAspect: artworkAspect)
+    }
+
+    /// The expanded artwork follows the cover's shape so a wide one (a YouTube thumbnail)
+    /// shows whole: square up to 16:9. Taller covers stay square, cropped.
+    static func artworkAspect(for size: CGSize?) -> CGFloat {
+        guard let size, size.width > 0, size.height > 0 else { return 1 }
+        return min(max(size.width / size.height, 1), widestArtworkAspect)
     }
 
     // MARK: Sizes
@@ -180,7 +193,7 @@ struct IslandLayout: Sendable, Equatable {
             )
         case .expanded:
             let side = Self.expandedArtworkSide
-            return CGRect(x: expandedMinX, y: notchSize.height + 10, width: side, height: side)
+            return CGRect(x: expandedMinX, y: notchSize.height + 10, width: (side * artworkAspect).rounded(), height: side)
         }
     }
 

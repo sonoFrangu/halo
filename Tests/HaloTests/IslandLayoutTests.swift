@@ -62,6 +62,25 @@ struct IslandLayoutTests {
     }
 
     @Test(arguments: IslandLayoutTests.layouts)
+    func wideArtworkWidensAndPushesTheTrackInfo(layout: IslandLayout) {
+        let wide = IslandLayout(notchSize: layout.notchSize, hasPhysicalNotch: layout.hasPhysicalNotch, artworkAspect: 16 / 9)
+        let square = layout.artworkFrame(for: .expanded)
+        let widened = wide.artworkFrame(for: .expanded)
+        #expect(widened.height == square.height)
+        #expect(abs(widened.width / widened.height - 16 / 9) < 0.02)
+        #expect(wide.trackInfoFrame.minX > widened.maxX)
+        #expect(wide.trackInfoFrame.width >= 200)
+        #expect(wide.artworkFrame(for: .compact) == layout.artworkFrame(for: .compact))
+    }
+
+    @Test func artworkAspectStaysBetweenSquareAndWide() {
+        #expect(IslandLayout.artworkAspect(for: CGSize(width: 1280, height: 720)) == IslandLayout.widestArtworkAspect)
+        #expect(IslandLayout.artworkAspect(for: CGSize(width: 3000, height: 1000)) == IslandLayout.widestArtworkAspect)
+        #expect(IslandLayout.artworkAspect(for: CGSize(width: 600, height: 800)) == 1)
+        #expect(IslandLayout.artworkAspect(for: nil) == 1)
+    }
+
+    @Test(arguments: IslandLayoutTests.layouts)
     func playerContentFitsInsideTheBodyBelowTheNotch(layout: IslandLayout) {
         let spec = layout.spec(for: .expanded, context: IslandContext(hasMedia: true, showsLyrics: true))
         let body = CGRect(x: layout.centerX - spec.width / 2, y: 0, width: spec.width, height: spec.height)

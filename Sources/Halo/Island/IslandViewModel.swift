@@ -31,7 +31,7 @@ final class IslandViewModel {
     private(set) var lyricsFocus: Double?
 
     var layout: IslandLayout {
-        IslandLayout(geometry: geometry)
+        IslandLayout(geometry: geometry, artworkAspect: context.artworkAspect)
     }
 
     var hasMedia: Bool {
@@ -189,6 +189,11 @@ final class IslandViewModel {
     /// Low Power Mode: shape changes become brief eases, like with Reduce Motion.
     func energyChanged(reduced: Bool) {
         isEnergyReduced = reduced
+    }
+
+    /// The cover's pixel size: the expanded artwork widens to show a wide cover whole.
+    func artworkChanged(size: CGSize?) {
+        updateContext { $0.artworkAspect = IslandLayout.artworkAspect(for: size) }
     }
 
     func lyricsChanged(visible: Bool) {
