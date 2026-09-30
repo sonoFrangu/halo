@@ -374,9 +374,10 @@ Il disegno delle animazioni (EQ, forma dell'isola) lo fa WindowServer e non è c
 - **Icona**: è un `.icns` classico (squircle disegnata con la griglia delle icone macOS). macOS
   26+ preferisce le icone di Icon Composer, compilabili solo con Xcode: se il sistema la
   giudica fuori forma può mostrarla dentro il proprio riquadro grigio.
-- **AirPods**: batterie lette da `system_profiler` (circa un secondo, una volta per
-  connessione); se il dispositivo non le pubblica si vede solo il volume. Nessun avviso quando
-  cambiano *durante* l'uso (servirebbe interrogare periodicamente il Bluetooth).
+- **AirPods**: batterie lette da `system_profiler` alla connessione e poi ogni 5 minuti finché
+  le cuffie restano l'uscita audio (circa 30 ms di CPU a lettura); la scheda ricompare quando
+  un auricolare (o la batteria unica) scende al 20% e al 10%, la custodia non conta. Se il
+  dispositivo non pubblica le batterie si vede solo il volume.
 - **Now Playing**: se l'adapter termina con errore Halo non lo rilancia (come raccomandato
   dall'adapter): serve riavviare Halo.
 - **L'EQ non legge l'audio.** È un'animazione sintetica che parte solo in riproduzione; livelli

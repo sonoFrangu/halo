@@ -136,4 +136,16 @@ struct HeadphoneBatteriesTests {
         #expect(HeadphoneBatteries.parse(systemProfilerJSON: Data(json.utf8), deviceName: "Nope") == nil)
         #expect(HeadphoneBatteries.parse(systemProfilerJSON: Data("garbage".utf8), deviceName: "Nope") == nil)
     }
+
+    @Test func warnsOnceWhenAWornBatteryDropsToAWarningLevel() {
+        let full = HeadphoneBatteries(left: 60, right: 58, case: 90)
+        #expect(HeadphoneBatteries(left: 40, right: 20, case: 90).crossedWarningLevel(since: full))
+        #expect(HeadphoneBatteries(left: 30, right: 9, case: 90).crossedWarningLevel(since: HeadphoneBatteries(left: 30, right: 15)))
+        // Already below: no second warning until the next level.
+        #expect(!HeadphoneBatteries(left: 30, right: 18).crossedWarningLevel(since: HeadphoneBatteries(left: 30, right: 19)))
+        // The case never counts, and charging back up is not a warning.
+        #expect(!HeadphoneBatteries(left: 60, right: 60, case: 5).crossedWarningLevel(since: full))
+        #expect(!full.crossedWarningLevel(since: HeadphoneBatteries(left: 15, right: 15)))
+        #expect(HeadphoneBatteries(main: 10).crossedWarningLevel(since: HeadphoneBatteries(main: 11)))
+    }
 }

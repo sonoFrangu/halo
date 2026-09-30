@@ -4,7 +4,8 @@ import Foundation
 /// Posts an alert when headphones become the output: AirPods connecting (macOS switches
 /// output to them), or the user picking them. Event driven through a CoreAudio property
 /// listener on the default output device. Batteries arrive a moment later from
-/// `BluetoothBatteryReader`, updating the alert in place.
+/// `BluetoothBatteryReader`, updating the alert in place; while the headphones stay the
+/// output they are read again every few minutes, and the alert returns when one runs low.
 @MainActor
 final class AudioDeviceMonitor {
     private let alerts: AlertCenter
@@ -15,6 +16,8 @@ final class AudioDeviceMonitor {
 
     /// Some headphones publish batteries a few seconds after connecting.
     static let batteryRetryDelay: Duration = .seconds(4)
+    /// A read costs about 30 ms of CPU, so checking this often while listening is cheap.
+    static let batteryPollInterval: Duration = .seconds(300)
 
     init(alerts: AlertCenter, volume: SystemVolume) {
         self.alerts = alerts
@@ -48,6 +51,7 @@ final class AudioDeviceMonitor {
         let device = volume.defaultOutputDevice
         guard device != currentDevice else { return }
         currentDevice = device
+        batteryTask?.cancel()
 
         let route = volume.route
         guard route != .speakers, let name = volume.outputName else { return }
@@ -55,7 +59,6 @@ final class AudioDeviceMonitor {
         let alert = AudioDeviceAlert(name: name, route: route, batteries: .none, volume: volume.level())
         alerts.post(.audioDevice(alert))
 
-        batteryTask?.cancel()
         batteryTask = Task { [weak self] in
             var batteries = await BluetoothBatteryReader.batteries(of: name)
             if batteries?.isEmpty ?? true {
@@ -63,18 +66,28 @@ final class AudioDeviceMonitor {
                 guard !Task.isCancelled else { return }
                 batteries = await BluetoothBatteryReader.batteries(of: name)
             }
-            guard
-                !Task.isCancelled,
-                let self,
-                let batteries,
-                !batteries.isEmpty,
-                self.currentDevice == device
-            else {
-                return
+            guard var last = batteries, !last.isEmpty else { return }
+            self?.showBatteries(last, of: alert, on: device)
+
+            // Cancelled when the output changes (see above) or the monitor stops.
+            while true {
+                try? await Task.sleep(for: Self.batteryPollInterval, tolerance: .seconds(60))
+                guard !Task.isCancelled, self != nil else { return }
+                guard let now = await BluetoothBatteryReader.batteries(of: name), !now.isEmpty else { continue }
+                if now.crossedWarningLevel(since: last) {
+                    self?.showBatteries(now, of: alert, on: device)
+                }
+                last = now
             }
-            var updated = alert
-            updated.batteries = batteries
-            self.alerts.post(.audioDevice(updated))
         }
+    }
+
+    /// Shows the headphones' card again with `batteries`, if they are still the output.
+    private func showBatteries(_ batteries: HeadphoneBatteries, of alert: AudioDeviceAlert, on device: AudioObjectID?) {
+        guard !Task.isCancelled, currentDevice == device else { return }
+        var updated = alert
+        updated.batteries = batteries
+        updated.volume = volume.level()
+        alerts.post(.audioDevice(updated))
     }
 }

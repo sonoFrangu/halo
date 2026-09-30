@@ -14,6 +14,20 @@ struct HeadphoneBatteries: Sendable, Equatable {
 
     static let none = HeadphoneBatteries()
 
+    /// Levels that bring the headphones' card back while listening.
+    static let warningLevels = [20, 10]
+
+    /// The lowest battery being worn: an earbud or the single battery, never the case.
+    var lowestWorn: Int? {
+        [left, right, main].compactMap { $0 }.min()
+    }
+
+    /// Whether the worn batteries fell to a warning level since `earlier`.
+    func crossedWarningLevel(since earlier: HeadphoneBatteries) -> Bool {
+        guard let now = lowestWorn, let before = earlier.lowestWorn else { return false }
+        return Self.warningLevels.contains { now <= $0 && before > $0 }
+    }
+
     /// Reads a device's batteries out of `system_profiler SPBluetoothDataType -json`.
     ///
     /// The output lists connected devices as one-key dictionaries (`{"Name": {…}}`) whose
