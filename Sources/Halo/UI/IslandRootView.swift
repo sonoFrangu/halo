@@ -40,7 +40,7 @@ struct IslandRootView: View {
 
             if island.state == .alert && island.alert?.kind == .siri {
                 SiriGlowView(shape: shape)
-                    .transition(.opacity.animation(.easeInOut(duration: 0.3)))
+                    .transition(.opacity.animation(Motion.content))
             }
         }
         .frame(width: canvas.width, height: canvas.height, alignment: .topLeading)

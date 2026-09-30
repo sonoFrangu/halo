@@ -92,7 +92,7 @@ struct ScrubberView: View {
 
     private func timeLabel(_ text: String, alignment: Alignment) -> some View {
         Text(text)
-            .font(.system(size: 11, weight: .medium).monospacedDigit())
+            .font(Typography.subheadline.weight(.medium).monospacedDigit())
             .foregroundStyle(Ink.secondary)
             .frame(width: 44, alignment: alignment)
     }

@@ -29,7 +29,7 @@ struct LiveActivityLeading: View {
             TimerRingView(timer: timer, isVisible: isVisible, lineWidth: 2.5)
         case .stopwatch(let stopwatch):
             Image(systemName: "stopwatch.fill")
-                .font(.system(size: 14, weight: .semibold))
+                .font(Glyph.wing)
                 .foregroundStyle(StopwatchPalette.tint.opacity(stopwatch.isRunning ? 1 : 0.55))
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         case .transfer(let transfer):
@@ -64,7 +64,7 @@ struct LiveActivityTrailing: View {
                 }
             }
         }
-        .font(.system(size: 11.5, weight: .semibold, design: .rounded).monospacedDigit())
+        .font(Typography.subheadline.weight(.semibold).monospacedDigit())
         .lineLimit(1)
         .minimumScaleFactor(0.8)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -101,7 +101,7 @@ struct TransferRing: View {
                 .trim(from: 0, to: CGFloat(max(0.02, min(transfer.fraction, 1))))
                 .stroke(tint, style: StrokeStyle(lineWidth: lineWidth, lineCap: .round))
                 .rotationEffect(.degrees(-90))
-                .animation(.easeOut(duration: 0.3), value: transfer.fraction)
+                .animation(Motion.value, value: transfer.fraction)
             Image(systemName: TransferPalette.symbol(for: transfer.kind))
                 .font(.system(size: 8, weight: .bold))
                 .foregroundStyle(tint)

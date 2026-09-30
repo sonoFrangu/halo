@@ -40,8 +40,8 @@ struct BatteryGlyph: View {
             }
             .frame(width: proxy.size.width, height: proxy.size.height)
         }
-        .animation(.spring(duration: 0.6, bounce: 0.2), value: level)
-        .animation(.spring(duration: 0.4, bounce: 0.3), value: isCharging)
+        .animation(Motion.value, value: level)
+        .animation(Motion.appear, value: isCharging)
         .accessibilityHidden(true)
     }
 

@@ -49,18 +49,18 @@ struct IslandContentView: View {
                 PrivacyDot(kind: device)
                     .place(in: layout.privacyDotFrame(alone: alone))
                     .opacity(isCompact ? 1 : 0)
-                    .animation(.easeOut(duration: 0.2), value: state)
+                    .animation(Motion.content, value: state)
             }
 
             if let activity {
                 LiveActivityLeading(activity: activity, isVisible: isCompact && !hasMedia)
                     .place(in: layout.artworkFrame(for: .compact))
                     .opacity(isCompact && !hasMedia ? 1 : 0)
-                    .animation(.easeOut(duration: 0.2), value: state)
+                    .animation(Motion.content, value: state)
                 LiveActivityTrailing(activity: activity, hasMedia: hasMedia)
                     .place(in: layout.compactRightWingFrame)
                     .opacity(isCompact ? 1 : 0)
-                    .animation(.easeOut(duration: 0.2), value: state)
+                    .animation(Motion.content, value: state)
             }
 
             PlayerContentView(island: island, models: models, actions: actions.player, layout: layout, isVisible: showsPlayer)
@@ -90,7 +90,7 @@ struct IslandContentView: View {
             TimerTabView(timers: timers, systemTimers: models.systemTimers, actions: actions.timer, isVisible: showsTimers)
                 .place(in: layout.tabBodyFrame)
                 .reveal(showsTimers, order: 0)
-                .animation(.spring(duration: 0.4, bounce: 0.15), value: [timers.timer == nil, timers.stopwatch == nil])
+                .animation(Motion.layout, value: [timers.timer == nil, timers.stopwatch == nil])
 
             HeaderContentView(island: island, models: models, tint: tint, actions: actions, layout: layout)
 

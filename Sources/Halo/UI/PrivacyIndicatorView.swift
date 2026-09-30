@@ -42,7 +42,7 @@ struct PrivacyGlyph: View {
 
     var body: some View {
         Image(systemName: kind.symbol)
-            .font(.system(size: 12, weight: .semibold))
+            .font(Glyph.button)
             .foregroundStyle(kind.color)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .accessibilityHidden(true)

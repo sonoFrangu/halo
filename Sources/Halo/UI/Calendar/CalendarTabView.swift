@@ -43,13 +43,13 @@ struct CalendarTabView: View {
     private func message(symbol: String, text: String, button: String? = nil, action: (() -> Void)? = nil) -> some View {
         VStack(spacing: 8) {
             Image(systemName: symbol)
-                .font(.system(size: 18, weight: .semibold))
+                .font(Glyph.hero)
             Text(text)
-                .font(.system(size: 12, weight: .semibold))
+                .font(Typography.callout.weight(.semibold))
             if let button, let action {
                 Button(button, action: action)
                     .buttonStyle(PressableButtonStyle())
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(Typography.subheadline.weight(.semibold))
                     .padding(.horizontal, 10)
                     .padding(.vertical, 4)
                     .background(Capsule().fill(Fill.primary))
@@ -78,10 +78,10 @@ struct CalendarEventRow: View {
 
             VStack(alignment: .leading, spacing: 1) {
                 Text(event.title)
-                    .font(.system(size: 12.5, weight: .semibold))
+                    .font(Typography.headline)
                     .foregroundStyle(.white)
                 Text(CalendarText.subtitle(for: event, now: now))
-                    .font(.system(size: 10.5, weight: .medium).monospacedDigit())
+                    .font(Typography.caption.monospacedDigit())
                     .foregroundStyle(isOngoing ? tint : Ink.secondary)
             }
             .lineLimit(1)
@@ -106,7 +106,7 @@ struct JoinButton: View {
     var body: some View {
         Button(action: action) {
             Label("Partecipa", systemImage: "video.fill")
-                .font(.system(size: 11, weight: .semibold))
+                .font(Typography.subheadline.weight(.semibold))
                 .foregroundStyle(.white)
                 .padding(.horizontal, 10)
                 .frame(height: 24)

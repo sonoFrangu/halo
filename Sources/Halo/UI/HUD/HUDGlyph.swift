@@ -10,12 +10,12 @@ struct HUDGlyph: View {
 
     var body: some View {
         Image(systemName: symbol, variableValue: variableValue)
-            .font(.system(size: 15, weight: .semibold))
+            .font(Glyph.wing)
             .symbolRenderingMode(.hierarchical)
             .foregroundStyle(isMuted ? Ink.secondary : Ink.primary)
             .contentTransition(.symbolEffect(.replace))
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .animation(.smooth(duration: 0.25), value: level)
+            .animation(Motion.value, value: level)
             .accessibilityLabel(kind == .brightness ? "Luminosità" : "Volume")
     }
 

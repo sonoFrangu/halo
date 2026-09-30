@@ -19,12 +19,12 @@ struct NotificationBanner: View {
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 0) {
                     Text(text.headline)
-                        .font(.system(size: 14, weight: .semibold))
+                        .font(Typography.headline)
                         .foregroundStyle(.white)
                         .layoutPriority(1)
                     if let detail = text.detail {
                         Text(" · \(detail)")
-                            .font(.system(size: 14))
+                            .font(Typography.body)
                             .foregroundStyle(Ink.secondary)
                     }
                 }
@@ -32,7 +32,7 @@ struct NotificationBanner: View {
 
                 if let message = text.message {
                     Text(message)
-                        .font(.system(size: 13))
+                        .font(Typography.body)
                         .foregroundStyle(Ink.primary)
                         .lineLimit(2)
                         .truncationMode(.tail)
@@ -49,7 +49,7 @@ struct NotificationBanner: View {
                     .accessibilityLabel("Foto")
             } else {
                 Text("ora")
-                    .font(.system(size: 11))
+                    .font(Typography.subheadline)
                     .foregroundStyle(Ink.tertiary)
             }
         }

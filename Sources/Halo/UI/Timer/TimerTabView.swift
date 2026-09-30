@@ -92,17 +92,17 @@ struct ActiveTimerView: View {
                 .frame(width: 82, height: 82)
                 .overlay {
                     Image(systemName: timer.mode.symbol)
-                        .font(.system(size: 20, weight: .semibold))
+                        .font(Glyph.hero)
                         .foregroundStyle(tint)
                 }
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(timer.isRunning ? timer.mode.label : "\(timer.mode.label) · in pausa")
-                    .font(.system(size: 10.5, weight: .semibold))
+                    .font(Typography.caption.weight(.semibold))
                     .foregroundStyle(tint)
                     .textCase(.uppercase)
                 TimerCountdownText(timer: timer)
-                    .font(.system(size: 34, weight: .semibold, design: .rounded).monospacedDigit())
+                    .font(Typography.display)
                     .foregroundStyle(.white)
                 HStack(spacing: 10) {
                     ControlButton(
@@ -168,7 +168,7 @@ struct CapsuleActionButton: View {
     var body: some View {
         Button(action: action) {
             Label(title, systemImage: symbol)
-                .font(.system(size: 12, weight: .semibold))
+                .font(Typography.callout.weight(.semibold))
                 .foregroundStyle(.white)
                 .padding(.horizontal, 14)
                 .frame(height: 28)
@@ -190,9 +190,9 @@ struct TimerPresetButton: View {
         Button(action: action) {
             VStack(spacing: -1) {
                 Text("\(minutes)")
-                    .font(.system(size: 15, weight: .semibold, design: .rounded))
+                    .font(Typography.displayMini)
                 Text("min")
-                    .font(.system(size: 8.5, weight: .medium))
+                    .font(Typography.caption)
                     .foregroundStyle(Ink.secondary)
             }
             .foregroundStyle(.white)

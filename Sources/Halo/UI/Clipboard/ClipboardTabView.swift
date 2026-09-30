@@ -15,9 +15,9 @@ struct ClipboardTabView: View {
             if history.items.isEmpty {
                 VStack(spacing: 4) {
                     Image(systemName: "list.clipboard")
-                        .font(.system(size: 18, weight: .semibold))
+                        .font(Glyph.hero)
                     Text("Quello che copi compare qui")
-                        .font(.system(size: 12, weight: .semibold))
+                        .font(Typography.callout.weight(.semibold))
                 }
                 .foregroundStyle(Ink.secondary)
             } else {
@@ -32,19 +32,19 @@ struct ClipboardTabView: View {
                 }
             }
         }
-        .animation(.spring(duration: 0.4, bounce: 0.15), value: history.items.map(\.id))
-        .animation(.easeOut(duration: 0.2), value: history.copiedID)
+        .animation(Motion.layout, value: history.items.map(\.id))
+        .animation(Motion.content, value: history.copiedID)
     }
 
     private var clearButton: some View {
         Button(action: actions.clear) {
             VStack(spacing: 6) {
                 Image(systemName: "trash")
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(Glyph.button)
                     .frame(width: 44, height: 44)
                     .background(Circle().fill(Fill.primary))
                 Text("Svuota")
-                    .font(.system(size: 10, weight: .medium))
+                    .font(Typography.caption)
             }
             .foregroundStyle(Ink.secondary)
         }
@@ -72,7 +72,7 @@ struct ClipboardTile: View {
                         ZStack {
                             RoundedRectangle(cornerRadius: Corner.tile, style: .continuous).fill(.black.opacity(0.55))
                             Label("Copiato", systemImage: "checkmark.circle.fill")
-                                .font(.system(size: 11, weight: .semibold))
+                                .font(Typography.subheadline.weight(.semibold))
                                 .foregroundStyle(.white)
                         }
                         .transition(.opacity)
@@ -98,7 +98,7 @@ struct ClipboardTile: View {
         switch item.content {
         case .text(let text):
             Text(text.trimmingCharacters(in: .whitespacesAndNewlines))
-                .font(.system(size: 10.5, weight: .medium))
+                .font(Typography.caption)
                 .foregroundStyle(Ink.primary)
                 .lineLimit(4)
                 .multilineTextAlignment(.leading)

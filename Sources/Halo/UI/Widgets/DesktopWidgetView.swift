@@ -24,7 +24,7 @@ struct DesktopWidgetView: View {
         .shadow(color: .black.opacity(0.3), radius: 22, x: 0, y: 12)
         .padding(DesktopWidgetView.shadowMargin)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .animation(.spring(duration: 0.5, bounce: 0.15), value: player.hasMedia)
+        .animation(Motion.appear, value: player.hasMedia)
     }
 
     /// Transparent room around the card for its shadow.

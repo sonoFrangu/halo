@@ -43,7 +43,7 @@ struct SiriGlyph: View {
 
     var body: some View {
         Image(systemName: "waveform")
-            .font(.system(size: 14, weight: .semibold))
+            .font(Glyph.wing)
             .foregroundStyle(LinearGradient(colors: SiriGlowView.colors, startPoint: .leading, endPoint: .trailing))
             .symbolEffect(.variableColor.iterative, isActive: isActive && !reduceMotion)
             .frame(maxWidth: .infinity, maxHeight: .infinity)

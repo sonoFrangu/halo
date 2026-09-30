@@ -56,7 +56,7 @@ struct TransportControls: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-        .animation(.spring(duration: 0.3, bounce: 0.2), value: hasLyrics)
+        .animation(Motion.layout, value: hasLyrics)
     }
 }
 

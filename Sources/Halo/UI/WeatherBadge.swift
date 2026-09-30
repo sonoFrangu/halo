@@ -10,15 +10,15 @@ struct WeatherBadge: View {
             if let report {
                 Image(systemName: report.symbol)
                     .symbolRenderingMode(.multicolor)
-                    .font(.system(size: 13, weight: .medium))
+                    .font(Typography.body.weight(.medium))
                 Text(report.temperatureText)
-                    .font(.system(size: 13, weight: .semibold).monospacedDigit())
+                    .font(Typography.headline.monospacedDigit())
                     .foregroundStyle(Ink.primary)
                     .contentTransition(.numericText(value: report.temperature))
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .animation(.easeInOut(duration: 0.3), value: report)
+        .animation(Motion.content, value: report)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(report.map { "\($0.summary), \($0.temperatureText)" } ?? "")
     }

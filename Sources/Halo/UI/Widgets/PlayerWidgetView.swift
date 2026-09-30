@@ -51,7 +51,7 @@ struct PlayerWidgetView: View {
         .background {
             WidgetBackdrop(cornerRadius: Corner.widget)
         }
-        .animation(.spring(duration: 0.45, bounce: 0.15), value: showsLyrics)
+        .animation(Motion.appear, value: showsLyrics)
     }
 
     private var details: some View {
@@ -61,19 +61,19 @@ struct PlayerWidgetView: View {
                     SourceIconView(icon: player.sourceIcon)
                         .frame(width: 12, height: 12)
                     Text(AppName.of(source))
-                        .font(.system(size: 10, weight: .semibold))
+                        .font(Typography.caption.weight(.semibold))
                         .foregroundStyle(Ink.secondary)
                         .lineLimit(1)
                 }
                 .padding(.bottom, 6)
             }
             Text(player.title)
-                .font(.system(size: 15, weight: .semibold))
+                .font(Typography.title)
                 .foregroundStyle(.white)
                 .lineLimit(1)
             if let subtitle {
                 Text(subtitle)
-                    .font(.system(size: 12))
+                    .font(Typography.callout)
                     .foregroundStyle(Ink.secondary)
                     .lineLimit(1)
             }

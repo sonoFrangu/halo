@@ -18,17 +18,17 @@ struct BatteryRing: View {
                     .stroke(ringColor, style: StrokeStyle(lineWidth: 2.5, lineCap: .round))
                     .rotationEffect(.degrees(-90))
                 Image(systemName: symbol)
-                    .font(.system(size: 10, weight: .semibold))
+                    .font(Glyph.small)
                     .foregroundStyle(value == nil ? Ink.tertiary : Ink.primary)
             }
             .frame(width: 28, height: 28)
 
             Text(value.map { "\(Int(($0 * 100).rounded()))%" } ?? caption)
-                .font(.system(size: 9, weight: .semibold).monospacedDigit())
+                .font(Typography.caption.weight(.semibold).monospacedDigit())
                 .foregroundStyle(Ink.secondary)
                 .lineLimit(1)
         }
-        .animation(.spring(duration: 0.7, bounce: 0.15), value: value)
+        .animation(Motion.value, value: value)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(caption)
         .accessibilityValue(value.map { "\(Int(($0 * 100).rounded())) percento" } ?? "sconosciuto")

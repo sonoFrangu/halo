@@ -6,7 +6,7 @@ struct FocusAlertGlyph: View {
 
     var body: some View {
         Image(systemName: alert.mode.symbol)
-            .font(.system(size: 14, weight: .semibold))
+            .font(Glyph.wing)
             .foregroundStyle(alert.isOn ? alert.mode.tint.color : Ink.secondary)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .accessibilityHidden(true)
@@ -20,10 +20,10 @@ struct FocusAlertValue: View {
     var body: some View {
         VStack(alignment: .leading, spacing: -1) {
             Text(alert.mode.name)
-                .font(.system(size: 12, weight: .semibold))
+                .font(Typography.callout.weight(.semibold))
                 .foregroundStyle(alert.isOn ? Ink.primary : Ink.secondary)
             Text(alert.isOn ? "Attiva" : "Disattivata")
-                .font(.system(size: 9.5, weight: .medium))
+                .font(Typography.caption)
                 .foregroundStyle(alert.isOn ? alert.mode.tint.color : Ink.secondary)
         }
         .lineLimit(1)
@@ -42,10 +42,10 @@ struct UnlockGlyph: View {
 
     var body: some View {
         Image(systemName: isVisible ? "lock.open.fill" : "lock.fill")
-            .font(.system(size: 14, weight: .semibold))
+            .font(Glyph.wing)
             .foregroundStyle(.white)
             .contentTransition(.symbolEffect(.replace))
-            .animation(reduceMotion ? nil : .spring(duration: 0.35, bounce: 0.3).delay(0.3), value: isVisible)
+            .animation(reduceMotion ? nil : Motion.appear.delay(0.3), value: isVisible)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .accessibilityLabel("Mac sbloccato")
     }
@@ -77,7 +77,7 @@ struct TransferBanner: View {
                 .frame(width: 46, height: 46)
                 .overlay(alignment: .bottomTrailing) {
                     Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 15, weight: .bold))
+                        .font(Glyph.tile)
                         .foregroundStyle(.white, tint)
                         .offset(x: 4, y: 4)
                 }
@@ -85,10 +85,10 @@ struct TransferBanner: View {
 
             VStack(alignment: .leading, spacing: 1) {
                 Text(alert.kind == .airDrop ? "Ricevuto con AirDrop" : "Download completato")
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(Typography.subheadline.weight(.semibold))
                     .foregroundStyle(tint)
                 Text(alert.name)
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(Typography.headline)
                     .foregroundStyle(.white)
                     .truncationMode(.middle)
             }
@@ -113,7 +113,7 @@ struct BannerIconButton: View {
     var body: some View {
         Button(action: action) {
             Image(systemName: symbol)
-                .font(.system(size: 12, weight: .semibold))
+                .font(Glyph.button)
                 .foregroundStyle(Ink.primary)
                 .frame(width: 28, height: 28)
                 .background(Circle().fill(Fill.primary))

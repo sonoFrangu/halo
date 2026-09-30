@@ -11,12 +11,12 @@ struct ClockCardView: View {
             HStack(alignment: .firstTextBaseline) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(context.date, format: .dateTime.hour().minute())
-                        .font(.system(size: 52, weight: .semibold, design: .rounded).monospacedDigit())
+                        .font(Typography.displayLarge)
                         .tracking(-1)
                         .foregroundStyle(.white)
                         .contentTransition(.numericText())
                     Text(context.date, format: .dateTime.weekday(.wide).day().month(.wide))
-                        .font(.system(size: 14, weight: .medium))
+                        .font(Typography.body.weight(.medium))
                         .foregroundStyle(Ink.secondary)
                 }
                 Spacer(minLength: 12)
@@ -24,16 +24,16 @@ struct ClockCardView: View {
                     VStack(alignment: .trailing, spacing: 4) {
                         Image(systemName: weather.symbol)
                             .symbolRenderingMode(.multicolor)
-                            .font(.system(size: 26, weight: .medium))
+                            .font(Glyph.display)
                         Text(weather.temperatureText)
-                            .font(.system(size: 20, weight: .semibold, design: .rounded).monospacedDigit())
+                            .font(Typography.displaySmall)
                             .foregroundStyle(Ink.primary)
                     }
                     .accessibilityElement(children: .ignore)
                     .accessibilityLabel("\(weather.summary), \(weather.temperatureText)")
                 }
             }
-            .animation(.easeInOut(duration: 0.4), value: context.date)
+            .animation(Motion.content, value: context.date)
         }
         .padding(Corner.widgetPadding)
         .frame(width: width)

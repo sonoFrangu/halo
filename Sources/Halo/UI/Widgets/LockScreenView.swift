@@ -17,7 +17,7 @@ struct LockScreenView: View {
             .shadow(color: .black.opacity(0.35), radius: 30, x: 0, y: 16)
             .opacity(isShown ? 1 : 0)
             .scaleEffect(isShown || reduceMotion ? 1 : 0.94, anchor: .top)
-            .animation(reduceMotion ? .easeInOut(duration: 0.25) : .spring(duration: 0.6, bounce: 0.12), value: isShown)
+            .animation(reduceMotion ? Motion.content : Motion.appear, value: isShown)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .padding(.top, LockScreenView.shadowMargin)
     }

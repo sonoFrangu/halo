@@ -28,8 +28,8 @@ struct ExpandedTabsView: View {
             Spacer(minLength: 0)
         }
         .frame(maxHeight: .infinity)
-        .animation(.spring(duration: 0.3, bounce: 0.2), value: selected)
-        .animation(.spring(duration: 0.3, bounce: 0.2), value: tabs)
+        .animation(Motion.layout, value: selected)
+        .animation(Motion.layout, value: tabs)
     }
 
     private func pill(_ tab: ExpandedTab) -> some View {
@@ -39,7 +39,7 @@ struct ExpandedTabsView: View {
             onSelect(tab)
         } label: {
             Image(systemName: tab.symbol)
-                .font(.system(size: 10.5, weight: .semibold))
+                .font(Glyph.small)
                 .foregroundStyle(isSelected ? Color.black : Ink.secondary)
                 .frame(width: pillWidth, height: Self.pillSize.height)
                 .background {

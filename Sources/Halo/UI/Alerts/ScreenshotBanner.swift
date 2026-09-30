@@ -38,10 +38,10 @@ struct ScreenshotBanner: View {
 
             VStack(alignment: .leading, spacing: 1) {
                 Text("Screenshot")
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(Typography.headline)
                     .foregroundStyle(.white)
                 Text("Trascinalo dove vuoi")
-                    .font(.system(size: 11))
+                    .font(Typography.subheadline)
                     .foregroundStyle(Ink.secondary)
             }
             .lineLimit(1)
@@ -59,7 +59,7 @@ struct ScreenshotBanner: View {
     private func iconButton(_ symbol: String, label: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Image(systemName: symbol)
-                .font(.system(size: 12, weight: .semibold))
+                .font(Glyph.button)
                 .foregroundStyle(Ink.primary)
                 .frame(width: 28, height: 28)
                 .background(Circle().fill(Fill.primary))

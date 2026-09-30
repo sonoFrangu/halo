@@ -14,7 +14,7 @@ struct TimerBanner: View {
                 Circle()
                     .fill(LinearGradient(colors: colors, startPoint: .topLeading, endPoint: .bottomTrailing))
                 Image(systemName: symbol)
-                    .font(.system(size: 15, weight: .bold))
+                    .font(Glyph.tile)
                     .foregroundStyle(.white)
             }
             .frame(width: 34, height: 34)
@@ -22,10 +22,10 @@ struct TimerBanner: View {
 
             VStack(alignment: .leading, spacing: 1) {
                 Text(alert.title)
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(Typography.headline)
                     .foregroundStyle(.white)
                 Text(alert.message)
-                    .font(.system(size: 11))
+                    .font(Typography.subheadline)
                     .foregroundStyle(Ink.secondary)
             }
             .lineLimit(1)
@@ -34,7 +34,7 @@ struct TimerBanner: View {
             if alert.next != nil {
                 Button(action: onStop) {
                     Text("Ferma")
-                        .font(.system(size: 11, weight: .semibold))
+                        .font(Typography.subheadline.weight(.semibold))
                         .foregroundStyle(.white)
                         .padding(.horizontal, 12)
                         .frame(height: 24)

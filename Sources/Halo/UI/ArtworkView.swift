@@ -37,14 +37,14 @@ struct ArtworkView: View {
                     .scaleEffect(0.42)
             }
         }
-        .animation(.easeInOut(duration: 0.3), value: image.map { ObjectIdentifier($0) })
+        .animation(Motion.content, value: image.map { ObjectIdentifier($0) })
         .clipShape(shape)
         .overlay {
             shape.strokeBorder(Fill.secondary, lineWidth: 0.5)
         }
         // The colored shadow follows its own delayed animation: it only appears once the
         // artwork has reached its expanded frame, so it is not re-rendered while it moves.
-        .animation(isProminent ? .easeOut(duration: 0.3).delay(0.25) : .easeOut(duration: 0.1)) { content in
+        .animation(isProminent ? Motion.decorationIn(reduceMotion: false) : Motion.decorationOut) { content in
             content.shadow(
                 color: palette.primary.color.opacity(isProminent ? 0.45 : 0),
                 radius: isProminent ? 14 : 0,

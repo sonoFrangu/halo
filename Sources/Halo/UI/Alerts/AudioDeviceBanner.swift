@@ -17,11 +17,11 @@ struct AudioDeviceBanner: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(alert.name)
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(Typography.headline)
                     .foregroundStyle(.white)
                     .lineLimit(1)
                 Text("Connesse")
-                    .font(.system(size: 11, weight: .medium))
+                    .font(Typography.subheadline.weight(.medium))
                     .foregroundStyle(Ink.secondary)
             }
             .reveal(isVisible, order: 1)
@@ -170,7 +170,7 @@ private struct DeviceGlyph: View {
                 .frame(width: 32, height: 32)
         } else {
             Image(systemName: symbol)
-                .font(.system(size: 26, weight: .light))
+                .font(Glyph.display)
                 .symbolRenderingMode(.hierarchical)
                 .foregroundStyle(LinearGradient(colors: [.white.opacity(0.95), .white.opacity(0.6)], startPoint: .top, endPoint: .bottom))
         }
@@ -182,7 +182,7 @@ private struct DeviceGlyph: View {
             glyph
         } else {
             Image(systemName: symbol)
-                .font(.system(size: 26, weight: .light))
+                .font(Glyph.display)
         }
     }
 }

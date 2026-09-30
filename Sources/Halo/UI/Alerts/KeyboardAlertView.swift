@@ -6,7 +6,7 @@ struct KeyboardAlertGlyph: View {
 
     var body: some View {
         Image(systemName: symbol)
-            .font(.system(size: 14, weight: .semibold))
+            .font(Glyph.wing)
             .foregroundStyle(tint)
             .contentTransition(.symbolEffect(.replace))
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -44,11 +44,11 @@ struct KeyboardAlertValue: View {
                         .background(RoundedRectangle(cornerRadius: 3, style: .continuous).fill(Color.white.opacity(0.85)))
                 }
                 Text(source.name)
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(Typography.callout.weight(.semibold))
                     .foregroundStyle(.white)
             case .capsLock(let on):
                 Text(on ? "Maiusc attivo" : "Maiusc spento")
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(Typography.callout.weight(.semibold))
                     .foregroundStyle(on ? Color(red: 0.4, green: 0.9, blue: 0.5) : Ink.secondary)
             }
         }

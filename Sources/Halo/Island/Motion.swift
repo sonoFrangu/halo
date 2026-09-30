@@ -38,6 +38,20 @@ enum Motion {
 
     static var decorationOut: Animation { .easeOut(duration: 0.1) }
 
+    // Roles for changes inside the island's content, the widgets and banners: the same
+    // kind of change moves the same way everywhere.
+
+    /// A level, percentage or progress moving: smooth, no bounce.
+    static var value: Animation { .smooth(duration: 0.3) }
+    /// Content replaced in place (a title, the artwork, the weather, the time): a soft
+    /// crossfade.
+    static var content: Animation { .easeInOut(duration: 0.25) }
+    /// Items appearing, moving or reordering inside a view: smooth, no bounce.
+    static var layout: Animation { .smooth(duration: 0.4) }
+    /// Something opening or arriving (a widget, a panel, the unlocked padlock): the only
+    /// content motion with a small bounce, like the island's own opening.
+    static var appear: Animation { .spring(duration: 0.5, bounce: 0.15) }
+
     static var hoverFeedback: Animation { .spring(duration: 0.25, bounce: 0.3) }
     static var press: Animation { .spring(duration: 0.2, bounce: 0.45) }
     static var palette: Animation { .easeInOut(duration: 0.6) }

@@ -8,16 +8,16 @@ struct PowerValueView: View {
         let percent = Int((alert.level * 100).rounded())
         HStack(alignment: .firstTextBaseline, spacing: 5) {
             Text("\(percent)%")
-                .font(.system(size: 13, weight: .semibold).monospacedDigit())
+                .font(Typography.headline.monospacedDigit())
                 .foregroundStyle(tint)
                 .contentTransition(.numericText(value: Double(percent)))
             Text(caption)
-                .font(.system(size: 10, weight: .medium))
+                .font(Typography.caption)
                 .foregroundStyle(Ink.secondary)
                 .lineLimit(1)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-        .animation(.spring(duration: 0.35, bounce: 0.1), value: percent)
+        .animation(Motion.value, value: percent)
         .accessibilityElement(children: .combine)
     }
 

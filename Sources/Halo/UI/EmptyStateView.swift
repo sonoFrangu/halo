@@ -7,15 +7,15 @@ struct EmptyStateView: View {
     var body: some View {
         HStack(spacing: 10) {
             Image(systemName: symbol)
-                .font(.system(size: 15, weight: .semibold))
+                .font(Glyph.wing)
                 .foregroundStyle(Ink.secondary)
             VStack(alignment: .leading, spacing: 1) {
                 Text(title)
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(Typography.headline)
                     .foregroundStyle(Ink.primary)
                 if let detail {
                     Text(detail)
-                        .font(.system(size: 11))
+                        .font(Typography.subheadline)
                         .foregroundStyle(Ink.tertiary)
                         .lineLimit(1)
                         .truncationMode(.middle)

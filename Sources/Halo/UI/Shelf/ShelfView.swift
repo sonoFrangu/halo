@@ -25,10 +25,10 @@ struct ShelfView: View {
             if store.isEmpty {
                 VStack(spacing: 4) {
                     Image(systemName: "tray.and.arrow.down.fill")
-                        .font(.system(size: 18, weight: .semibold))
+                        .font(Glyph.hero)
                         .symbolEffect(.bounce, value: isDropTargeted)
                     Text(isDropTargeted ? "Rilascia per aggiungere" : "Trascina qui i file")
-                        .font(.system(size: 12, weight: .semibold))
+                        .font(Typography.callout.weight(.semibold))
                 }
                 .foregroundStyle(Ink.secondary)
             } else {
@@ -44,19 +44,19 @@ struct ShelfView: View {
             }
         }
         .onDrop(of: [.fileURL], delegate: ShelfDropDelegate(actions: actions))
-        .animation(.spring(duration: 0.3, bounce: 0.2), value: isDropTargeted)
-        .animation(.spring(duration: 0.4, bounce: 0.15), value: store.items)
+        .animation(Motion.hoverFeedback, value: isDropTargeted)
+        .animation(Motion.layout, value: store.items)
     }
 
     private var clearButton: some View {
         Button(action: actions.clear) {
             VStack(spacing: 6) {
                 Image(systemName: "trash")
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(Glyph.button)
                     .frame(width: 44, height: 44)
                     .background(Circle().fill(Fill.primary))
                 Text("Svuota")
-                    .font(.system(size: 10, weight: .medium))
+                    .font(Typography.caption)
             }
             .foregroundStyle(Ink.secondary)
         }
@@ -80,7 +80,7 @@ struct ShelfTile: View {
                 .frame(width: 48, height: 48)
                 .shadow(color: .black.opacity(0.4), radius: 4, x: 0, y: 2)
             Text(item.name)
-                .font(.system(size: 10, weight: .medium))
+                .font(Typography.caption)
                 .foregroundStyle(Ink.primary)
                 .lineLimit(1)
                 .truncationMode(.middle)

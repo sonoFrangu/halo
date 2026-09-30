@@ -42,8 +42,8 @@ struct HUDLevelBar: View {
         .onChange(of: isDragging) { _, dragging in
             onInteractionChanged(dragging)
         }
-        .animation(.smooth(duration: 0.25), value: level)
-        .animation(.smooth(duration: 0.25), value: isMuted)
+        .animation(Motion.value, value: level)
+        .animation(Motion.value, value: isMuted)
         .animation(Motion.hoverFeedback, value: isDragging)
         .accessibilityElement()
         .accessibilityValue("\(Int((level * 100).rounded())) percento")

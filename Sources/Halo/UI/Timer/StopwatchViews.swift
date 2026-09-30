@@ -82,11 +82,11 @@ struct ActiveStopwatchView: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(stopwatch.isRunning ? "Cronometro" : "Cronometro · in pausa")
-                    .font(.system(size: 10.5, weight: .semibold))
+                    .font(Typography.caption.weight(.semibold))
                     .foregroundStyle(StopwatchPalette.tint)
                     .textCase(.uppercase)
                 StopwatchText(stopwatch: stopwatch)
-                    .font(.system(size: 34, weight: .semibold, design: .rounded).monospacedDigit())
+                    .font(Typography.display)
                     .foregroundStyle(.white)
                 HStack(spacing: 10) {
                     ControlButton(
@@ -124,11 +124,11 @@ struct ActivityRow<Leading: View, Value: View>: View {
                 .frame(width: 40, height: 40)
             VStack(alignment: .leading, spacing: 0) {
                 Text(title)
-                    .font(.system(size: 9.5, weight: .semibold))
+                    .font(Typography.caption.weight(.semibold))
                     .foregroundStyle(tint)
                     .textCase(.uppercase)
                 value
-                    .font(.system(size: 20, weight: .semibold, design: .rounded).monospacedDigit())
+                    .font(Typography.displaySmall)
                     .foregroundStyle(.white)
             }
             Spacer(minLength: 8)

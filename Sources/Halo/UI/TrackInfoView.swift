@@ -8,7 +8,7 @@ struct TrackInfoView: View {
     /// otherwise they are truncated.
     var scrolls = false
 
-    static let titleSize: CGFloat = 15
+    static let titleSize = Typography.titleSize
     static let titleTracking: CGFloat = -0.2
 
     var body: some View {
@@ -29,19 +29,19 @@ struct TrackInfoView: View {
             .foregroundStyle(.white)
 
             Text(artist ?? "")
-                .font(.system(size: 13, weight: .medium))
+                .font(Typography.body.weight(.medium))
                 .foregroundStyle(Ink.secondary)
         }
         .lineLimit(1)
         .truncationMode(.tail)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .contentTransition(.opacity)
-        .animation(.easeInOut(duration: 0.25), value: title)
+        .animation(Motion.content, value: title)
         .accessibilityElement(children: .combine)
     }
 
     private var titleFont: Font {
-        .system(size: Self.titleSize, weight: .semibold)
+        Typography.title
     }
 
     /// Width of the title as drawn, measured with AppKit so no view state is needed.

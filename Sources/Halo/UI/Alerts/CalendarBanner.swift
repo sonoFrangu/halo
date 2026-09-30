@@ -15,7 +15,7 @@ struct CalendarBanner: View {
                 RoundedRectangle(cornerRadius: Corner.tile, style: .continuous)
                     .fill(tint.opacity(0.22))
                 Image(systemName: event.meetingURL == nil ? "calendar" : "video.fill")
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(Glyph.tile)
                     .foregroundStyle(tint)
             }
             .frame(width: 34, height: 34)
@@ -23,15 +23,15 @@ struct CalendarBanner: View {
             TimelineView(.everyMinute) { context in
                 VStack(alignment: .leading, spacing: 1) {
                     Text("\(CalendarText.short(for: event, now: context.date)) · \(CalendarText.time(event.start))")
-                        .font(.system(size: 10, weight: .semibold).monospacedDigit())
+                        .font(Typography.caption.weight(.semibold).monospacedDigit())
                         .foregroundStyle(tint)
                         .textCase(.uppercase)
                     Text(event.title)
-                        .font(.system(size: 13, weight: .semibold))
+                        .font(Typography.headline)
                         .foregroundStyle(.white)
                     if let location = event.location, !location.isEmpty, event.meetingURL == nil {
                         Text(location)
-                            .font(.system(size: 11))
+                            .font(Typography.subheadline)
                             .foregroundStyle(Ink.secondary)
                     }
                 }

@@ -69,12 +69,12 @@ struct LyricsPanel: View {
             }
             .offset(y: proxy.size.height / 2 - lineHeight / 2 - CGFloat(center) * lineHeight)
         }
-        .animation(reduceMotion ? .easeInOut(duration: 0.2) : .spring(duration: 0.55, bounce: 0.12), value: current)
+        .animation(reduceMotion ? Motion.content : Motion.layout, value: current)
     }
 
     private func lineView(_ line: LyricLine, isCurrent: Bool, distance: Int) -> some View {
         Text(line.text.isEmpty ? "♪" : line.text)
-            .font(.system(size: 16, weight: .bold))
+            .font(Typography.lyric)
             .tracking(-0.2)
             .lineLimit(1)
             .minimumScaleFactor(0.75)
