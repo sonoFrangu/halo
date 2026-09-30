@@ -385,11 +385,39 @@ struct AboutSection: View {
             Hint(symbol: "tray.and.arrow.down", text: "Trascina file sulla notch per metterli sullo scaffale.")
             Hint(symbol: "menubar.rectangle", text: "Il menu di Halo nella barra dei menu ha timer, cronometro e queste impostazioni (⌘,).")
         }
+        Section("Autore") {
+            AuthorRow()
+        }
         Section("Riconoscimenti") {
             Hint(symbol: "music.note", text: "Now Playing tramite mediaremote-adapter di Jonas van den Berg (licenza BSD a 3 clausole).")
             Hint(symbol: "quote.bubble", text: "Testi sincronizzati da LRCLIB.")
             Hint(symbol: "cloud.sun", text: "Meteo da Open-Meteo.")
         }
+    }
+}
+
+/// Who made Halo: the GitHub avatar (bundled, so no network request) and profile link.
+struct AuthorRow: View {
+    private static let profile = URL(string: "https://github.com/sonoFrangu")!
+
+    var body: some View {
+        HStack(spacing: 12) {
+            if let avatar = Bundle.main.image(forResource: "Author") {
+                Image(nsImage: avatar)
+                    .resizable()
+                    .interpolation(.high)
+                    .frame(width: 40, height: 40)
+                    .clipShape(Circle())
+                    .accessibilityHidden(true)
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Creato da sonoFrangu")
+                    .font(.system(size: 13, weight: .semibold))
+                Link("github.com/sonoFrangu", destination: Self.profile)
+                    .font(.system(size: 12))
+            }
+        }
+        .padding(.vertical, 2)
     }
 }
 

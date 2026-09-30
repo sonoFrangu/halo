@@ -61,6 +61,8 @@ for size in 16 32 128 256 512; do
     sips -z "$((size * 2))" "$((size * 2))" "$ROOT/Support/AppIcon.png" --out "$ICONSET/icon_${size}x${size}@2x.png" > /dev/null
 done
 iconutil -c icns "$ICONSET" -o "$APP/Contents/Resources/AppIcon.icns"
+# Author avatar for Settings › Informazioni (bundled: no network request).
+cp "$ROOT/Support/Author.png" "$APP/Contents/Resources/Author.png"
 ditto "$ADAPTER_OUT/MediaRemoteAdapter.framework" "$ADAPTER_DEST/MediaRemoteAdapter.framework"
 cp "$ADAPTER_SRC/bin/mediaremote-adapter.pl" "$ADAPTER_DEST/mediaremote-adapter.pl"
 cp "$ADAPTER_SRC/LICENSE" "$ADAPTER_DEST/LICENSE"
