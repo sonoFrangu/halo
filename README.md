@@ -93,7 +93,8 @@ un'altra identità.
 
 Test unitari (stream Now Playing, timeline, geometria e layout, forma, palette, HUD, avvisi,
 batterie, LRC e sincronia dei testi, meteo, notifiche, gesti, calendario, timer, cronometro,
-Full Immersione, download): `swift test` (richiede Xcode per Swift Testing).
+Full Immersione, download): `scripts/test.sh` (`swift test` più il percorso del plugin di Swift Testing, che con i soli
+Command Line Tools il compilatore non trova da solo).
 
 La CI (`.github/workflows/build.yml`) esegue test e bundle a ogni push con Xcode 26.0.1 e 26.6
 (runner `macos-26`) e con Xcode 27 + Command Line Tools su SDK 27, e carica `Halo.zip` come
