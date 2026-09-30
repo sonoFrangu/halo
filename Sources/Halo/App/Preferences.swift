@@ -239,9 +239,10 @@ enum Preferences {
         set { defaults.set(newValue, forKey: Key.haptics) }
     }
 
-    /// Seconds synced lyrics are shown ahead of their timestamps (negative: later).
+    /// Seconds synced lyrics are shown ahead of their timestamps (negative: later). The
+    /// default was tuned by ear on Spotify through the Mac's speakers.
     static var lyricsLead: Double {
-        get { (defaults.object(forKey: Key.lyricsLead) as? Double).map { min(max($0, -1), 2) } ?? 0.25 }
+        get { (defaults.object(forKey: Key.lyricsLead) as? Double).map { min(max($0, -1), 2) } ?? 0.5 }
         set { defaults.set(newValue, forKey: Key.lyricsLead) }
     }
 
