@@ -114,10 +114,11 @@ struct PowerAlert: Sendable, Equatable {
 struct AudioDeviceAlert: Sendable, Equatable {
     var name: String
     var route: SystemVolume.Route
+    /// Bluetooth product ID (`"0x201B"`), when the device reports one: picks the model's
+    /// picture and symbols.
+    var productID: String?
     /// Battery levels in 0...100, when the device reports them.
     var batteries: HeadphoneBatteries
-    /// Output volume in 0...1, if the device has a volume control.
-    var volume: Double?
 }
 
 /// A system notification mirrored from Notification Center.

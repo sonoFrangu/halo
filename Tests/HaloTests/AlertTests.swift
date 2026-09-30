@@ -149,3 +149,45 @@ struct HeadphoneBatteriesTests {
         #expect(HeadphoneBatteries(main: 10).crossedWarningLevel(since: HeadphoneBatteries(main: 11)))
     }
 }
+
+struct BluetoothProductTests {
+    @Test func readsProductIDsOfConnectedAndPairedDevices() {
+        let json = """
+        {
+          "SPBluetoothDataType": [
+            {
+              "device_connected": [
+                { "AirPods di Matteo": { "device_productID": "0x201B", "device_batteryLevelLeft": "90%" } },
+                { "Tastiera": { "device_minorType": "Keyboard" } }
+              ],
+              "device_not_connected": [
+                { "Beats Studio Buds": { "device_productID": "0x2011" } }
+              ]
+            }
+          ]
+        }
+        """
+        #expect(BluetoothProduct.ids(systemProfilerJSON: Data(json.utf8)) == [
+            "AirPods di Matteo": "0x201B",
+            "Beats Studio Buds": "0x2011",
+        ])
+        #expect(BluetoothProduct.ids(systemProfilerJSON: Data("garbage".utf8)).isEmpty)
+    }
+}
+
+struct OutputRouteTests {
+    @Test func classifiesAirPodsByProductWhateverTheirName() {
+        func route(_ id: String?, _ product: String?, name: String = "Cuffie di Matteo") -> SystemVolume.Route {
+            SystemVolume.route(deviceName: name, productID: id, productName: product, isBluetooth: true)
+        }
+        #expect(route("0x200F", "AirPods") == .airPods)
+        #expect(route("0x2013", "AirPods") == .airPods3)
+        #expect(route("0x201B", "AirPods") == .airPods4)
+        #expect(route("0x2027", "AirPods Pro") == .airPodsPro)
+        #expect(route("0x201F", "AirPods Max") == .airPodsMax)
+        #expect(route("0x2011", "Beats Studio Buds") == .headphones)
+        #expect(route(nil, nil, name: "AirPods Pro di Matteo") == .airPodsPro)
+        #expect(route(nil, nil, name: "AirPods di Matteo") == .airPods)
+        #expect(SystemVolume.route(deviceName: "MacBook Air Speakers", productID: nil, productName: nil, isBluetooth: false) == .speakers)
+    }
+}

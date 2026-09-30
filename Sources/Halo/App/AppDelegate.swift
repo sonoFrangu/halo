@@ -107,6 +107,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if Preferences.lyricsEnabled { lyrics.start() }
         if Preferences.chargingAlertsEnabled { features.power.start() }
         if Preferences.headphoneAlertsEnabled { features.audioDevices.start() }
+        // AirPods models for the volume HUD and the headphones' banner.
+        Task { await BluetoothProduct.refreshIDs() }
         Diagnostics.shared.record("Halo avviato, versione \(Diagnostics.build)")
     }
 

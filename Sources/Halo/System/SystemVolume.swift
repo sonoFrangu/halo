@@ -9,7 +9,11 @@ final class SystemVolume {
     enum Route: Equatable, Sendable {
         case speakers
         case headphones
+        /// 1st or 2nd generation, or AirPods whose generation is unknown.
         case airPods
+        case airPods3
+        /// 4th generation and later.
+        case airPods4
         case airPodsPro
         case airPodsMax
     }
@@ -75,11 +79,33 @@ final class SystemVolume {
 
     var route: Route {
         guard let device = defaultOutputDevice else { return .speakers }
-        let name = deviceName(device)?.lowercased() ?? ""
-        if name.contains("airpods max") { return .airPodsMax }
-        if name.contains("airpods pro") { return .airPodsPro }
-        if name.contains("airpods") { return .airPods }
-        return transportType(device) == kAudioDeviceTransportTypeBluetooth ? .headphones : .speakers
+        let name = deviceName(device) ?? ""
+        let productID = BluetoothProduct.id(ofDevice: name)
+        return Self.route(
+            deviceName: name,
+            productID: productID,
+            productName: productID.flatMap { BluetoothProduct.product(id: $0).name },
+            isBluetooth: transportType(device) == kAudioDeviceTransportTypeBluetooth
+        )
+    }
+
+    /// Classifies by product, so AirPods renamed to anything keep their model. Only
+    /// generations the catalogue name ("AirPods", "AirPods Pro") cannot tell apart are
+    /// listed; other AirPods, future ones included, go by that name, and without a product
+    /// ID by the device's own name.
+    nonisolated static func route(deviceName: String, productID: String?, productName: String?, isBluetooth: Bool) -> Route {
+        switch productID {
+        case "0x2002", "0x200F": return .airPods
+        case "0x2013": return .airPods3
+        default: break
+        }
+        let label = productName ?? deviceName
+        if label.localizedCaseInsensitiveContains("AirPods") {
+            if label.localizedCaseInsensitiveContains("Max") { return .airPodsMax }
+            if label.localizedCaseInsensitiveContains("Pro") { return .airPodsPro }
+            return productID == nil ? .airPods : .airPods4
+        }
+        return isBluetooth ? .headphones : .speakers
     }
 
     // MARK: Output devices

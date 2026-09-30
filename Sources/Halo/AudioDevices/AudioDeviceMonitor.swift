@@ -6,6 +6,8 @@ import Foundation
 /// listener on the default output device. Batteries arrive a moment later from
 /// `BluetoothBatteryReader`, updating the alert in place; while the headphones stay the
 /// output they are read again every few minutes, and the alert returns when one runs low.
+/// The model's picture and symbols come from product IDs read at launch (`BluetoothProduct`),
+/// so the alert shows them right away; a device paired since then gets them a moment later.
 @MainActor
 final class AudioDeviceMonitor {
     private let alerts: AlertCenter
@@ -56,10 +58,25 @@ final class AudioDeviceMonitor {
         let route = volume.route
         guard route != .speakers, let name = volume.outputName else { return }
 
-        let alert = AudioDeviceAlert(name: name, route: route, batteries: .none, volume: volume.level())
+        let alert = AudioDeviceAlert(
+            name: name,
+            route: route,
+            productID: BluetoothProduct.id(ofDevice: name),
+            batteries: .none
+        )
         alerts.post(.audioDevice(alert))
 
         batteryTask = Task { [weak self] in
+            var alert = alert
+            if alert.productID == nil {
+                await BluetoothProduct.refreshIDs()
+                guard !Task.isCancelled, let self else { return }
+                if let id = BluetoothProduct.id(ofDevice: name), self.currentDevice == device {
+                    alert.productID = id
+                    alert.route = self.volume.route
+                    self.alerts.post(.audioDevice(alert))
+                }
+            }
             var batteries = await BluetoothBatteryReader.batteries(of: name)
             if batteries?.isEmpty ?? true {
                 try? await Task.sleep(for: Self.batteryRetryDelay)
@@ -87,7 +104,6 @@ final class AudioDeviceMonitor {
         guard !Task.isCancelled, currentDevice == device else { return }
         var updated = alert
         updated.batteries = batteries
-        updated.volume = volume.level()
         alerts.post(.audioDevice(updated))
     }
 }

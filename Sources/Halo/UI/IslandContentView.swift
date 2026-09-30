@@ -302,11 +302,11 @@ struct AlertContentView: View {
             }
 
             if let device = shown?.audioDevice {
-                AudioDeviceBanner(alert: device)
+                AudioDeviceBanner(alert: device, isVisible: isAlert && kind == .audioDevice)
                     .contentShape(Rectangle())
                     .onTapGesture { alertActions.activate(.audioDevice(device)) }
+                    .allowsHitTesting(isAlert && kind == .audioDevice)
                     .place(in: layout.bannerFrame)
-                    .reveal(isAlert && kind == .audioDevice, order: 0)
             }
 
             if let calendar = shown?.calendar {

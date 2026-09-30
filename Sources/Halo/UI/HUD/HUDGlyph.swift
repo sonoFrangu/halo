@@ -31,6 +31,8 @@ struct HUDGlyph: View {
             if isMuted { return "speaker.slash.fill" }
             switch route {
             case .airPods: return "airpods"
+            case .airPods3: return "airpods.gen3"
+            case .airPods4: return "airpods.gen4"
             case .airPodsPro: return "airpodspro"
             case .airPodsMax: return "airpodsmax"
             case .headphones: return "headphones"

@@ -1,6 +1,7 @@
 import Foundation
 
-/// Asks `system_profiler` for the batteries of connected Bluetooth headphones.
+/// Asks `system_profiler` for the batteries of connected Bluetooth headphones, and for the
+/// product IDs of paired devices.
 ///
 /// Public and permission-free (unlike private IOBluetooth selectors or a Bluetooth scan).
 /// It takes about a second, so it runs once per connection, off the main actor.
@@ -8,6 +9,11 @@ enum BluetoothBatteryReader {
     static func batteries(of deviceName: String) async -> HeadphoneBatteries? {
         guard let data = await runSystemProfiler() else { return nil }
         return HeadphoneBatteries.parse(systemProfilerJSON: data, deviceName: deviceName)
+    }
+
+    static func productIDs() async -> [String: String] {
+        guard let data = await runSystemProfiler() else { return [:] }
+        return BluetoothProduct.ids(systemProfilerJSON: data)
     }
 
     private static func runSystemProfiler() async -> Data? {

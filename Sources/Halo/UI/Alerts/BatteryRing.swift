@@ -36,6 +36,7 @@ struct BatteryRing: View {
 
     private var ringColor: Color {
         guard let value else { return .clear }
-        return value <= 0.15 ? Color(red: 1, green: 0.35, blue: 0.3) : tint
+        // Red from the first low-battery warning on (`HeadphoneBatteries.warningLevels`).
+        return value <= 0.2 ? Color(red: 1, green: 0.35, blue: 0.3) : tint
     }
 }
