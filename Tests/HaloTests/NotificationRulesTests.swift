@@ -52,3 +52,11 @@ struct NotificationRulesTests {
         #expect(decide("com.apple.controlcenter.notifications.low-battery") == .full)
     }
 }
+
+struct SystemBannerTests {
+    @Test func appNameIsWhatPrecedesTheTexts() {
+        #expect(SystemBanner.appName(description: "Script Editor, Prova AX, Evento", texts: ["Prova AX", "Evento"]) == "Script Editor")
+        #expect(SystemBanner.appName(description: "Foo, Bar, Ciao, a tutti", texts: ["Ciao, a tutti"]) == "Foo, Bar")
+        #expect(SystemBanner.appName(description: "WhatsApp, altro", texts: ["Mario"]) == nil)
+    }
+}

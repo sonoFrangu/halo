@@ -35,6 +35,36 @@ struct AlertCenterTests {
         #expect(center.current == notification(4, from: "com.other"))
     }
 
+    @Test func aLatePhotoUpdatesTheSameNotificationWithoutCounting() {
+        let center = AlertCenter()
+        center.post(notification(-1))
+        center.post(notification(-2))
+        #expect(center.current == notification(-2, count: 2))
+        // The records arrive: the shown one (same text) brings its photo, the earlier one
+        // is no longer on screen.
+        center.refresh(notification(8).withText("T-2"))
+        center.refresh(notification(7).withText("T-1"))
+        #expect(center.current == notification(8, count: 2).withText("T-2"))
+    }
+
+    @Test func refreshNeverBringsBackAGoneNotification() {
+        let center = AlertCenter()
+        center.post(notification(-1))
+        center.dismissCurrent()
+        center.refresh(notification(7).withText("T-1"))
+        center.fold(notification(8))
+        #expect(center.current == nil)
+    }
+
+    @Test func foldedNotificationsCountWithoutChangingTheBanner() {
+        let center = AlertCenter()
+        center.post(notification(-1))
+        center.fold(notification(5))
+        center.fold(notification(6))
+        center.fold(notification(9, from: "com.other"))
+        #expect(center.current == notification(-1, count: 3))
+    }
+
     @Test func queuedNotificationsStackToo() {
         let center = AlertCenter()
         center.post(charging)
@@ -208,5 +238,13 @@ struct OutputRouteTests {
         #expect(route(nil, nil, name: "AirPods Pro di Matteo") == .airPodsPro)
         #expect(route(nil, nil, name: "AirPods di Matteo") == .airPods)
         #expect(SystemVolume.route(deviceName: "MacBook Air Speakers", productID: nil, productName: nil, isBluetooth: false) == .speakers)
+    }
+}
+
+private extension IslandAlert {
+    func withText(_ headline: String) -> IslandAlert {
+        guard case .notification(var alert) = self else { return self }
+        alert.text = NotificationText(headline: headline)
+        return .notification(alert)
     }
 }

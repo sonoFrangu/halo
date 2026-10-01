@@ -76,16 +76,34 @@ enum IslandAlert: Sendable, Equatable {
 
     /// `self` arriving while `previous`, of the same kind, is still up or queued: a
     /// notification from the same app stacks onto it and counts both, as Notification
-    /// Center groups them. Anything else simply replaces it.
+    /// Center groups them; the same notification again (its photo arriving) keeps the
+    /// count. Anything else simply replaces it.
     func replacing(_ previous: IslandAlert) -> IslandAlert {
         guard
             case .notification(var next) = self,
             case .notification(let shown) = previous,
-            next.bundleIdentifier == shown.bundleIdentifier,
-            next.id != shown.id
+            next.bundleIdentifier == shown.bundleIdentifier
         else { return self }
-        next.count += shown.count
+        next.count = next.isSame(as: shown) ? shown.count : shown.count + next.count
         return .notification(next)
+    }
+
+    /// `self` with `other`, a notification of the same app it stands for too, counted in;
+    /// what it shows stays.
+    func counting(_ other: IslandAlert) -> IslandAlert? {
+        guard
+            case .notification(var alert) = self,
+            case .notification(let added) = other,
+            alert.bundleIdentifier == added.bundleIdentifier
+        else { return nil }
+        alert.count += added.count
+        return .notification(alert)
+    }
+
+    /// Both are the same notification, from either source.
+    func isSame(as other: IslandAlert) -> Bool {
+        guard case .notification(let alert) = self, case .notification(let otherAlert) = other else { return false }
+        return alert.isSame(as: otherAlert)
     }
 
     /// How long the alert stays once nothing holds it.
@@ -137,6 +155,8 @@ struct AudioDeviceAlert: Sendable, Equatable {
 
 /// A system notification mirrored from Notification Center.
 struct NotificationAlert: Sendable, Equatable {
+    /// The database record's id; negative for a notification read off its banner, which has
+    /// no record yet.
     var id: Int64
     var bundleIdentifier: String
     var text: NotificationText
@@ -144,6 +164,11 @@ struct NotificationAlert: Sendable, Equatable {
     var imageURL: URL?
     /// Notifications from this app the banner stands for, this one included.
     var count = 1
+
+    /// The same notification, whether read off its banner or from its database record.
+    func isSame(as other: NotificationAlert) -> Bool {
+        bundleIdentifier == other.bundleIdentifier && text == other.text
+    }
 }
 
 /// A meeting is about to start.

@@ -188,7 +188,19 @@ apre in sola lettura il database SQLite di Centro Notifiche
 (`~/Library/Group Containers/group.com.apple.usernoted/db2/db`, serve l'Accesso completo al
 disco), memorizza l'ultimo `rec_id` e, a ogni scrittura segnalata da `DatabaseChangeWatcher`
 (kqueue su db, db-wal e cartella; raffiche raggruppate in 120 ms), legge i record nuovi e
-pubblica i banner. `NotificationPayload` (testato) decodifica la plist binaria (`req.titl`,
+pubblica i banner.
+
+usernoted però scrive il record solo quando il suo banner lascia lo schermo, circa 5 s dopo;
+con una raffica il ritardo cresceva ancora. Con l'Accessibilità `SystemBannerWatcher` osserva
+il processo `com.apple.notificationcenterui` (`AXWindowCreated`, `AXLayoutChanged`) e legge
+il banner appena compare (~0,2 s): elemento `AXNotificationCenterBanner`, testi con id
+`title`/`subtitle`/`body`, nome dell'app in testa alla descrizione. Il nome diventa bundle id
+solo se una sola app registrata in Centro Notifiche ha quel nome (mai i siti); altrimenti
+decide il record. Quando il record arriva: se è la stessa notifica (stesso bundle e testo)
+porta solo la foto (`AlertCenter.refresh`); se è di un'app con un banner già mostrato,
+Centro Notifiche l'aveva raggruppata (mostra circa un banner al secondo per app) e conta
+solo nel badge (`AlertCenter.fold`); altrimenti viene mostrata come prima. Le letture
+Accessibilità girano su una coda privata con timeout di 0,5 s. `NotificationPayload` (testato) decodifica la plist binaria (`req.titl`,
 `req.subt`, `req.body`) e trova la foto allegata (`imageURL`: il primo URL `file://` o percorso
 assoluto di un'immagine dentro `req`, perché il formato è privato). Senza permesso il menu
 mostra la voce per concederlo e Halo riprova a ogni cambio di app attiva. Le notifiche dei siti

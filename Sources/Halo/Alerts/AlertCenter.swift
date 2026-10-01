@@ -45,6 +45,27 @@ final class AlertCenter {
         scheduleDismiss()
     }
 
+    /// Updates an alert still on screen or waiting (a notification's photo arriving after
+    /// its text) without restarting its time; one already gone stays gone.
+    func refresh(_ alert: IslandAlert) {
+        if let current, current.isSame(as: alert) {
+            self.current = alert.replacing(current)
+        } else if let index = queue.firstIndex(where: { $0.isSame(as: alert) }) {
+            queue[index] = alert.replacing(queue[index])
+        }
+    }
+
+    /// Counts `alert` on the notification of the same app still on screen or waiting,
+    /// without restarting its time or changing what it shows; once that one is gone,
+    /// nothing happens.
+    func fold(_ alert: IslandAlert) {
+        if let folded = current?.counting(alert) {
+            current = folded
+        } else if let index = queue.firstIndex(where: { $0.counting(alert) != nil }), let folded = queue[index].counting(alert) {
+            queue[index] = folded
+        }
+    }
+
     /// Dismisses the visible alert now (e.g. after a click).
     func dismissCurrent() {
         advance()

@@ -6,6 +6,11 @@ import Observation
 /// macOS offers no public API to observe other apps' notifications, so Halo reads
 /// Notification Center's own database (Full Disk Access required) and posts a banner for
 /// each new record. The system banner still appears too; Halo only mirrors it.
+///
+/// A record is written only when its system banner leaves the screen, about five seconds
+/// late, so with Accessibility the banner itself is read the moment it appears
+/// (`SystemBannerWatcher`) and the record then only brings the photo, or a notification
+/// whose banner was not read (no Accessibility, an app name Halo cannot match).
 @MainActor
 @Observable
 final class NotificationMirror {
@@ -25,11 +30,19 @@ final class NotificationMirror {
     @ObservationIgnored private var watcher: DatabaseChangeWatcher?
     @ObservationIgnored private var lastID: Int64 = 0
     @ObservationIgnored private var activationObserver: NSObjectProtocol?
+    @ObservationIgnored private var banners: SystemBannerWatcher?
+    /// Notifications shown from their banner, waiting for their database record.
+    @ObservationIgnored private var shownFromBanners: [(alert: NotificationAlert, date: Date)] = []
+    @ObservationIgnored private var nextBannerID: Int64 = -1
     /// Whether a Focus is silencing notifications now; apps allowed through still show.
     @ObservationIgnored var isFocusSilencing: () -> Bool = { false }
 
-    /// More new records than this at once (e.g. after waking) shows only the newest.
+    /// More new records than this at once that no banner showed (e.g. after waking) shows
+    /// only the newest.
     static let burstLimit = 3
+    /// How long a notification shown from its banner waits for its record. A banner kept
+    /// on screen (pointer on it, alert style) delays the record.
+    static let recordWait: TimeInterval = 600
 
     init(alerts: AlertCenter) {
         self.alerts = alerts
@@ -50,6 +63,11 @@ final class NotificationMirror {
         }
         watcher.start()
         self.watcher = watcher
+        let banners = SystemBannerWatcher { [weak self] banner in
+            self?.bannerAppeared(banner)
+        }
+        banners.start()
+        self.banners = banners
         stopWaitingForAccess()
         status = .running
         Log.app.info("notification mirroring started")
@@ -58,6 +76,9 @@ final class NotificationMirror {
     func stop() {
         watcher?.stop()
         watcher = nil
+        banners?.stop()
+        banners = nil
+        shownFromBanners.removeAll()
         database = nil
         stopWaitingForAccess()
         status = .off
@@ -99,21 +120,42 @@ final class NotificationMirror {
             Log.app.error("notification read failed: \(String(describing: error), privacy: .public)")
             return
         }
+        Log.app.debug("notification records read: \(records.count)")
         guard let newest = records.last else { return }
         lastID = newest.id
-        let focusSilencing = isFocusSilencing()
-        let screenShared = ScreenSharing.isActive
-        let shown = records.count > Self.burstLimit ? [newest] : records
-        for record in shown {
-            let decision = NotificationRules.decide(
+        var unseen: [NotificationAlert] = []
+        for record in records {
+            let payload = NotificationPayload.parse(record.data) ?? NotificationPayload()
+            guard let alert = alert(
+                id: record.id,
                 bundleIdentifier: record.bundleIdentifier,
-                ownBundleIdentifier: Bundle.main.bundleIdentifier,
-                mode: Preferences.notificationMode(for: record.bundleIdentifier),
-                screenShared: screenShared,
-                focusSilencing: focusSilencing,
-                bypassesFocus: Preferences.bypassesFocus(record.bundleIdentifier)
-            )
-            guard let alert = Self.alert(for: record, decision: decision) else { continue }
+                title: payload.title,
+                subtitle: payload.subtitle,
+                body: payload.body,
+                imageURL: payload.imageURL
+            ) else { continue }
+            if takeShownFromBanner(alert) {
+                Log.app.debug("notification record matched its banner")
+                // Already on screen from its banner: only its photo is new.
+                if let imageURL = alert.imageURL {
+                    Task { [weak self] in
+                        _ = await NotificationThumbnail.load(alert.id, from: imageURL)
+                        self?.alerts.refresh(.notification(alert))
+                    }
+                }
+                continue
+            }
+            if shownFromBanners.contains(where: { $0.alert.bundleIdentifier == alert.bundleIdentifier }) {
+                // Notification Center shows about one banner a second per app and folds
+                // the rest into it: count it on the banner already shown, never late alone.
+                Log.app.debug("notification record folded into a banner")
+                alerts.fold(.notification(alert))
+                continue
+            }
+            unseen.append(alert)
+        }
+        for alert in unseen.count > Self.burstLimit ? Array(unseen.suffix(1)) : unseen {
+            Log.app.debug("notification shown from its record: \(alert.bundleIdentifier, privacy: .public)")
             guard let imageURL = alert.imageURL else {
                 alerts.post(.notification(alert))
                 continue
@@ -126,31 +168,80 @@ final class NotificationMirror {
         }
     }
 
-    private static func alert(for record: NotificationRecord, decision: NotificationDecision) -> NotificationAlert? {
-        let appName = AppName.of(record.bundleIdentifier)
+    // MARK: Banners
+
+    private func bannerAppeared(_ banner: SystemBanner) {
+        guard let bundleIdentifier = bundleIdentifier(ofAppNamed: banner.appName) else {
+            Log.app.debug("notification banner of an unknown app, left to its record")
+            return
+        }
+        guard let alert = alert(
+            id: nextBannerID,
+            bundleIdentifier: bundleIdentifier,
+            title: banner.title,
+            subtitle: banner.subtitle,
+            body: banner.body,
+            imageURL: nil
+        ) else { return }
+        nextBannerID -= 1
+        let now = Date()
+        shownFromBanners.removeAll { now.timeIntervalSince($0.date) > Self.recordWait }
+        shownFromBanners.append((alert, now))
+        alerts.post(.notification(alert))
+        Log.app.debug("notification shown from its banner")
+    }
+
+    /// The registered app showing `name` on its banners. Only a single match counts, and
+    /// never a website (they are not mirrored); anything else waits for its record.
+    private func bundleIdentifier(ofAppNamed name: String) -> String? {
+        let matches = appIdentifiers().filter { !Self.isFromWebsite($0) && AppName.of($0) == name }
+        return matches.count == 1 ? matches[0] : nil
+    }
+
+    /// Whether `alert` was already shown from its banner; forgets it if so.
+    private func takeShownFromBanner(_ alert: NotificationAlert) -> Bool {
+        guard let index = shownFromBanners.firstIndex(where: { $0.alert.isSame(as: alert) }) else { return false }
+        shownFromBanners.remove(at: index)
+        return true
+    }
+
+    // MARK: Alerts
+
+    /// The banner for one notification under the rules, or `nil` when it is not shown.
+    private func alert(
+        id: Int64,
+        bundleIdentifier: String,
+        title: String?,
+        subtitle: String?,
+        body: String?,
+        imageURL: URL?
+    ) -> NotificationAlert? {
+        let decision = NotificationRules.decide(
+            bundleIdentifier: bundleIdentifier,
+            ownBundleIdentifier: Bundle.main.bundleIdentifier,
+            mode: Preferences.notificationMode(for: bundleIdentifier),
+            screenShared: ScreenSharing.isActive,
+            focusSilencing: isFocusSilencing(),
+            bypassesFocus: Preferences.bypassesFocus(bundleIdentifier)
+        )
+        let appName = AppName.of(bundleIdentifier)
         switch decision {
         case .drop:
             return nil
         case .appOnly:
             // No title or body: the banner shows the app's name only, and no photo.
             return NotificationAlert(
-                id: record.id,
-                bundleIdentifier: record.bundleIdentifier,
+                id: id,
+                bundleIdentifier: bundleIdentifier,
                 text: NotificationText.make(title: nil, subtitle: nil, body: nil, appName: appName),
                 imageURL: nil
             )
         case .full:
-            let payload = NotificationPayload.parse(record.data) ?? NotificationPayload()
             return NotificationAlert(
-                id: record.id,
-                bundleIdentifier: record.bundleIdentifier,
-                text: NotificationText.make(
-                    title: payload.title,
-                    subtitle: payload.subtitle,
-                    body: payload.body,
-                    appName: appName
-                ),
-                imageURL: payload.imageURL
+                id: id,
+                bundleIdentifier: bundleIdentifier,
+                text: NotificationText.make(title: title, subtitle: subtitle, body: body, appName: appName),
+                imageURL: imageURL
             )
         }
     }
