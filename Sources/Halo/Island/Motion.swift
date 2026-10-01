@@ -8,10 +8,13 @@ enum Motion {
         if reduceMotion {
             return .easeInOut(duration: 0.18)
         }
-        return isOpening(from: old, to: new)
-            ? .spring(duration: 0.5, bounce: 0.24)
-            : .spring(duration: 0.34, bounce: 0.08)
+        return .spring(isOpening(from: old, to: new) ? opening : closing)
     }
+
+    static let opening = Spring(duration: 0.5, bounce: 0.24)
+    /// Barely bouncy: closing into the notch must not swing back out from behind it
+    /// (`NotchShapeTests`).
+    static let closing = Spring(duration: 0.34, bounce: 0.08)
 
     /// Size changes within a state (media appears, an alert changes style, a tab switches).
     static func context(reduceMotion: Bool) -> Animation {

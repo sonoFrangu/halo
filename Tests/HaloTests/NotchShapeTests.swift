@@ -88,3 +88,47 @@ struct NotchShapeTests {
         #expect(path.strokedPath(StrokeStyle(lineWidth: 0.2)).contains(diagonal))
     }
 }
+
+/// The island closes into the hardware notch (MacBook Air 13" at "More Space": 208 × 37.5).
+struct NotchClosingTests {
+    private let layout = IslandLayout(notchSize: CGSize(width: 208, height: 37.5), hasPhysicalNotch: true)
+
+    @Test func idleHidesBehindTheNotch() {
+        let idle = layout.spec(for: .idle, context: IslandContext())
+        #expect(idle.width < 208 && idle.height < 37.5 && idle.earRadius == 0)
+    }
+
+    /// Closing can start at any moment of an opening (the pointer passes over the notch),
+    /// carrying its speed. Once the shape is back behind the notch it must stay there:
+    /// a swing back out would show as a black flicker under the notch.
+    @Test(arguments: [
+        (IslandState.compact, IslandContext()),
+        (.alert, IslandContext(alertStyle: .wings)),
+        (.alert, IslandContext(alertStyle: .banner)),
+        (.expanded, IslandContext(hasMedia: true, tab: .player, showsLyrics: true)),
+    ])
+    func closingNeverSwingsBackOut(state: IslandState, context: IslandContext) {
+        let idle = layout.spec(for: .idle, context: context)
+        let open = layout.spec(for: state, context: context)
+        let notch = layout.notchSize
+        for (from, to, limit) in [(idle.width, open.width, notch.width), (idle.height, open.height, notch.height)] {
+            for step in 0...100 {
+                let interruptedAt = Double(step) * 0.005
+                let start = from + Motion.opening.value(target: to - from, time: interruptedAt)
+                let speed = Motion.opening.velocity(target: to - from, time: interruptedAt)
+                var hasLeft = start > limit
+                var isBack = false
+                for millisecond in 0...2000 {
+                    let value = start + Motion.closing.value(target: from - start, initialVelocity: speed, time: Double(millisecond) / 1000)
+                    if isBack {
+                        #expect(value <= limit)
+                    } else if value > limit {
+                        hasLeft = true
+                    } else if hasLeft {
+                        isBack = true
+                    }
+                }
+            }
+        }
+    }
+}
