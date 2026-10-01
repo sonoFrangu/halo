@@ -23,9 +23,16 @@ struct ScrollGestureInterpreterTests {
         return samples
     }
 
-    private func actions(_ samples: [ScrollSample], allowsTrackSkip: Bool = true) -> [ScrollGestureInterpreter.Action] {
+    private func actions(_ samples: [ScrollSample], allowsTrackSkip: Bool = true, swipeUpDismisses: Bool = false) -> [ScrollGestureInterpreter.Action] {
         var interpreter = ScrollGestureInterpreter()
-        return samples.compactMap { interpreter.handle($0, allowsTrackSkip: allowsTrackSkip) }
+        return samples.compactMap { interpreter.handle($0, allowsTrackSkip: allowsTrackSkip, swipeUpDismisses: swipeUpDismisses) }
+    }
+
+    @Test(arguments: [true, false])
+    func swipingUpOverAnAlertDismissesItOnce(inverted: Bool) {
+        #expect(actions(swipe(fingersY: 120, inverted: inverted), allowsTrackSkip: false, swipeUpDismisses: true) == [.dismiss])
+        #expect(actions(swipe(fingersY: -120, inverted: inverted), allowsTrackSkip: false, swipeUpDismisses: true).isEmpty)
+        #expect(actions(swipe(fingersY: 20, inverted: inverted), allowsTrackSkip: false, swipeUpDismisses: true).isEmpty)
     }
 
     @Test(arguments: [true, false])

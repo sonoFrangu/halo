@@ -176,7 +176,7 @@ final class IslandController {
     // MARK: Gestures
 
     /// Swipes over the open player: horizontal skips a track, vertical changes the volume;
-    /// over the lyrics, scrolling browses them.
+    /// over the lyrics, scrolling browses them; over an alert, a swipe up dismisses it.
     private func scrolled(_ event: NSEvent) -> Bool {
         if viewModel.acceptsLyricsScroll, let window = event.window {
             // Canvas coordinates: origin at the top-left of the panel.
@@ -186,7 +186,8 @@ final class IslandController {
                 return true
             }
         }
-        guard Preferences.gesturesEnabled, viewModel.acceptsVolumeGestures else { return false }
+        let dismisses = viewModel.acceptsDismissGesture
+        guard Preferences.gesturesEnabled, viewModel.acceptsVolumeGestures || dismisses else { return false }
         let sample = ScrollSample(
             deltaX: Double(event.scrollingDeltaX),
             deltaY: Double(event.scrollingDeltaY),
@@ -195,12 +196,16 @@ final class IslandController {
             isPrecise: event.hasPreciseScrollingDeltas,
             isInverted: event.isDirectionInvertedFromDevice
         )
-        switch scrollGesture.handle(sample, allowsTrackSkip: viewModel.acceptsTrackGestures) {
+        switch scrollGesture.handle(sample, allowsTrackSkip: viewModel.acceptsTrackGestures, swipeUpDismisses: dismisses) {
         case .nextTrack:
             services.nowPlaying.nextTrack()
             Haptics.perform(.action)
         case .previousTrack:
             services.nowPlaying.previousTrack()
+            Haptics.perform(.action)
+        case .dismiss:
+            viewModel.alertSwipedAway()
+            services.alerts.dismissCurrent()
             Haptics.perform(.action)
         case .volume(let delta):
             if services.hud.nudgeVolume(by: delta) {

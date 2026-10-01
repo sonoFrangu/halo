@@ -48,6 +48,12 @@ final class IslandViewModel {
         (state == .expanded && context.tab == .player) || (state == .alert && alert == .hud)
     }
 
+    /// A swipe up pushes the alert back into the notch: any alert but the HUD (scrolling
+    /// there changes the volume) and Siri (it stays until Siri closes).
+    var acceptsDismissGesture: Bool {
+        state == .alert && alert != .hud && alert != .siri
+    }
+
     /// Called with `true` when the panel should receive mouse events.
     @ObservationIgnored var onInteractivityChange: ((Bool) -> Void)?
     /// Called with `true` while alerts should wait (player open, pointer on a banner).
@@ -66,6 +72,9 @@ final class IslandViewModel {
     /// shelf during a file drag, the Timer tab from a live activity) do not change it.
     @ObservationIgnored private var chosenTab: ExpandedTab = .player
     @ObservationIgnored private var isHovering = false
+    /// An alert was swiped away under the pointer: the island stays closed until the
+    /// pointer leaves, instead of opening where the alert was.
+    @ObservationIgnored private var ignoresHover = false
     @ObservationIgnored private var isInteracting = false
     @ObservationIgnored private var showsActivity = false
     @ObservationIgnored private var isDraggingFiles = false
@@ -115,6 +124,9 @@ final class IslandViewModel {
         let inside = hotZone.contains(location)
         if inside != isPointerInside {
             isPointerInside = inside
+            if !inside {
+                ignoresHover = false
+            }
             if inside {
                 entersOverActivity = hasLiveActivity && location.x > geometry.notchCenterX + geometry.notchSize.width / 2
             }
@@ -164,6 +176,13 @@ final class IslandViewModel {
             }
         }
         resolveState()
+    }
+
+    /// The alert is being swiped away; `AlertCenter` withdraws it next.
+    func alertSwipedAway() {
+        hoverTask?.cancel()
+        isHovering = false
+        ignoresHover = true
     }
 
     func selectTab(_ tab: ExpandedTab) {
@@ -328,6 +347,7 @@ final class IslandViewModel {
 
     private func scheduleHover(_ inside: Bool) {
         hoverTask?.cancel()
+        guard !(inside && ignoresHover) else { return }
         let delay = inside ? Self.expandDelay : Self.collapseDelay
         hoverTask = Task { [weak self] in
             try? await Task.sleep(for: delay)

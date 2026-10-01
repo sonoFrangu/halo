@@ -25,6 +25,7 @@ struct ScrollSample: Sendable, Equatable {
 /// Turns scrolling over the island into player gestures: a horizontal swipe skips a track
 /// (once per swipe: left = next, right = previous), a vertical swipe or a wheel changes the
 /// volume (fingers or wheel up = louder), whatever the "natural scrolling" setting.
+/// Over an alert, a swipe up instead pushes it back into the notch, as on iPhone.
 ///
 /// Each swipe locks to one axis after a few points of travel, so a slightly diagonal
 /// swipe does not do both. Momentum is ignored, so the volume stops with the fingers.
@@ -34,6 +35,8 @@ struct ScrollGestureInterpreter {
         case previousTrack
         /// Change of volume in 0...1 units.
         case volume(Double)
+        /// Swipe up over an alert: dismiss it.
+        case dismiss
     }
 
     private enum Axis {
@@ -45,6 +48,8 @@ struct ScrollGestureInterpreter {
     static let lockDistance = 6.0
     /// Horizontal travel that skips a track.
     static let skipDistance = 60.0
+    /// Upward travel that dismisses an alert.
+    static let dismissDistance = 30.0
     /// Full volume range over ~220 points of finger travel.
     static let volumePerPoint = 1.0 / 220
     /// One wheel notch = one system volume step.
@@ -53,9 +58,12 @@ struct ScrollGestureInterpreter {
     private var axis: Axis?
     private var travelX = 0.0
     private var travelY = 0.0
-    private var didSkip = false
+    /// The swipe already skipped a track or dismissed an alert: once per swipe.
+    private var didAct = false
 
-    mutating func handle(_ sample: ScrollSample, allowsTrackSkip: Bool) -> Action? {
+    /// `swipeUpDismisses`: the island shows an alert, so vertical swipes dismiss it rather
+    /// than change the volume.
+    mutating func handle(_ sample: ScrollSample, allowsTrackSkip: Bool, swipeUpDismisses: Bool = false) -> Action? {
         guard !sample.isMomentum else { return nil }
 
         // Movement of the fingers (or wheel): right and up are positive.
@@ -64,6 +72,9 @@ struct ScrollGestureInterpreter {
 
         guard sample.isPrecise, sample.phase != .none else {
             guard fingerY != 0, abs(fingerY) >= abs(fingerX) else { return nil }
+            if swipeUpDismisses {
+                return fingerY > 0 ? .dismiss : nil
+            }
             return .volume(fingerY > 0 ? Self.volumePerLine : -Self.volumePerLine)
         }
 
@@ -86,10 +97,15 @@ struct ScrollGestureInterpreter {
 
         switch axis {
         case .horizontal:
-            guard allowsTrackSkip, !didSkip, abs(travelX) >= Self.skipDistance else { return nil }
-            didSkip = true
+            guard allowsTrackSkip, !didAct, abs(travelX) >= Self.skipDistance else { return nil }
+            didAct = true
             return travelX < 0 ? .nextTrack : .previousTrack
         case .vertical:
+            if swipeUpDismisses {
+                guard !didAct, travelY >= Self.dismissDistance else { return nil }
+                didAct = true
+                return .dismiss
+            }
             return fingerY == 0 ? nil : .volume(fingerY * Self.volumePerPoint)
         case nil:
             return nil
@@ -100,6 +116,6 @@ struct ScrollGestureInterpreter {
         axis = nil
         travelX = 0
         travelY = 0
-        didSkip = false
+        didAct = false
     }
 }

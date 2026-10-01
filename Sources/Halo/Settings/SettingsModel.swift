@@ -493,7 +493,7 @@ final class SettingsModel {
                 )),
                 .toggle(SettingsToggle(
                     id: "gestures", title: "Gesti sul trackpad",
-                    detail: "Sull'isola aperta: scorri a sinistra o a destra per cambiare brano, in su o in giù per il volume.",
+                    detail: "Sull'isola aperta: scorri a sinistra o a destra per cambiare brano, in su o in giù per il volume. Su un avviso: scorri in su per chiuderlo.",
                     symbol: "hand.draw.fill", tint: SettingsColor.indigo,
                     isOn: { Preferences.gesturesEnabled },
                     setOn: { Preferences.gesturesEnabled = $0 }
