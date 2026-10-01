@@ -102,12 +102,14 @@ final class NotificationMirror {
         guard let newest = records.last else { return }
         lastID = newest.id
         let focusSilencing = isFocusSilencing()
+        let screenShared = ScreenSharing.isActive
         let shown = records.count > Self.burstLimit ? [newest] : records
         for record in shown {
             let decision = NotificationRules.decide(
                 bundleIdentifier: record.bundleIdentifier,
                 ownBundleIdentifier: Bundle.main.bundleIdentifier,
                 mode: Preferences.notificationMode(for: record.bundleIdentifier),
+                screenShared: screenShared,
                 focusSilencing: focusSilencing,
                 bypassesFocus: Preferences.bypassesFocus(record.bundleIdentifier)
             )

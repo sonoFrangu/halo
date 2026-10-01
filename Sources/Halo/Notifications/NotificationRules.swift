@@ -22,12 +22,17 @@ enum NotificationRules {
         bundleIdentifier: String,
         ownBundleIdentifier: String?,
         mode: NotificationAppMode,
+        screenShared: Bool,
         focusSilencing: Bool,
         bypassesFocus: Bool
     ) -> NotificationDecision {
         if bundleIdentifier == ownBundleIdentifier
             || NotificationMirror.isFromWebsite(bundleIdentifier)
             || NotificationMirror.isFromBluetooth(bundleIdentifier) {
+            return .drop
+        }
+        // As macOS does: whoever watches a shared screen does not read the messages.
+        if screenShared {
             return .drop
         }
         if mode == .hidden || (focusSilencing && !bypassesFocus) {

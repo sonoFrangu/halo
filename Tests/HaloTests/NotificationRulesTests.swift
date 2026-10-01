@@ -5,6 +5,7 @@ struct NotificationRulesTests {
     private func decide(
         _ bundleIdentifier: String = "net.whatsapp.WhatsApp",
         mode: NotificationAppMode = .show,
+        screenShared: Bool = false,
         focusSilencing: Bool = false,
         bypassesFocus: Bool = false
     ) -> NotificationDecision {
@@ -12,6 +13,7 @@ struct NotificationRulesTests {
             bundleIdentifier: bundleIdentifier,
             ownBundleIdentifier: "io.github.sonofrangu.halo",
             mode: mode,
+            screenShared: screenShared,
             focusSilencing: focusSilencing,
             bypassesFocus: bypassesFocus
         )
@@ -37,6 +39,11 @@ struct NotificationRulesTests {
     @Test func websitesAndHaloAreNeverShown() {
         #expect(decide("_WEB_CENTER_:web.com.example", bypassesFocus: true) == .drop)
         #expect(decide("io.github.sonofrangu.halo") == .drop)
+    }
+
+    @Test func sharedScreenHidesEveryNotification() {
+        #expect(decide(mode: .show, screenShared: true) == .drop)
+        #expect(decide(mode: .appOnly, screenShared: true, bypassesFocus: true) == .drop)
     }
 
     @Test func bluetoothBannersAreLeftToTheHeadphonesAlert() {
