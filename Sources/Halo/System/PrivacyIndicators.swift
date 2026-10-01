@@ -3,7 +3,8 @@ import CoreMediaIO
 import Foundation
 import Observation
 
-/// Whether any app is using a microphone or a camera, like the dots on iPhone.
+/// Whether any app is using a microphone or a camera, like the dots on iPhone, and whether
+/// a FaceTime or phone call is going on (the compact island then counts its time).
 ///
 /// Event driven: CoreAudio and CoreMediaIO call back when a device starts or stops
 /// "running somewhere" (in any process) and when devices come and go. Reading these
@@ -18,6 +19,8 @@ final class PrivacyIndicators {
 
     private(set) var isMicrophoneInUse = false
     private(set) var isCameraInUse = false
+    /// When the current call started, as far as Halo saw it.
+    private(set) var callStart: Date?
     private(set) var isEnabled = Preferences.privacyIndicatorEnabled
 
     /// What the island shows: the camera wins, as on iPhone.
@@ -35,9 +38,9 @@ final class PrivacyIndicators {
         guard isEnabled, watcher == nil else { return }
         generation += 1
         let generation = generation
-        let watcher = DeviceUsageWatcher { [weak self] microphone, camera in
+        let watcher = DeviceUsageWatcher { [weak self] usage in
             Task { @MainActor in
-                self?.apply(microphone: microphone, camera: camera, generation: generation)
+                self?.apply(usage, generation: generation)
             }
         }
         watcher.start()
@@ -49,6 +52,7 @@ final class PrivacyIndicators {
         watcher = nil
         isMicrophoneInUse = false
         isCameraInUse = false
+        callStart = nil
     }
 
     func setEnabled(_ enabled: Bool) {
@@ -57,11 +61,18 @@ final class PrivacyIndicators {
         if enabled { start() } else { stop() }
     }
 
-    private func apply(microphone: Bool, camera: Bool, generation: Int) {
+    private func apply(_ usage: DeviceUsage, generation: Int) {
         guard watcher != nil, generation == self.generation else { return }
-        if microphone != isMicrophoneInUse { isMicrophoneInUse = microphone }
-        if camera != isCameraInUse { isCameraInUse = camera }
+        if usage.microphone != isMicrophoneInUse { isMicrophoneInUse = usage.microphone }
+        if usage.camera != isCameraInUse { isCameraInUse = usage.camera }
+        if usage.call != (callStart != nil) { callStart = usage.call ? Date() : nil }
     }
+}
+
+private struct DeviceUsage: Sendable, Equatable {
+    var microphone: Bool
+    var camera: Bool
+    var call: Bool
 }
 
 /// Watches the devices on a private serial queue. CoreAudio and above all CoreMediaIO
@@ -72,13 +83,20 @@ final class PrivacyIndicators {
 /// `@unchecked Sendable`: every mutable property is touched only on `queue`.
 private final class DeviceUsageWatcher: @unchecked Sendable {
     private let queue = DispatchQueue(label: "io.github.sonofrangu.halo.privacy", qos: .utility)
-    private let report: @Sendable (_ microphone: Bool, _ camera: Bool) -> Void
+    private let report: @Sendable (DeviceUsage) -> Void
     private var audioListeners: [AudioPropertyListener] = []
     private var cameraListeners: [CameraPropertyListener] = []
-    private var last: (microphone: Bool, camera: Bool)?
+    /// Kept apart: the process list changes whenever any app starts playing, and that
+    /// should not rescan the cameras.
+    private var callListeners: [AudioPropertyListener] = []
+    private var last: DeviceUsage?
     private var isStopped = false
 
-    init(report: @escaping @Sendable (_ microphone: Bool, _ camera: Bool) -> Void) {
+    /// The system services that carry the audio of FaceTime calls and of iPhone calls
+    /// relayed to the Mac; the FaceTime and Phone apps themselves never open the microphone.
+    private static let callServices: Set<String> = ["com.apple.avconferenced", "com.apple.TelephonyUtilities"]
+
+    init(report: @escaping @Sendable (DeviceUsage) -> Void) {
         self.report = report
     }
 
@@ -97,9 +115,11 @@ private final class DeviceUsageWatcher: @unchecked Sendable {
     private func removeListeners() {
         audioListeners.removeAll()
         cameraListeners.removeAll()
+        callListeners.removeAll()
     }
 
-    /// (Re)registers on the device lists and on every input device and camera.
+    /// (Re)registers on the device lists and on every input device and camera, then on the
+    /// calls.
     private func rewatch() {
         guard !isStopped else { return }
         removeListeners()
@@ -116,16 +136,33 @@ private final class DeviceUsageWatcher: @unchecked Sendable {
         }
         audioListeners = audio.compactMap { $0 }
         cameraListeners = cameras.compactMap { $0 }
+        rewatchCalls()
+    }
+
+    /// (Re)registers on the audio process list and on the call services' audio input.
+    private func rewatchCalls() {
+        guard !isStopped else { return }
+        callListeners.removeAll()
+        let changed: @Sendable () -> Void = { [weak self] in self?.refresh() }
+        let processesChanged: @Sendable () -> Void = { [weak self] in self?.rewatchCalls() }
+        var calls = [AudioPropertyListener(object: AudioObjectID(kAudioObjectSystemObject), selector: kAudioHardwarePropertyProcessObjectList, queue: queue, action: processesChanged)]
+        calls += Self.callProcesses().map {
+            AudioPropertyListener(object: $0, selector: kAudioProcessPropertyIsRunningInput, queue: queue, action: changed)
+        }
+        callListeners = calls.compactMap { $0 }
         refresh()
     }
 
     private func refresh() {
         guard !isStopped else { return }
-        let microphone = Self.audioInputDevices().contains { Self.isRunning(audioDevice: $0) }
-        let camera = Self.cameras().contains { Self.isRunning(camera: $0) }
-        guard last?.microphone != microphone || last?.camera != camera else { return }
-        last = (microphone, camera)
-        report(microphone, camera)
+        let usage = DeviceUsage(
+            microphone: Self.audioInputDevices().contains { Self.isRunning(audioDevice: $0) },
+            camera: Self.cameras().contains { Self.isRunning(camera: $0) },
+            call: Self.callProcesses().contains { Self.isRunningInput(process: $0) }
+        )
+        guard usage != last else { return }
+        last = usage
+        report(usage)
     }
 
     // MARK: CoreAudio
@@ -154,6 +191,33 @@ private final class DeviceUsageWatcher: @unchecked Sendable {
         var running: UInt32 = 0
         var size = UInt32(MemoryLayout<UInt32>.size)
         return AudioObjectGetPropertyData(audioDevice, &address, 0, nil, &size, &running) == noErr && running != 0
+    }
+
+    /// Audio clients of the call services (CoreAudio lists one per process playing or
+    /// recording).
+    private static func callProcesses() -> [AudioObjectID] {
+        var address = audioAddress(kAudioHardwarePropertyProcessObjectList)
+        let system = AudioObjectID(kAudioObjectSystemObject)
+        var size: UInt32 = 0
+        guard AudioObjectGetPropertyDataSize(system, &address, 0, nil, &size) == noErr, size > 0 else { return [] }
+        var processes = [AudioObjectID](repeating: 0, count: Int(size) / MemoryLayout<AudioObjectID>.size)
+        guard AudioObjectGetPropertyData(system, &address, 0, nil, &size, &processes) == noErr else { return [] }
+        return processes.filter { process in
+            var bundle = audioAddress(kAudioProcessPropertyBundleID)
+            var identifier: Unmanaged<CFString>?
+            var bundleSize = UInt32(MemoryLayout<Unmanaged<CFString>?>.size)
+            guard AudioObjectGetPropertyData(process, &bundle, 0, nil, &bundleSize, &identifier) == noErr,
+                  let identifier = identifier?.takeRetainedValue() as String?
+            else { return false }
+            return callServices.contains(identifier)
+        }
+    }
+
+    private static func isRunningInput(process: AudioObjectID) -> Bool {
+        var address = audioAddress(kAudioProcessPropertyIsRunningInput)
+        var running: UInt32 = 0
+        var size = UInt32(MemoryLayout<UInt32>.size)
+        return AudioObjectGetPropertyData(process, &address, 0, nil, &size, &running) == noErr && running != 0
     }
 
     // MARK: CoreMediaIO

@@ -332,13 +332,14 @@ final class IslandController {
     }
 
     /// A timer, the stopwatch, a Clock timer or a download turns the compact island into a
-    /// live activity.
+    /// live activity. A call needs no hover area of its own: its microphone already keeps
+    /// the island up (`observePrivacy`).
     private func observeLiveActivities() {
         let timers = services.timers
         let systemTimers = services.systemTimers
         let transfers = services.transfers
         let active = withObservationTracking {
-            LiveActivity.current(timers: timers, systemTimers: systemTimers, transfers: transfers) != nil
+            LiveActivity.current(call: nil, timers: timers, systemTimers: systemTimers, transfers: transfers) != nil
         } onChange: { [weak self] in
             Task { @MainActor [weak self] in
                 self?.observeLiveActivities()

@@ -1,15 +1,18 @@
 import SwiftUI
 
-/// What the compact island shows besides music, most important first: Halo's timer, the
-/// stopwatch, a Clock timer (started with Siri or the Clock app), then a download or
-/// AirDrop.
+/// What the compact island shows besides music, most important first: a FaceTime or phone
+/// call, Halo's timer, the stopwatch, a Clock timer (started with Siri or the Clock app),
+/// then a download or AirDrop.
 enum LiveActivity: Equatable {
+    /// A call going on since this date.
+    case call(Date)
     case timer(FocusTimer)
     case stopwatch(Stopwatch)
     case transfer(Transfer)
 
     @MainActor
-    static func current(timers: TimerController, systemTimers: SystemTimerMonitor, transfers: TransferMonitor) -> LiveActivity? {
+    static func current(call: Date?, timers: TimerController, systemTimers: SystemTimerMonitor, transfers: TransferMonitor) -> LiveActivity? {
+        if let call { return .call(call) }
         if let timer = timers.timer { return .timer(timer) }
         if let stopwatch = timers.stopwatch { return .stopwatch(stopwatch) }
         if let system = systemTimers.current { return .timer(system.focusTimer) }
@@ -25,6 +28,12 @@ struct LiveActivityLeading: View {
 
     var body: some View {
         switch activity {
+        case .call:
+            Image(systemName: "phone.fill")
+                .font(Glyph.wing)
+                .foregroundStyle(CallPalette.tint)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .accessibilityLabel("Chiamata in corso")
         case .timer(let timer):
             TimerRingView(timer: timer, isVisible: isVisible, lineWidth: 2.5)
         case .stopwatch(let stopwatch):
@@ -38,7 +47,7 @@ struct LiveActivityLeading: View {
     }
 }
 
-/// Right wing: the countdown, the stopwatch or the percentage. With music playing (the
+/// Right wing: the call's time, the countdown, the stopwatch or the percentage. With music playing (the
 /// artwork holds the left wing) a transfer also shows its ring here.
 struct LiveActivityTrailing: View {
     let activity: LiveActivity
@@ -47,6 +56,9 @@ struct LiveActivityTrailing: View {
     var body: some View {
         Group {
             switch activity {
+            case .call(let start):
+                Text(timerInterval: start...Date.distantFuture, countsDown: false)
+                    .foregroundStyle(CallPalette.tint)
             case .timer(let timer):
                 TimerCountdownText(timer: timer)
                     .foregroundStyle(TimerPalette.tint(for: timer.mode).opacity(timer.isRunning ? 1 : 0.55))
@@ -69,6 +81,11 @@ struct LiveActivityTrailing: View {
         .minimumScaleFactor(0.8)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
+}
+
+enum CallPalette {
+    /// The green of the call pill on iPhone.
+    static let tint = Color(red: 0.19, green: 0.82, blue: 0.35)
 }
 
 enum TransferPalette {
