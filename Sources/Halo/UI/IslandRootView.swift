@@ -44,6 +44,7 @@ struct IslandRootView: View {
             }
         }
         .frame(width: canvas.width, height: canvas.height, alignment: .topLeading)
+        .coordinateSpace(.named(IslandCanvas.space))
         .ignoresSafeArea()
         .animation(Motion.palette, value: palette)
         .environment(\.reducesEffects, models.energy.reducesEffects)

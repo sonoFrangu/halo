@@ -3,6 +3,9 @@ import SwiftUI
 /// Content appearance for the expanded player: after the shape has opened, elements come
 /// in one after another from a slight blur and scale; they leave quickly and together.
 ///
+/// Every element grows out of the notch's center, wherever it sits (a wing, a banner, a
+/// row inside a banner), so the whole island opens from the middle outward like the shape.
+///
 /// `blurs: false` skips the blur for content that is expensive to filter every frame, such
 /// as Liquid Glass controls (which sample what is behind them).
 struct RevealModifier: ViewModifier {
@@ -13,14 +16,34 @@ struct RevealModifier: ViewModifier {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.reducesEffects) private var reducesEffects
 
+    /// Scale of hidden content: how far toward the notch's center it starts.
+    static let hiddenScale = 0.88
+
     func body(content: Content) -> some View {
         let calm = reduceMotion || reducesEffects
+        let scale = isVisible || calm ? 1 : Self.hiddenScale
         return content
             .opacity(isVisible ? 1 : 0)
             .blur(radius: isVisible || calm || !blurs ? 0 : 6)
-            .scaleEffect(isVisible || calm ? 1 : 0.94, anchor: .top)
+            .visualEffect { content, proxy in
+                content.scaleEffect(scale, anchor: IslandCanvas.notchCenter(in: proxy))
+            }
             .allowsHitTesting(isVisible)
             .animation(Motion.reveal(isVisible: isVisible, order: order, reduceMotion: calm), value: isVisible)
+    }
+}
+
+/// The island's canvas, named so content can find the notch from anywhere inside it.
+enum IslandCanvas {
+    static let space = "island"
+
+    /// The top of the notch's center, as an anchor in the view's own bounds; the view's top
+    /// center outside the island.
+    nonisolated static func notchCenter(in proxy: GeometryProxy) -> UnitPoint {
+        // The canvas's bounds come in the view's own coordinates.
+        let size = proxy.size
+        guard let canvas = proxy.bounds(of: .named(space)), size.width > 0, size.height > 0 else { return .top }
+        return UnitPoint(x: canvas.midX / size.width, y: canvas.minY / size.height)
     }
 }
 

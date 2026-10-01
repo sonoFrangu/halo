@@ -132,3 +132,37 @@ struct NotchClosingTests {
         }
     }
 }
+
+/// Content grows out of the notch's center wherever it sits, even nested in a stack.
+@MainActor
+struct RevealOriginTests {
+    @Test func scaleIsAnchoredAtTheNotchCenter() throws {
+        let view = ZStack(alignment: .topLeading) {
+            Color.black
+            HStack(spacing: 0) {
+                Spacer().frame(width: 150)
+                Rectangle().fill(.white).frame(width: 20, height: 20)
+                    .visualEffect { content, proxy in
+                        content.scaleEffect(0.5, anchor: IslandCanvas.notchCenter(in: proxy))
+                    }
+            }
+            .padding(.top, 50)
+        }
+        .frame(width: 200, height: 100, alignment: .topLeading)
+        .coordinateSpace(.named(IslandCanvas.space))
+
+        let renderer = ImageRenderer(content: view)
+        renderer.scale = 1
+        let image = try #require(renderer.cgImage)
+        let bitmap = NSBitmapImageRep(cgImage: image)
+        var lit: [CGPoint] = []
+        for y in 0..<100 {
+            for x in 0..<200 where (bitmap.colorAt(x: x, y: y)?.redComponent ?? 0) > 0.5 {
+                lit.append(CGPoint(x: x, y: y))
+            }
+        }
+        // Halfway from (150, 50) to the notch center (100, 0).
+        #expect(lit.map(\.x).min() == 125 && lit.map(\.x).max() == 134)
+        #expect(lit.map(\.y).min() == 25 && lit.map(\.y).max() == 34)
+    }
+}

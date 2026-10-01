@@ -44,23 +44,20 @@ struct IslandContentView: View {
                 if alone {
                     PrivacyGlyph(kind: device)
                         .place(in: layout.artworkFrame(for: .compact))
-                        .opacity(isCompact ? 1 : 0)
+                        .reveal(isCompact, order: 0)
                 }
                 PrivacyDot(kind: device)
                     .place(in: layout.privacyDotFrame(alone: alone))
-                    .opacity(isCompact ? 1 : 0)
-                    .animation(Motion.content, value: state)
+                    .reveal(isCompact, order: 0)
             }
 
             if let activity {
                 LiveActivityLeading(activity: activity, isVisible: isCompact && !hasMedia)
                     .place(in: layout.artworkFrame(for: .compact))
-                    .opacity(isCompact && !hasMedia ? 1 : 0)
-                    .animation(Motion.content, value: state)
+                    .reveal(isCompact && !hasMedia, order: 0)
                 LiveActivityTrailing(activity: activity, hasMedia: hasMedia)
                     .place(in: layout.compactRightWingFrame)
-                    .opacity(isCompact ? 1 : 0)
-                    .animation(Motion.content, value: state)
+                    .reveal(isCompact, order: 0)
             }
 
             PlayerContentView(island: island, models: models, actions: actions.player, layout: layout, isVisible: showsPlayer)

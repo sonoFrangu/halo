@@ -193,8 +193,8 @@ struct IslandLayout: Sendable, Equatable {
     func artworkFrame(for state: IslandState) -> CGRect {
         switch state {
         case .idle, .alert:
-            // Slides inward under the notch while shrinking.
-            return square(side: 10, centerX: centerX - notchSize.width / 2 + 14, centerY: notchSize.height / 2)
+            // Shrinks into the notch's center, and grows out of it.
+            return square(side: 10, centerX: centerX, centerY: notchSize.height / 2)
         case .compact:
             return square(
                 side: max(14, notchSize.height - 12),
@@ -207,11 +207,12 @@ struct IslandLayout: Sendable, Equatable {
         }
     }
 
-    /// The equalizer lives in the compact right wing; elsewhere it fades where it is.
+    /// The equalizer lives in the compact right wing; elsewhere it shrinks into the notch's
+    /// center.
     func equalizerFrame(for state: IslandState) -> CGRect {
         switch state {
         case .idle, .alert:
-            return CGRect(x: centerX + notchSize.width / 2 - 18, y: notchSize.height / 2 - 3, width: 8, height: 6)
+            return CGRect(x: centerX - 4, y: notchSize.height / 2 - 3, width: 8, height: 6)
         case .compact, .expanded:
             let height = max(10, notchSize.height - 18)
             return CGRect(
