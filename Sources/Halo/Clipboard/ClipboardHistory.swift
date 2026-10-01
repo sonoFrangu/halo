@@ -22,8 +22,9 @@ struct ClipboardItem: Identifiable {
 
 /// The last texts and images copied anywhere, for the Clipboard tab. Kept in memory only.
 /// macOS has no pasteboard change notification, so `changeCount` (a plain integer read) is
-/// checked twice a second. Files are left to the shelf, and what password managers mark
-/// as concealed or transient is skipped (nspasteboard.org).
+/// checked twice a second, except while the screens sleep or the session is switched away,
+/// when nothing can be copied. Files are left to the shelf, and what password managers
+/// mark as concealed or transient is skipped (nspasteboard.org).
 @MainActor
 @Observable
 final class ClipboardHistory {
@@ -36,6 +37,7 @@ final class ClipboardHistory {
     @ObservationIgnored private var timer: Timer?
     @ObservationIgnored private var lastChange = 0
     @ObservationIgnored private var copiedReset: Task<Void, Never>?
+    @ObservationIgnored private var pauseObservers: [NSObjectProtocol] = []
 
     static let limit = 20
     static let maximumTextLength = 200_000
@@ -47,8 +49,34 @@ final class ClipboardHistory {
     ]
 
     func start() {
-        guard isEnabled, timer == nil else { return }
+        guard isEnabled, pauseObservers.isEmpty else { return }
+        let center = NSWorkspace.shared.notificationCenter
+        let pause: @Sendable (Notification) -> Void = { [weak self] _ in
+            MainActor.assumeIsolated { self?.stopPolling() }
+        }
+        let resume: @Sendable (Notification) -> Void = { [weak self] _ in
+            MainActor.assumeIsolated { self?.startPolling() }
+        }
+        pauseObservers = [
+            center.addObserver(forName: NSWorkspace.screensDidSleepNotification, object: nil, queue: .main, using: pause),
+            center.addObserver(forName: NSWorkspace.sessionDidResignActiveNotification, object: nil, queue: .main, using: pause),
+            center.addObserver(forName: NSWorkspace.screensDidWakeNotification, object: nil, queue: .main, using: resume),
+            center.addObserver(forName: NSWorkspace.sessionDidBecomeActiveNotification, object: nil, queue: .main, using: resume),
+        ]
         lastChange = pasteboard.changeCount
+        startPolling()
+    }
+
+    func stop() {
+        let center = NSWorkspace.shared.notificationCenter
+        pauseObservers.forEach { center.removeObserver($0) }
+        pauseObservers.removeAll()
+        stopPolling()
+    }
+
+    private func startPolling() {
+        guard timer == nil else { return }
+        // Whatever was copied while paused is picked up by the first poll.
         let timer = Timer(timeInterval: 0.5, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.poll() }
         }
@@ -57,7 +85,7 @@ final class ClipboardHistory {
         self.timer = timer
     }
 
-    func stop() {
+    private func stopPolling() {
         timer?.invalidate()
         timer = nil
     }

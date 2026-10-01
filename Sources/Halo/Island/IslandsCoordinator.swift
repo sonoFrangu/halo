@@ -1,7 +1,8 @@
 import AppKit
 
 /// Keeps one island per display (or only on the notched/primary one) in sync with the
-/// display configuration, and fans pointer movement out to all of them.
+/// display configuration, and fans the pointer of a file drag out to all of them (plain
+/// movement reaches each island through its own panel).
 @MainActor
 final class IslandsCoordinator {
     private let services: IslandServices
@@ -53,6 +54,7 @@ final class IslandsCoordinator {
     }
 
     private func fileDragChanged(_ dragging: Bool) {
+        pointerMonitor?.setFollowsDrag(dragging)
         for island in islands.values {
             island.fileDragChanged(dragging)
         }

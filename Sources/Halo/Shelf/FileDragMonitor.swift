@@ -11,8 +11,15 @@ import AppKit
 final class FileDragMonitor {
     private let onChange: (Bool) -> Void
     private var monitors: [Any] = []
-    private var baselineChangeCount = NSPasteboard(name: .drag).changeCount
+    private let pasteboard = NSPasteboard(name: .drag)
+    private lazy var baselineChangeCount = pasteboard.changeCount
+    /// When the drag pasteboard was last read during this press.
+    private var lastCheck: ContinuousClock.Instant?
     private(set) var isDraggingFiles = false
+
+    /// A drag sends up to 120 events a second and each read of the pasteboard is a round
+    /// trip to its server, so a press reads it at most this often.
+    static let checkInterval: Duration = .milliseconds(100)
 
     init(onChange: @escaping (Bool) -> Void) {
         self.onChange = onChange
@@ -47,14 +54,17 @@ final class FileDragMonitor {
     }
 
     private func mouseButtonActivity() {
-        let pasteboard = NSPasteboard(name: .drag)
         let isButtonDown = NSEvent.pressedMouseButtons & 1 != 0
         guard isButtonDown else {
             baselineChangeCount = pasteboard.changeCount
+            lastCheck = nil
             set(false)
             return
         }
-        guard !isDraggingFiles, pasteboard.changeCount != baselineChangeCount else { return }
+        let now = ContinuousClock.now
+        guard !isDraggingFiles, lastCheck.map({ now - $0 >= Self.checkInterval }) ?? true else { return }
+        lastCheck = now
+        guard pasteboard.changeCount != baselineChangeCount else { return }
         let hasFiles = pasteboard.canReadObject(
             forClasses: [NSURL.self],
             options: [.urlReadingFileURLsOnly: true]

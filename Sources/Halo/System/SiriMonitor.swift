@@ -111,9 +111,10 @@ final class SiriMonitor {
         }
     }
 
+    /// Asks for Siri's two apps by identifier: reading every running app's identifier is
+    /// a Launch Services round trip each, and this runs on every Accessibility event.
     private static func siriPIDs() -> [pid_t] {
-        NSWorkspace.shared.runningApplications
-            .filter { bundleIdentifiers.contains($0.bundleIdentifier ?? "") }
+        bundleIdentifiers.flatMap { NSRunningApplication.runningApplications(withBundleIdentifier: $0) }
             .map(\.processIdentifier)
     }
 

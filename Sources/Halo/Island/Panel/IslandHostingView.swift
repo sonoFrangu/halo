@@ -4,9 +4,9 @@ import SwiftUI
 /// Hosting view for the island.
 ///
 /// - Accepts the first mouse click, so controls respond without activating Halo.
-/// - Reports pointer movement through an `.activeAlways` tracking area: while the panel
-///   accepts mouse events the cursor's events are routed to it, and this keeps hover
-///   detection working whether or not Halo is the active app.
+/// - Reports pointer movement through an `.activeAlways` tracking area, which fires even
+///   while the panel is click-through: it is how the islands learn where the pointer is,
+///   only near the notch, whether or not Halo is the active app.
 /// - Offers scroll events to `onScroll` (island gestures); unhandled ones go on as usual.
 final class IslandHostingView<Content: View>: NSHostingView<Content> {
     var onPointerActivity: (() -> Void)?
@@ -41,7 +41,11 @@ final class IslandHostingView<Content: View>: NSHostingView<Content> {
     }
 
     override func mouseMoved(with event: NSEvent) {
-        super.mouseMoved(with: event)
+        // SwiftUI's hover tracking hit-tests the whole view; nothing reacts to hover while
+        // the panel lets clicks through.
+        if window?.ignoresMouseEvents == false {
+            super.mouseMoved(with: event)
+        }
         onPointerActivity?()
     }
 
