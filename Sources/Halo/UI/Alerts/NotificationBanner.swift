@@ -3,7 +3,8 @@ import SwiftUI
 
 /// Banner of a mirrored system notification, Dynamic Island style: app icon, sender with the
 /// group or subtitle dimmed beside it, up to two lines of message, and on the right the
-/// attached photo or "ora". Clicking opens the app.
+/// attached photo or "ora". Notifications stacked from the same app put their count on the
+/// icon, like an app badge. Clicking opens the app.
 struct NotificationBanner: View {
     let alert: NotificationAlert
 
@@ -15,6 +16,12 @@ struct NotificationBanner: View {
             AppIcon(bundleIdentifier: alert.bundleIdentifier)
                 .frame(width: 44, height: 44)
                 .clipShape(corner)
+                .overlay(alignment: .topTrailing) {
+                    if alert.count > 1 {
+                        CountBadge(count: alert.count)
+                            .offset(x: 6, y: -6)
+                    }
+                }
 
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 0) {
@@ -55,6 +62,21 @@ struct NotificationBanner: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .accessibilityElement(children: .combine)
+    }
+}
+
+/// Red count on an app icon, as on the Dock and the Home Screen.
+private struct CountBadge: View {
+    let count: Int
+
+    var body: some View {
+        Text(count, format: .number)
+            .font(Typography.caption.weight(.bold).monospacedDigit())
+            .foregroundStyle(.white)
+            .padding(.horizontal, 5)
+            .frame(minWidth: 18, minHeight: 18)
+            .background(Color.red, in: Capsule())
+            .accessibilityLabel("\(count) notifiche")
     }
 }
 

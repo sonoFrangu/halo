@@ -3,7 +3,8 @@ import Observation
 
 /// Decides which alert the island shows and for how long.
 ///
-/// - Alerts of the same kind replace each other (a new HUD level, a newer notification).
+/// - Alerts of the same kind replace each other (a new HUD level, a newer notification);
+///   notifications from the same app stack and keep count (`IslandAlert.replacing`).
 /// - The HUD preempts anything: it is direct feedback to a key press. An alert it
 ///   interrupts goes back to the front of the queue and gets its full time afterwards.
 /// - Other alerts queue up and are shown one after another.
@@ -28,13 +29,14 @@ final class AlertCenter {
         guard !(isQuiet && alert.waitsOutPresentations) else { return }
         if let current {
             if current.kind == alert.kind {
-                self.current = alert
+                self.current = alert.replacing(current)
             } else if alert.kind == .hud {
                 queue.insert(current, at: 0)
                 self.current = alert
             } else {
+                let queued = queue.first { $0.kind == alert.kind }
                 queue.removeAll { $0.kind == alert.kind }
-                queue.append(alert)
+                queue.append(queued.map(alert.replacing) ?? alert)
                 return
             }
         } else {

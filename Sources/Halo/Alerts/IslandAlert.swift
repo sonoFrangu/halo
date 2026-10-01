@@ -74,6 +74,20 @@ enum IslandAlert: Sendable, Equatable {
         }
     }
 
+    /// `self` arriving while `previous`, of the same kind, is still up or queued: a
+    /// notification from the same app stacks onto it and counts both, as Notification
+    /// Center groups them. Anything else simply replaces it.
+    func replacing(_ previous: IslandAlert) -> IslandAlert {
+        guard
+            case .notification(var next) = self,
+            case .notification(let shown) = previous,
+            next.bundleIdentifier == shown.bundleIdentifier,
+            next.id != shown.id
+        else { return self }
+        next.count += shown.count
+        return .notification(next)
+    }
+
     /// How long the alert stays once nothing holds it.
     var duration: Duration {
         switch self {
@@ -128,6 +142,8 @@ struct NotificationAlert: Sendable, Equatable {
     var text: NotificationText
     /// Photo attached to the notification; its thumbnail is loaded before the banner is posted.
     var imageURL: URL?
+    /// Notifications from this app the banner stands for, this one included.
+    var count = 1
 }
 
 /// A meeting is about to start.

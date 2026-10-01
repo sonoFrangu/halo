@@ -4,8 +4,8 @@ import Testing
 
 @MainActor
 struct AlertCenterTests {
-    private func notification(_ id: Int64) -> IslandAlert {
-        .notification(NotificationAlert(id: id, bundleIdentifier: "com.example", text: NotificationText(headline: "T\(id)")))
+    private func notification(_ id: Int64, from app: String = "com.example", count: Int = 1) -> IslandAlert {
+        .notification(NotificationAlert(id: id, bundleIdentifier: app, text: NotificationText(headline: "T\(id)"), count: count))
     }
 
     private let charging = IslandAlert.power(PowerAlert(event: .connected, level: 0.5, isCharging: true, minutesToFull: 60))
@@ -19,10 +19,29 @@ struct AlertCenterTests {
     @Test func sameKindReplacesInPlace() {
         let center = AlertCenter()
         center.post(notification(1))
-        center.post(notification(2))
-        #expect(center.current == notification(2))
+        center.post(notification(2, from: "com.other"))
+        #expect(center.current == notification(2, from: "com.other"))
         center.dismissCurrent()
         #expect(center.current == nil)
+    }
+
+    @Test func notificationsFromTheSameAppStack() {
+        let center = AlertCenter()
+        center.post(notification(1))
+        center.post(notification(2))
+        center.post(notification(3))
+        #expect(center.current == notification(3, count: 3))
+        center.post(notification(4, from: "com.other"))
+        #expect(center.current == notification(4, from: "com.other"))
+    }
+
+    @Test func queuedNotificationsStackToo() {
+        let center = AlertCenter()
+        center.post(charging)
+        center.post(notification(1))
+        center.post(notification(2))
+        center.dismissCurrent()
+        #expect(center.current == notification(2, count: 2))
     }
 
     @Test func otherKindsQueueInOrder() {
