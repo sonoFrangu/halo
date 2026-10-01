@@ -11,6 +11,7 @@ final class IslandController {
     private let panelController: IslandPanelController
     private let holderID: String
     private var scrollGesture = ScrollGestureInterpreter()
+    private var measuredState: IslandState = .idle
 
     init(screen: NSScreen, displayID: CGDirectDisplayID, services: IslandServices) {
         self.displayID = displayID
@@ -70,6 +71,9 @@ final class IslandController {
         observeLiveActivities()
         observePrivacy()
         observeEnergy()
+        if FrameMeter.isEnabled {
+            observeShape()
+        }
     }
 
     private static func actions(
@@ -359,6 +363,22 @@ final class IslandController {
             }
         }
         viewModel.privacyChanged(inUse: inUse)
+    }
+
+    /// Measures the frames of every change of shape (`FrameMeter`).
+    private func observeShape() {
+        let island = viewModel
+        let state = withObservationTracking {
+            island.state
+        } onChange: { [weak self] in
+            Task { @MainActor [weak self] in
+                self?.observeShape()
+            }
+        }
+        if state != measuredState {
+            panelController.measureFrames("\(measuredState) → \(state)")
+            measuredState = state
+        }
     }
 
     private func observeEnergy() {

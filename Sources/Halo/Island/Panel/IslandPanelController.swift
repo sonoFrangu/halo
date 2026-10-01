@@ -7,6 +7,7 @@ import SwiftUI
 final class IslandPanelController {
     private let panel: IslandPanel
     private let hostingView: IslandHostingView<IslandRootView>
+    private let frameMeter = FrameMeter()
 
     var onPointerActivity: (() -> Void)? {
         get { hostingView.onPointerActivity }
@@ -46,6 +47,11 @@ final class IslandPanelController {
 
     func hide() {
         panel.orderOut(nil)
+    }
+
+    /// Logs the frames of the animation starting now (see `FrameMeter`, off by default).
+    func measureFrames(_ label: String) {
+        frameMeter.measure(label, in: hostingView)
     }
 
     func setInteractive(_ interactive: Bool) {
