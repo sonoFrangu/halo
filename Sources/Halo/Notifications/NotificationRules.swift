@@ -25,7 +25,9 @@ enum NotificationRules {
         focusSilencing: Bool,
         bypassesFocus: Bool
     ) -> NotificationDecision {
-        if bundleIdentifier == ownBundleIdentifier || NotificationMirror.isFromWebsite(bundleIdentifier) {
+        if bundleIdentifier == ownBundleIdentifier
+            || NotificationMirror.isFromWebsite(bundleIdentifier)
+            || NotificationMirror.isFromBluetooth(bundleIdentifier) {
             return .drop
         }
         if mode == .hidden || (focusSilencing && !bypassesFocus) {

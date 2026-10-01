@@ -160,6 +160,13 @@ final class NotificationMirror {
         bundleIdentifier.hasPrefix("_WEB_CENTER_")
     }
 
+    /// macOS's own Bluetooth banners ("AirPods connected", with batteries): never mirrored,
+    /// since `AudioDeviceMonitor` already shows headphones in the island.
+    nonisolated static func isFromBluetooth(_ bundleIdentifier: String) -> Bool {
+        let identifier = bundleIdentifier.lowercased()
+        return identifier.hasPrefix("com.apple.bluetooth") || identifier.hasPrefix("_system_center_:com.apple.bluetooth")
+    }
+
     // MARK: Access
 
     private func fail(_ error: Error) {

@@ -38,4 +38,10 @@ struct NotificationRulesTests {
         #expect(decide("_WEB_CENTER_:web.com.example", bypassesFocus: true) == .drop)
         #expect(decide("io.github.sonofrangu.halo") == .drop)
     }
+
+    @Test func bluetoothBannersAreLeftToTheHeadphonesAlert() {
+        #expect(decide("com.apple.bluetoothuserd.UserNotification", bypassesFocus: true) == .drop)
+        #expect(decide("_SYSTEM_CENTER_:com.apple.BluetoothUIServer") == .drop)
+        #expect(decide("com.apple.controlcenter.notifications.low-battery") == .full)
+    }
 }
