@@ -100,6 +100,9 @@ La CI (`.github/workflows/build.yml`) esegue test e bundle a ogni push con Xcode
 (runner `macos-26`) e con Xcode 27 + Command Line Tools su SDK 27, e carica `Halo.zip` come
 artifact.
 
+`scripts/dmg.sh` impacchetta `build/Halo.app` in `build/Halo-<versione>.dmg`, con un link ad
+Applicazioni accanto all'app: è il file delle release.
+
 ## Lanciare
 
 ```sh
