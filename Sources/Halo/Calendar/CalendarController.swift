@@ -35,8 +35,8 @@ final class CalendarModel {
 /// Reads the user's calendars through EventKit and posts a reminder a few minutes before
 /// each meeting.
 ///
-/// Event driven: it refreshes on `EKEventStoreChanged`, at midnight, after wake, and at the
-/// single next moment something changes (a reminder, a start or an end), with one sleeping
+/// Event driven: it refreshes on `EKEventStoreChanged`, when a calendar is checked or
+/// unchecked in Calendar.app, at midnight, after wake, and at the single next moment something changes (a reminder, a start or an end), with one sleeping
 /// task instead of a timer.
 @MainActor
 @Observable
@@ -49,6 +49,7 @@ final class CalendarController {
     @ObservationIgnored private let reader: EventReader
     @ObservationIgnored private var fetchTask: Task<Void, Never>?
     @ObservationIgnored private var observers: [(center: NotificationCenter, token: NSObjectProtocol)] = []
+    @ObservationIgnored private var hiddenCalendarsObservation: NSKeyValueObservation?
     @ObservationIgnored private var wakeTask: Task<Void, Never>?
     @ObservationIgnored private var events: [CalendarEvent] = []
     @ObservationIgnored private var alerted: Set<String> = []
@@ -89,6 +90,7 @@ final class CalendarController {
             observer.center.removeObserver(observer.token)
         }
         observers.removeAll()
+        hiddenCalendarsObservation = nil
         wakeTask?.cancel()
         wakeTask = nil
         fetchTask?.cancel()
@@ -136,6 +138,13 @@ final class CalendarController {
             (center, center.addObserver(forName: .NSCalendarDayChanged, object: nil, queue: .main, using: changed)),
             (workspace, workspace.addObserver(forName: NSWorkspace.didWakeNotification, object: nil, queue: .main, using: changed)),
         ]
+        // Calendar.app writes its preferences through cfprefsd, which tells observers in
+        // other processes too.
+        hiddenCalendarsObservation = reader.calendarApp?.observe(\.DisabledCalendars) { _, _ in
+            Task { @MainActor [weak self] in
+                self?.refresh()
+            }
+        }
         refresh()
     }
 
@@ -217,19 +226,29 @@ final class CalendarController {
 private final class EventReader: @unchecked Sendable {
     private let store: EKEventStore
     private let queue = DispatchQueue(label: "io.github.sonofrangu.halo.calendar", qos: .utility)
+    /// Calendar.app's preferences, where its sidebar keeps the unchecked calendars.
+    let calendarApp = UserDefaults(suiteName: "com.apple.iCal")
 
     init(store: EKEventStore) {
         self.store = store
     }
 
-    /// Timed events from 12 hours ago to 36 hours ahead, not cancelled nor declined.
+    /// Timed events from 12 hours ago to 36 hours ahead, not cancelled nor declined, from
+    /// the calendars checked in Calendar.app.
     func events(around now: Date) async -> [CalendarEvent] {
         await withCheckedContinuation { continuation in
             queue.async {
+                let hidden = Set(self.calendarApp?.DisabledCalendars?["MainWindow"] as? [String] ?? [])
+                let calendars = self.store.calendars(for: .event).filter { !hidden.contains($0.calendarIdentifier) }
+                // Every calendar unchecked: nothing to show.
+                guard !calendars.isEmpty else {
+                    continuation.resume(returning: [])
+                    return
+                }
                 let predicate = self.store.predicateForEvents(
                     withStart: now.addingTimeInterval(-12 * 3600),
                     end: now.addingTimeInterval(36 * 3600),
-                    calendars: nil
+                    calendars: calendars
                 )
                 let events = self.store.events(matching: predicate)
                     .filter { !$0.isAllDay && $0.status != .canceled && !CalendarController.isDeclined($0) }
@@ -237,5 +256,13 @@ private final class EventReader: @unchecked Sendable {
                 continuation.resume(returning: events)
             }
         }
+    }
+}
+
+private extension UserDefaults {
+    /// Calendar.app's unchecked calendars by window (`MainWindow`). Named as the key so KVO
+    /// observes it.
+    @objc dynamic var DisabledCalendars: [String: Any]? {
+        dictionary(forKey: "DisabledCalendars")
     }
 }
