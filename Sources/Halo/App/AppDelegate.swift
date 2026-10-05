@@ -81,7 +81,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             ),
             lockScreen: LockScreenController(player: nowPlaying.model, lyrics: lyrics.model, actions: cardActions),
             islands: islands,
-            loginItem: LoginItemController()
+            loginItem: LoginItemController(),
+            updates: UpdateChecker()
         )
         self.features = features
         statusItem = StatusItemController(features: features)
@@ -179,4 +180,5 @@ struct Features {
     let lockScreen: LockScreenController
     let islands: IslandsCoordinator
     let loginItem: LoginItemController
+    let updates: UpdateChecker
 }

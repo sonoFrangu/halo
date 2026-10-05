@@ -40,9 +40,10 @@ Architettura e scelte in [`docs/design.md`](docs/design.md).
 
 Tutto si accende e spegne dalle **Impostazioni** (menu della capsula › Impostazioni…, ⌘,),
 organizzate come Impostazioni di Sistema: una pagina per argomento (Generale, Isola, Musica,
-Attività, Avvisi, Scaffale e screenshot, Permessi, Informazioni), ogni opzione con la
-spiegazione di cosa fa e dove si vede; un'opzione accesa a cui manca un permesso lo segnala con
-il pulsante per concederlo. Il menu contiene lo stato di Now Playing, il sottomenu Timer e
+Attività, Avvisi, Scaffale e screenshot, Permessi, Aggiornamenti, Informazioni), ogni opzione
+con la spiegazione di cosa fa e dove si vede; un'opzione accesa a cui manca un permesso lo
+segnala con il pulsante per concederlo. In Aggiornamenti vedi la versione installata, se ne è
+uscita una nuova su GitHub e puoi controllare subito o spegnere il controllo automatico. Il menu contiene lo stato di Now Playing, il sottomenu Timer e
 cronometro, le Impostazioni, una voce per i permessi mancanti (solo se ce ne sono) ed Esci.
 
 ## Requisiti

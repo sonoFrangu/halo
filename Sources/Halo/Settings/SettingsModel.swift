@@ -13,6 +13,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
     case alerts
     case files
     case permissions
+    case updates
     case about
 
     var id: String { rawValue }
@@ -28,6 +29,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         case .alerts: "Avvisi"
         case .files: "Scaffale e screenshot"
         case .permissions: "Permessi"
+        case .updates: "Aggiornamenti"
         case .about: "Informazioni"
         }
     }
@@ -41,6 +43,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         case .alerts: "bell.badge.fill"
         case .files: "tray.full.fill"
         case .permissions: "hand.raised.fill"
+        case .updates: "arrow.down.circle.fill"
         case .about: "info.circle.fill"
         }
     }
@@ -54,6 +57,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         case .alerts: SettingsColor.red
         case .files: SettingsColor.teal
         case .permissions: SettingsColor.blue
+        case .updates: SettingsColor.green
         case .about: SettingsColor.gray
         }
     }
@@ -75,6 +79,8 @@ enum SettingsPane: String, CaseIterable, Identifiable {
             "Un posto temporaneo per i file, sempre a portata di mano nella notch."
         case .permissions:
             "Alcune funzioni hanno bisogno di un permesso di macOS. Halo funziona anche senza: la funzione che ne ha bisogno resta semplicemente inattiva."
+        case .updates:
+            "Halo controlla su GitHub se è uscita una nuova versione. Il download si apre nel browser: niente si installa da solo."
         case .about:
             "La notch del tuo Mac, più viva."
         }
@@ -279,6 +285,9 @@ final class SettingsModel {
         Preferences.hoverDelay = seconds
         revision += 1
     }
+
+    /// GitHub release checks, shared with the menu.
+    var updates: UpdateChecker { features.updates }
 
     /// Which app runs the timers started from the notch.
     var timerApp: TimerApp {

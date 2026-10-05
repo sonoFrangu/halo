@@ -1,8 +1,11 @@
 import Foundation
+import Observation
 
 /// Asks GitHub for the latest release at launch, then at most once a day when the menu
-/// opens, so a new version shows up in the menu. No timer runs in between.
+/// opens, so a new version shows up in the menu and in Settings › Aggiornamenti. No timer
+/// runs in between. Automatic checks can be turned off; "Controlla ora" always asks.
 @MainActor
+@Observable
 final class UpdateChecker {
     struct Release: Equatable {
         let version: String
@@ -11,22 +14,41 @@ final class UpdateChecker {
 
     /// A release newer than the running build, once one is known.
     private(set) var available: Release?
+    private(set) var isChecking = false
+    /// The last check that got an answer from GitHub.
+    private(set) var lastSuccess: Date?
+    /// The last check failed (offline, GitHub unreachable or rate-limited).
+    private(set) var failed = false
+
+    var checksAutomatically = Preferences.checksForUpdates {
+        didSet { Preferences.checksForUpdates = checksAutomatically }
+    }
+
+    let runningVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0"
 
     private static let endpoint = URL(string: "https://api.github.com/repos/sonoFrangu/halo/releases/latest")!
     private static let interval: TimeInterval = 24 * 60 * 60
-    private var lastCheck: Date?
-    private var task: Task<Void, Never>?
+    @ObservationIgnored private var lastAttempt: Date?
 
+    /// At launch and when the menu opens: asks if automatic checks are on and a day has passed.
     func checkIfDue(now: Date = Date()) {
-        guard task == nil, lastCheck.map({ now.timeIntervalSince($0) >= Self.interval }) ?? true else { return }
-        lastCheck = now
-        task = Task { [weak self] in
+        guard checksAutomatically, lastAttempt.map({ now.timeIntervalSince($0) >= Self.interval }) ?? true else { return }
+        check(now: now)
+    }
+
+    /// Asks GitHub now, unless a check is already running.
+    func check(now: Date = Date()) {
+        guard !isChecking else { return }
+        lastAttempt = now
+        isChecking = true
+        Task { [weak self] in
             let release = try? await Self.fetchLatest()
             guard let self else { return }
-            task = nil
+            isChecking = false
+            failed = release == nil
             guard let release else { return }
-            let running = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0"
-            available = Self.isNewer(release.version, than: running) ? release : nil
+            lastSuccess = Date()
+            available = Self.isNewer(release.version, than: runningVersion) ? release : nil
         }
     }
 

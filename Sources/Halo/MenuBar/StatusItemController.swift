@@ -16,7 +16,7 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     private var stopwatchItem: NSMenuItem?
     private var stopwatchResetItem: NSMenuItem?
     private var updateItem: NSMenuItem?
-    private let updates = UpdateChecker()
+    private var updates: UpdateChecker { features.updates }
 
     init(features: Features) {
         self.statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)

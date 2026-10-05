@@ -17,6 +17,7 @@ struct SettingsView: View {
                 }
                 Section {
                     SidebarRow(pane: .permissions, badge: model.missingPermissions.count).tag(SettingsPane.permissions)
+                    SidebarRow(pane: .updates, badge: model.updates.available == nil ? 0 : 1).tag(SettingsPane.updates)
                     SidebarRow(pane: .about).tag(SettingsPane.about)
                 }
             }
@@ -55,6 +56,8 @@ struct SettingsPage: View {
             switch pane {
             case .permissions:
                 PermissionsSection(model: model)
+            case .updates:
+                UpdatesSection(updates: model.updates)
             case .about:
                 AboutSection()
             default:
@@ -407,6 +410,72 @@ struct PermissionRow: View {
 }
 
 /// Where things come from, and the diagnostics to send when something misbehaves.
+/// The installed version, whether a newer one is out, "Controlla ora" and the automatic check.
+struct UpdatesSection: View {
+    let updates: UpdateChecker
+
+    var body: some View {
+        Section {
+            HStack(alignment: .center, spacing: 10) {
+                SettingsIcon(symbol: status.symbol, tint: status.tint)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(status.title)
+                    Text(detail)
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer(minLength: 8)
+                if let release = updates.available {
+                    Button("Scarica Halo \(release.version)…") { NSWorkspace.shared.open(release.page) }
+                        .buttonStyle(.borderedProminent)
+                } else if updates.isChecking {
+                    ProgressView().controlSize(.small)
+                } else {
+                    Button("Controlla ora") { updates.check() }
+                }
+            }
+        }
+        Section {
+            Toggle(isOn: Binding(get: { updates.checksAutomatically }, set: { updates.checksAutomatically = $0 })) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Controlla automaticamente")
+                    Text("All'avvio e una volta al giorno quando apri il menu. Una nuova versione compare anche nel menu di Halo.")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
+    }
+
+    private var status: (title: String, symbol: String, tint: Color) {
+        if let release = updates.available {
+            return ("Disponibile Halo \(release.version)", "arrow.down.circle.fill", SettingsColor.green)
+        }
+        if updates.isChecking {
+            return ("Controllo in corso…", "arrow.triangle.2.circlepath", SettingsColor.gray)
+        }
+        if updates.failed {
+            return ("Impossibile controllare", "exclamationmark.triangle.fill", SettingsColor.orange)
+        }
+        if updates.lastSuccess != nil {
+            return ("Halo è aggiornata", "checkmark.circle.fill", SettingsColor.green)
+        }
+        return ("Non ancora controllato", "questionmark.circle.fill", SettingsColor.gray)
+    }
+
+    private var detail: String {
+        var text = "Versione installata: \(updates.runningVersion)."
+        if updates.failed {
+            text += " GitHub non risponde: controlla la connessione e riprova."
+        } else if let date = updates.lastSuccess {
+            text += " Ultimo controllo: \(date.formatted(.relative(presentation: .named).locale(Locale(identifier: "it_IT"))))."
+        }
+        return text
+    }
+}
+
 struct AboutSection: View {
     var body: some View {
         DiagnosticsSection(diagnostics: Diagnostics.shared)

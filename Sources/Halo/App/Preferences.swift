@@ -35,6 +35,7 @@ enum Preferences {
         static let transfers = "transfersEnabled"
         static let unlockAnimation = "unlockAnimationEnabled"
         static let unlockAnimationStyle = "unlockAnimationStyle"
+        static let checksForUpdates = "checksForUpdates"
         static let systemTimers = "systemTimersEnabled"
         static let siri = "siriEnabled"
         static let timerApp = "timerApp"
@@ -214,6 +215,12 @@ enum Preferences {
     static var unlockAnimationStyle: UnlockAnimationStyle {
         get { defaults.string(forKey: Key.unlockAnimationStyle).flatMap(UnlockAnimationStyle.init(rawValue:)) ?? .faceID }
         set { defaults.set(newValue.rawValue, forKey: Key.unlockAnimationStyle) }
+    }
+
+    /// Ask GitHub for a new release at launch and once a day. On by default.
+    static var checksForUpdates: Bool {
+        get { flag(Key.checksForUpdates, default: true) }
+        set { defaults.set(newValue, forKey: Key.checksForUpdates) }
     }
 
     /// Timers started with Siri or the Clock app, as a live activity.
