@@ -16,8 +16,11 @@ enum CalendarText {
         if event.isOngoing(at: now) {
             return "In corso · fino alle \(time(event.end))"
         }
-        let range = "\(time(event.start)) – \(time(event.end))"
-        if let relative = relative(to: event.start, now: now) {
+        if event.isAllDay, event.start <= now {
+            return "Tutto il giorno"
+        }
+        let range = event.isAllDay ? "tutto il giorno" : "\(time(event.start)) – \(time(event.end))"
+        if !event.isAllDay, let relative = relative(to: event.start, now: now) {
             return "\(relative.prefix(1).uppercased())\(relative.dropFirst()) · \(range)"
         }
         if calendar.isDate(event.start, inSameDayAs: now) {

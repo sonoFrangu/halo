@@ -205,7 +205,8 @@ final class CalendarController {
             end: event.endDate,
             color: color(of: event.calendar),
             location: event.location,
-            meetingURL: MeetingLink.find(in: [event.url?.absoluteString, event.location, event.notes])
+            meetingURL: MeetingLink.find(in: [event.url?.absoluteString, event.location, event.notes]),
+            isAllDay: event.isAllDay
         )
     }
 
@@ -233,7 +234,7 @@ private final class EventReader: @unchecked Sendable {
         self.store = store
     }
 
-    /// Timed events from 12 hours ago to 36 hours ahead, not cancelled nor declined, from
+    /// Events from 12 hours ago to 36 hours ahead, not cancelled nor declined, from
     /// the calendars checked in Calendar.app.
     func events(around now: Date) async -> [CalendarEvent] {
         await withCheckedContinuation { continuation in
@@ -251,7 +252,7 @@ private final class EventReader: @unchecked Sendable {
                     calendars: calendars
                 )
                 let events = self.store.events(matching: predicate)
-                    .filter { !$0.isAllDay && $0.status != .canceled && !CalendarController.isDeclined($0) }
+                    .filter { $0.status != .canceled && !CalendarController.isDeclined($0) }
                     .map { CalendarController.event(from: $0) }
                 continuation.resume(returning: events)
             }

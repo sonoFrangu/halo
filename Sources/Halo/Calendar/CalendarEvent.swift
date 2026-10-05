@@ -10,14 +10,17 @@ struct CalendarEvent: Sendable, Equatable, Identifiable {
     var location: String?
     /// Video call link found in the event (Zoom, Meet, Teams, Webex, FaceTime).
     var meetingURL: URL?
+    /// Starts at midnight, so it sorts ahead of the day's timed events.
+    var isAllDay = false
 
     /// Identifies one reminder: a rescheduled event gets a new one.
     var reminderKey: String {
         "\(id)@\(start.timeIntervalSinceReferenceDate)"
     }
 
+    /// An all-day event is never "in corso": it would glow and say so all day.
     func isOngoing(at date: Date) -> Bool {
-        start <= date && date < end
+        !isAllDay && start <= date && date < end
     }
 }
 
@@ -59,15 +62,16 @@ enum CalendarSchedule {
     /// An event shows in the island header from this long before it starts.
     static let headlineLead: TimeInterval = 60 * 60
 
-    /// Events not over yet, soonest first (ongoing ones lead).
+    /// Events not over yet, soonest first: all-day events lead their day, then ongoing ones.
     static func upcoming(_ events: [CalendarEvent], now: Date, limit: Int) -> [CalendarEvent] {
         Array(events.filter { $0.end > now }.sorted { $0.start < $1.start }.prefix(limit))
     }
 
-    /// Events whose reminder is due now and was not shown yet.
+    /// Events whose reminder is due now and was not shown yet. All-day events get none.
     static func dueReminders(_ events: [CalendarEvent], now: Date, alerted: Set<String>) -> [CalendarEvent] {
         events.filter { event in
-            !alerted.contains(event.reminderKey)
+            !event.isAllDay
+                && !alerted.contains(event.reminderKey)
                 && now >= event.start.addingTimeInterval(-reminderLead)
                 && now < event.start.addingTimeInterval(lateReminderGrace)
         }
@@ -77,6 +81,7 @@ enum CalendarSchedule {
     /// its reminder, its start or its end.
     static func nextChange(_ events: [CalendarEvent], after now: Date) -> Date? {
         events
+            .filter { !$0.isAllDay }
             .flatMap {
                 [$0.start.addingTimeInterval(-headlineLead), $0.start.addingTimeInterval(-reminderLead), $0.start, $0.end]
             }
@@ -85,7 +90,8 @@ enum CalendarSchedule {
     }
 
     /// The event worth a glance in the island header: ongoing, or starting within the hour.
+    /// Never an all-day one, which would hold the header all day.
     static func headline(_ events: [CalendarEvent], now: Date) -> CalendarEvent? {
-        upcoming(events, now: now, limit: 1).first { $0.start.timeIntervalSince(now) <= headlineLead }
+        upcoming(events.filter { !$0.isAllDay }, now: now, limit: 1).first { $0.start.timeIntervalSince(now) <= headlineLead }
     }
 }

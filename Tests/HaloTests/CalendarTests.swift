@@ -65,6 +65,18 @@ struct CalendarScheduleTests {
         #expect(CalendarSchedule.headline([event("close", startsIn: 45)], now: now)?.id == "close")
         #expect(CalendarSchedule.headline([event("on", startsIn: -10)], now: now)?.id == "on")
     }
+
+    @Test func allDayEventsLeadTheListButStayOutOfHeaderAndReminders() {
+        var holiday = event("holiday", startsIn: -10 * 60, lasting: 24 * 60)
+        holiday.isAllDay = true
+        let meeting = event("meeting", startsIn: 4)
+        let events = [meeting, holiday]
+        #expect(CalendarSchedule.upcoming(events, now: now, limit: 5).map(\.id) == ["holiday", "meeting"])
+        #expect(CalendarSchedule.headline(events, now: now)?.id == "meeting")
+        #expect(CalendarSchedule.dueReminders([holiday], now: now, alerted: []).isEmpty)
+        #expect(!holiday.isOngoing(at: now))
+        #expect(CalendarText.subtitle(for: holiday, now: now) == "Tutto il giorno")
+    }
 }
 
 struct CalendarTextTests {
