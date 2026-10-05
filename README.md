@@ -101,7 +101,9 @@ La CI (`.github/workflows/build.yml`) esegue test e bundle a ogni push con Xcode
 artifact.
 
 `scripts/dmg.sh` impacchetta `build/Halo.app` in `build/Halo-<versione>.dmg`, con un link ad
-Applicazioni accanto all'app: è il file delle release.
+Applicazioni accanto all'app: è il file delle release. La finestra la imposta Finder via
+AppleScript (la prima volta macOS chiede il permesso di Automazione); lo sfondo,
+`Support/DMGBackground.png`, si rigenera con `scripts/dmg/render-background.py`.
 
 ## Lanciare
 
