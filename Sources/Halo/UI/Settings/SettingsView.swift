@@ -126,6 +126,8 @@ struct SettingsItemRow: View {
             LyricsLeadRow(model: model)
         case .timerApp:
             TimerAppRow(model: model)
+        case .unlockStyle:
+            UnlockStyleRow(model: model)
         case .notificationApps:
             NotificationAppsRow(model: model)
         }
@@ -227,6 +229,35 @@ struct TimerAppRow: View {
             Picker("App dei timer della notch", selection: Binding(get: { model.timerApp }, set: { model.setTimerApp($0) })) {
                 Text("Halo").tag(TimerApp.halo)
                 Text("Orologio").tag(TimerApp.clock)
+            }
+            .labelsHidden()
+            .pickerStyle(.segmented)
+            .fixedSize()
+        }
+        .disabled(!isAvailable)
+        .opacity(isAvailable ? 1 : 0.5)
+    }
+}
+
+/// Which animation plays in the notch when the Mac is unlocked.
+struct UnlockStyleRow: View {
+    let model: SettingsModel
+
+    var body: some View {
+        let isAvailable = model.isOn(id: "unlock")
+        HStack(alignment: .top, spacing: 10) {
+            SettingsIcon(symbol: "faceid", tint: SettingsColor.blue)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Animazione di sblocco")
+                Text("Lucchetto: si apre come su iPhone. Face ID: il volto, gli anelli che ruotano e la spunta.")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 8)
+            Picker("Animazione di sblocco", selection: Binding(get: { model.unlockStyle }, set: { model.setUnlockStyle($0) })) {
+                Text("Lucchetto").tag(UnlockAnimationStyle.padlock)
+                Text("Face ID").tag(UnlockAnimationStyle.faceID)
             }
             .labelsHidden()
             .pickerStyle(.segmented)

@@ -34,6 +34,7 @@ enum Preferences {
         static let notificationFocusBypass = "notificationFocusBypass"
         static let transfers = "transfersEnabled"
         static let unlockAnimation = "unlockAnimationEnabled"
+        static let unlockAnimationStyle = "unlockAnimationStyle"
         static let systemTimers = "systemTimersEnabled"
         static let siri = "siriEnabled"
         static let timerApp = "timerApp"
@@ -203,10 +204,16 @@ enum Preferences {
         set { defaults.set(newValue, forKey: Key.transfers) }
     }
 
-    /// The padlock opening in the island when the Mac is unlocked.
+    /// The unlock animation in the island when the Mac is unlocked.
     static var unlockAnimationEnabled: Bool {
         get { flag(Key.unlockAnimation, default: true) }
         set { defaults.set(newValue, forKey: Key.unlockAnimation) }
+    }
+
+    /// What the island shows when the Mac is unlocked. Face ID by default.
+    static var unlockAnimationStyle: UnlockAnimationStyle {
+        get { defaults.string(forKey: Key.unlockAnimationStyle).flatMap(UnlockAnimationStyle.init(rawValue:)) ?? .faceID }
+        set { defaults.set(newValue.rawValue, forKey: Key.unlockAnimationStyle) }
     }
 
     /// Timers started with Siri or the Clock app, as a live activity.

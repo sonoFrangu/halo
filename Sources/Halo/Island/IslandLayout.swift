@@ -51,6 +51,9 @@ struct IslandLayout: Sendable, Equatable {
     static let tabBodyHeight: CGFloat = 128
     static let bannerMinimumWidth: CGFloat = 400
     static let bannerBodyHeight: CGFloat = 70
+    /// Side of the glyph alert's symbol, and the margin around it below the notch.
+    static let glyphSide: CGFloat = 64
+    static let glyphInset: CGFloat = 18
     static let contentInset: CGFloat = 24
     static let expandedCornerRadius: CGFloat = 28
     static let bannerCornerRadius: CGFloat = 24
@@ -149,6 +152,13 @@ struct IslandLayout: Sendable, Equatable {
                 bottomRadius: min(12, notch.height / 2 - 2),
                 earRadius: 6
             )
+        case .alert where context.alertStyle == .glyph:
+            return IslandShapeSpec(
+                width: max(notch.width, Self.glyphSide + 2 * Self.glyphInset),
+                height: notch.height + Self.glyphSide + 2 * Self.glyphInset - 6,
+                bottomRadius: Self.expandedCornerRadius,
+                earRadius: 12
+            )
         case .alert:
             return IslandShapeSpec(
                 width: bannerWidth,
@@ -173,6 +183,7 @@ struct IslandLayout: Sendable, Equatable {
             spec(for: .expanded, context: IslandContext(tab: .shelf)),
             spec(for: .alert, context: IslandContext(alertStyle: .banner)),
             spec(for: .alert, context: IslandContext(alertStyle: .wings)),
+            spec(for: .alert, context: IslandContext(alertStyle: .glyph)),
             spec(for: .compact, context: IslandContext()),
         ]
         let width = specs.map { $0.width + 2 * $0.earRadius }.max() ?? 0
@@ -332,6 +343,15 @@ struct IslandLayout: Sendable, Equatable {
     var alertRightWingFrame: CGRect {
         let x = centerX + notchSize.width / 2 + 12
         return CGRect(x: x, y: 0, width: hudWingWidth - 12 - 16, height: notchSize.height)
+    }
+
+    /// The symbol of a glyph alert, centered below the notch.
+    var glyphFrame: CGRect {
+        square(
+            side: Self.glyphSide,
+            centerX: centerX,
+            centerY: notchSize.height - 6 + Self.glyphInset + Self.glyphSide / 2
+        )
     }
 
     /// Content of a banner alert, below the notch.

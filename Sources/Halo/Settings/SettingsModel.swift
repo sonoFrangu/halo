@@ -181,6 +181,7 @@ struct SettingsItem: Identifiable {
         case hoverDelay
         case lyricsLead
         case timerApp
+        case unlockStyle
         case notificationApps
     }
 
@@ -194,6 +195,7 @@ struct SettingsItem: Identifiable {
     static let hoverDelay = SettingsItem(id: "hoverDelay", kind: .hoverDelay)
     static let lyricsLead = SettingsItem(id: "lyricsLead", kind: .lyricsLead)
     static let timerApp = SettingsItem(id: "timerApp", kind: .timerApp)
+    static let unlockStyle = SettingsItem(id: "unlockStyle", kind: .unlockStyle)
     static let notificationApps = SettingsItem(id: "notificationApps", kind: .notificationApps)
 }
 
@@ -286,6 +288,17 @@ final class SettingsModel {
 
     func setTimerApp(_ app: TimerApp) {
         Preferences.timerApp = app
+        revision += 1
+    }
+
+    /// What the island plays when the Mac is unlocked.
+    var unlockStyle: UnlockAnimationStyle {
+        _ = revision
+        return Preferences.unlockAnimationStyle
+    }
+
+    func setUnlockStyle(_ style: UnlockAnimationStyle) {
+        Preferences.unlockAnimationStyle = style
         revision += 1
     }
 
@@ -645,11 +658,12 @@ final class SettingsModel {
                 )),
                 .toggle(SettingsToggle(
                     id: "unlock", title: "Sblocco",
-                    detail: "Il lucchetto che si apre nella notch quando sblocchi il Mac, come su iPhone.",
+                    detail: "Un'animazione nella notch quando sblocchi il Mac: il lucchetto che si apre o la sequenza di Face ID.",
                     symbol: "lock.open.fill", tint: SettingsColor.gray,
                     isOn: { unlock.isEnabled },
                     setOn: { unlock.setEnabled($0) }
                 )),
+                .unlockStyle,
                 .toggle(SettingsToggle(
                     id: "siri", title: "Siri nella notch",
                     detail: "Mentre Siri ascolta e risponde la notch si illumina con i suoi colori. Il pannello di Siri resta dov'è.",

@@ -6,6 +6,8 @@ enum AlertStyle: Sendable, Equatable {
     case wings
     /// Below the notch (headphones, notifications).
     case banner
+    /// A square panel below the notch holding one big glyph (the Face ID unlock).
+    case glyph
 }
 
 /// Something that briefly takes over the island.
@@ -21,8 +23,8 @@ enum IslandAlert: Sendable, Equatable {
     case keyboard(KeyboardAlert)
     case focus(FocusAlert)
     case transfer(TransferAlert)
-    /// The Mac was just unlocked.
-    case unlock
+    /// The Mac was just unlocked, played in the chosen style.
+    case unlock(UnlockAnimationStyle)
     /// Siri is on screen; held up by `SiriMonitor` until it closes.
     case siri
 
@@ -60,7 +62,8 @@ enum IslandAlert: Sendable, Equatable {
 
     var style: AlertStyle {
         switch self {
-        case .hud, .power, .keyboard, .focus, .unlock, .siri: .wings
+        case .hud, .power, .keyboard, .focus, .unlock(.padlock), .siri: .wings
+        case .unlock(.faceID): .glyph
         case .audioDevice, .notification, .calendar, .screenshot, .timer, .transfer: .banner
         }
     }
@@ -119,7 +122,8 @@ enum IslandAlert: Sendable, Equatable {
         case .keyboard: .milliseconds(1400)
         case .focus: .milliseconds(2200)
         case .transfer: .seconds(5)
-        case .unlock: .milliseconds(1300)
+        // Glance's hold after a successful scan: the Face ID checkmark lands at 1.2 s.
+        case .unlock: .milliseconds(1700)
         // Counts only once `SiriMonitor` lets go, and it withdraws the alert right away.
         case .siri: .seconds(1)
         }

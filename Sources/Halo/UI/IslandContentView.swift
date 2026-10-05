@@ -276,9 +276,11 @@ struct AlertContentView: View {
                     .reveal(isAlert && kind == .focus, order: 1)
             }
 
-            UnlockGlyph(isVisible: isAlert && kind == .unlock)
-                .place(in: layout.hudGlyphFrame)
-                .reveal(isAlert && kind == .unlock, order: 0)
+            if let unlock = shown?.unlock {
+                UnlockGlyph(style: unlock, isVisible: isAlert && kind == .unlock)
+                    .place(in: unlock == .faceID ? layout.glyphFrame : layout.hudGlyphFrame)
+                    .reveal(isAlert && kind == .unlock, order: 0)
+            }
 
             SiriGlyph(isActive: isAlert && kind == .siri)
                 .place(in: layout.hudGlyphFrame)
@@ -372,6 +374,11 @@ extension IslandAlert {
 
     var focus: FocusAlert? {
         if case .focus(let alert) = self { return alert }
+        return nil
+    }
+
+    var unlock: UnlockAnimationStyle? {
+        if case .unlock(let style) = self { return style }
         return nil
     }
 

@@ -105,6 +105,7 @@ struct NotchClosingTests {
         (IslandState.compact, IslandContext()),
         (.alert, IslandContext(alertStyle: .wings)),
         (.alert, IslandContext(alertStyle: .banner)),
+        (.alert, IslandContext(alertStyle: .glyph)),
         (.expanded, IslandContext(hasMedia: true, tab: .player, showsLyrics: true)),
     ])
     func closingNeverSwingsBackOut(state: IslandState, context: IslandContext) {

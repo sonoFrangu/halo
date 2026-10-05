@@ -32,7 +32,7 @@ Architettura e scelte in [`docs/design.md`](docs/design.md).
 | **Cronometro** | scheda Timer, ali (attività live), menu | quadrante con lancetta; con un timer attivo, due righe |
 | **Download e AirDrop** | ali (attività live), banner alla fine | anello e percentuale; poi Mostra nel Finder / Scaffale |
 | **Full Immersione** | ali dell'isola | simbolo, colore e nome quando la attivi o la disattivi; notifiche zitte mentre è attiva |
-| **Sblocco** | ali dell'isola | il lucchetto che si apre quando sblocchi il Mac |
+| **Sblocco** | ali dell'isola | quando sblocchi il Mac: il lucchetto che si apre o la sequenza di Face ID (volto, anelli, spunta) |
 | **Microfono e fotocamera** | ali dell'isola | pallino arancione/verde quando un'app li usa |
 | **Lingua tastiera e Bloc Maiusc** | ali dell'isola | avviso breve al cambio |
 | **Modalità presentazione** | — | con un'app a tutto schermo gli avvisi che interrompono restano zitti |
@@ -290,7 +290,7 @@ Sistema; lo stato si aggiorna da solo quando torni su Halo.
 - Attivando o disattivando una Full Immersione (Centro di Controllo, barra dei menu,
   Comandi rapidi) le ali mostrano il suo simbolo nel suo colore e il nome ("Lavoro · Attiva").
   Mentre è attiva le notifiche non compaiono nella notch (disattivabile).
-- Quando sblocchi il Mac il lucchetto nell'isola si apre, come su iPhone.
+- Quando sblocchi il Mac il lucchetto nell'isola si apre, come su iPhone, oppure parte la sequenza di Face ID (Impostazioni › Avvisi › Animazione di sblocco).
 
 ### Microfono, fotocamera, tastiera
 - Quando un'app usa il microfono (arancione) o una fotocamera (verde) l'isola mostra un

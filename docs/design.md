@@ -298,8 +298,14 @@ occupa anche l'ala sinistra. `IslandViewModel.liveActivityChanged` tiene l'isola
   (kqueue sulla cartella). Un cambio posta l'avviso `.focus`; `NotificationMirror.isSuppressed`
   tace le notifiche mentre una è attiva. Le Full Immersioni da programma non compaiono in quel
   file.
-- **Sblocco** (`UnlockGreeter`): `com.apple.screenIsUnlocked` → avviso `.unlock`, il lucchetto
-  si apre con `contentTransition(.symbolEffect(.replace))` 0,3 s dopo la comparsa.
+- **Sblocco** (`UnlockGreeter`): `com.apple.screenIsUnlocked` → avviso `.unlock(stile)` (1,7 s),
+  stile da `Preferences.unlockAnimationStyle`. Lucchetto: nelle ali, si apre con
+  `contentTransition(.symbolEffect(.replace))` 0,3 s dopo la comparsa. Face ID: stile d'avviso
+  `.glyph`, un pannello quadrato sotto la notch con il glifo da 64 pt; `FaceIDUnlockGlyph` è un
+  `Canvas` guidato da `KeyframeAnimator` che rifà fotogramma per fotogramma il video di successo
+  di Glance (1,22 s, geometria nello spazio da 432 px del video): angoli che si uniscono in un
+  quadrato arrotondato mentre il volto svanisce, cerchio, due anelli proiettati in 3D con scie
+  sfocate, appiattimento, spunta che nasce da un punto; poi ferma fino a 1,7 s.
 - **Timer di Siri e Orologio** (`SystemTimerMonitor`, `SystemTimerLogParser` e
   `SystemTimerState` testati): `mobiletimerd` accetta solo client Apple e la voce Timer della
   barra dei menu non è esposta all'Accessibilità, quindi Halo segue `log stream --style ndjson`

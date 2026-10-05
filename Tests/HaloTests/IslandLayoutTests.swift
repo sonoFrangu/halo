@@ -14,6 +14,7 @@ struct IslandLayoutTests {
         IslandContext(hasMedia: false),
         IslandContext(hasMedia: true, showsLyrics: true),
         IslandContext(alertStyle: .banner),
+        IslandContext(alertStyle: .glyph),
         IslandContext(tab: .shelf),
     ]
 
